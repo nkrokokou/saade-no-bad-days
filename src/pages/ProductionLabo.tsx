@@ -1,0 +1,113 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProducts } from '@/hooks/useProducts';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
+import { format, subDays, addDays } from 'date-fns';
+import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
+
+export default function ProductionLabo() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: products = [] } = useProducts();
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  const { data: entries = [] } = useQuery({
+    queryKey: ['production_labo', selectedDate],
+    queryFn: async () => {
+      const { data } = await supabase.from('production_labo')
+        .select('*, produits(nom)')
+        .eq('date_production', selectedDate);
+      return data || [];
+    },
+  });
+
+  const [local, setLocal] = useState<Record<string, { qte_produite: number; qte_sortie_en_salle: number; qte_perte: number }>>({});
+
+  const getVal = (pid: string, field: string) => {
+    if (local[pid]?.[field as keyof typeof local[string]] !== undefined) return local[pid][field as keyof typeof local[string]];
+    const e = entries.find((x: any) => x.produit_id === pid);
+    return e?.[field] ?? 0;
+  };
+
+  const setVal = (pid: string, field: string, val: number) => {
+    setLocal(prev => ({
+      ...prev,
+      [pid]: { qte_produite: getVal(pid, 'qte_produite'), qte_sortie_en_salle: getVal(pid, 'qte_sortie_en_salle'), qte_perte: getVal(pid, 'qte_perte'), ...prev[pid], [field]: val },
+    }));
+  };
+
+  const save = useMutation({
+    mutationFn: async () => {
+      for (const [pid, vals] of Object.entries(local)) {
+        const existing = entries.find((e: any) => e.produit_id === pid);
+        if (existing) {
+          await supabase.from('production_labo').update(vals).eq('id', existing.id);
+        } else {
+          await supabase.from('production_labo').insert({
+            produit_id: pid, date_production: selectedDate, ...vals, created_by: user?.id,
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['production_labo'] });
+      setLocal({});
+      toast.success('Production sauvegardée');
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-2xl font-heading font-bold">Production Labo</h1>
+        <Button onClick={() => save.mutate()} disabled={save.isPending}>
+          <Save className="h-4 w-4 mr-1" /> Sauvegarder
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Input type="date" className="w-44" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="overflow-x-auto pt-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[200px]">Produit</TableHead>
+                <TableHead>Qté Produite</TableHead>
+                <TableHead>Sortie en Salle</TableHead>
+                <TableHead>Perte</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map(p => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.nom}</TableCell>
+                  {['qte_produite', 'qte_sortie_en_salle', 'qte_perte'].map(f => (
+                    <TableCell key={f}>
+                      <Input type="number" className="w-24" value={getVal(p.id, f) || ''}
+                        onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
