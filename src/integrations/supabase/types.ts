@@ -14,7 +14,276 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bon_transfert_lignes: {
+        Row: {
+          bon_transfert_id: string
+          created_at: string
+          id: string
+          perte: number
+          produit_id: string
+          qte_prevue: number
+          qte_recue: number
+          solde_fin: number
+          solde_ouverture: number
+        }
+        Insert: {
+          bon_transfert_id: string
+          created_at?: string
+          id?: string
+          perte?: number
+          produit_id: string
+          qte_prevue?: number
+          qte_recue?: number
+          solde_fin?: number
+          solde_ouverture?: number
+        }
+        Update: {
+          bon_transfert_id?: string
+          created_at?: string
+          id?: string
+          perte?: number
+          produit_id?: string
+          qte_prevue?: number
+          qte_recue?: number
+          solde_fin?: number
+          solde_ouverture?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bon_transfert_lignes_bon_transfert_id_fkey"
+            columns: ["bon_transfert_id"]
+            isOneToOne: false
+            referencedRelation: "bons_transfert"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bon_transfert_lignes_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bons_transfert: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_transfert: string
+          id: string
+          statut: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_transfert: string
+          id?: string
+          statut?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_transfert?: string
+          id?: string
+          statut?: string
+        }
+        Relationships: []
+      }
+      inventaire: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_inventaire: string
+          id: string
+          nom_produit: string
+          quantite: number
+          section: string
+          unite: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_inventaire: string
+          id?: string
+          nom_produit: string
+          quantite?: number
+          section: string
+          unite?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_inventaire?: string
+          id?: string
+          nom_produit?: string
+          quantite?: number
+          section?: string
+          unite?: string | null
+        }
+        Relationships: []
+      }
+      pertes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          jour: string
+          produit_id: string
+          quantite: number
+          semaine_debut: string
+          type_labo: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          jour: string
+          produit_id: string
+          quantite?: number
+          semaine_debut: string
+          type_labo: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          jour?: string
+          produit_id?: string
+          quantite?: number
+          semaine_debut?: string
+          type_labo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pertes_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_labo: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_production: string
+          id: string
+          produit_id: string
+          qte_perte: number
+          qte_produite: number
+          qte_sortie_en_salle: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_production: string
+          id?: string
+          produit_id: string
+          qte_perte?: number
+          qte_produite?: number
+          qte_sortie_en_salle?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_production?: string
+          id?: string
+          produit_id?: string
+          qte_perte?: number
+          qte_produite?: number
+          qte_sortie_en_salle?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_labo_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produits: {
+        Row: {
+          categorie: string
+          created_at: string
+          id: string
+          nom: string
+          unite: string | null
+        }
+        Insert: {
+          categorie?: string
+          created_at?: string
+          id?: string
+          nom: string
+          unite?: string | null
+        }
+        Update: {
+          categorie?: string
+          created_at?: string
+          id?: string
+          nom?: string
+          unite?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string
+          id: string
+          role?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      stock_tampon: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_stock: string
+          id: string
+          produit_id: string
+          quantite: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_stock: string
+          id?: string
+          produit_id: string
+          quantite?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_stock?: string
+          id?: string
+          produit_id?: string
+          quantite?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_tampon_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
