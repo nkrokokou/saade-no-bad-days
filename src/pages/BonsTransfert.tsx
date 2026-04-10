@@ -91,8 +91,9 @@ export default function BonsTransfert() {
     if (!ligne) return;
     const updated = { ...ligne, [field]: value };
     const solde_fin = (updated.solde_ouverture || 0) + (updated.qte_recue || 0) - (updated.perte || 0);
+    const updateData: Record<string, number> = { [field]: value, solde_fin };
     await supabase.from('bon_transfert_lignes')
-      .update({ [field]: value, solde_fin }).eq('id', ligneId);
+      .update(updateData as any).eq('id', ligneId);
     qc.invalidateQueries({ queryKey: ['bon_lignes', selectedBon] });
   };
 
