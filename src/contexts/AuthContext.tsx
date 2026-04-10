@@ -33,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .select('id, full_name, role')
       .eq('id', userId)
       .single();
-    setProfile(data);
+    setProfile(data as Profile | null);
   };
 
   useEffect(() => {
