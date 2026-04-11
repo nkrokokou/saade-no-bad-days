@@ -14,6 +14,7 @@ import ProductionLabo from "./pages/ProductionLabo";
 import Inventaire from "./pages/Inventaire";
 import ClotureJournaliere from "./pages/ClotureJournaliere";
 import Degustations from "./pages/Degustations";
+import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => (
             {/* CEO only */}
             <Route element={<AppLayout allowedRoles={['ceo']} />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/admin" element={<Admin />} />
             </Route>
 
             {/* Bons de Transfert */}
@@ -61,7 +63,7 @@ const App = () => (
               <Route path="/inventaire" element={<Inventaire />} />
             </Route>
 
-            {/* Clôture Journalière & Invendus -50% */}
+            {/* Clôture Journalière */}
             <Route element={<AppLayout allowedRoles={['ceo', 'salle']} />}>
               <Route path="/cloture" element={<ClotureJournaliere />} />
             </Route>
