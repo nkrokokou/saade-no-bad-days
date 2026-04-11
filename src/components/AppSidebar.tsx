@@ -32,6 +32,8 @@ const navItems: NavItem[] = [
   { title: 'Pertes', url: '/pertes', icon: TrendingDown, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
   { title: 'Production Labo', url: '/production', icon: ChefHat, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie'] },
   { title: 'Inventaire', url: '/inventaire', icon: ClipboardList, roles: ['ceo', 'cuisine_salee'] },
+  { title: 'Clôture & Invendus', url: '/cloture', icon: DollarSign, roles: ['ceo', 'salle'] },
+  { title: 'Dégustations', url: '/degustations', icon: Wine, roles: ['ceo', 'salle'] },
 ];
 
 export function AppSidebar() {
