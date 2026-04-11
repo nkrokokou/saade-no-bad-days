@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
 import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
@@ -37,7 +39,6 @@ export default function StockTampon() {
         quantite: localQty[p.id] ?? stockEntries.find((s: any) => s.produit_id === p.id)?.quantite ?? 0,
         created_by: user?.id,
       }));
-      // Upsert
       for (const entry of entries) {
         const existing = stockEntries.find((s: any) => s.produit_id === entry.produit_id);
         if (existing) {
@@ -61,7 +62,6 @@ export default function StockTampon() {
     return entry?.quantite ?? 0;
   };
 
-  // Group products by category
   const grouped = products.reduce((acc, p) => {
     const cat = p.categorie || 'DIVERS';
     if (!acc[cat]) acc[cat] = [];
@@ -69,13 +69,43 @@ export default function StockTampon() {
     return acc;
   }, {} as Record<string, typeof products>);
 
+  const handleExport = () => {
+    const data = products.map(p => ({ Produit: p.nom, Catégorie: p.categorie, Quantité: getQty(p.id) }));
+    exportToExcel(data, `stock_tampon_${selectedDate}`);
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(`Stock Tampon — ${selectedDate}`,
+      ['Produit', 'Catégorie', 'Quantité'],
+      products.map(p => [p.nom, p.categorie, getQty(p.id)]));
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const rows = await parseExcelFile(file);
+      let imported = 0;
+      const updates: Record<string, number> = {};
+      for (const row of rows) {
+        const name = String(row['Produit'] || row['PRODUITS'] || row['produit'] || Object.values(row)[0] || '');
+        const qty = Number(row['Quantité'] || row['QTE'] || row['quantite'] || Object.values(row)[1] || 0);
+        const pid = findProductByName(name, products);
+        if (pid && qty > 0) { updates[pid] = qty; imported++; }
+      }
+      setLocalQty(prev => ({ ...prev, ...updates }));
+      toast.success(`${imported} produits importés — pensez à sauvegarder`);
+    } catch { toast.error('Erreur de lecture du fichier'); }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold">Stock Tampon</h1>
-        <Button onClick={() => saveStock.mutate()} disabled={saveStock.isPending}>
-          <Save className="h-4 w-4 mr-1" /> Sauvegarder
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
+          <Button onClick={() => saveStock.mutate()} disabled={saveStock.isPending}>
+            <Save className="h-4 w-4 mr-1" /> Sauvegarder
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
