@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
 import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -58,11 +60,8 @@ export default function Degustations() {
           await supabase.from('degustations').update(vals).eq('id', existing.id);
         } else {
           await supabase.from('degustations').insert({
-            produit_id: pid,
-            date_degustation: selectedDate,
-            quantite: vals.quantite,
-            motif: vals.motif,
-            created_by: user?.id,
+            produit_id: pid, date_degustation: selectedDate,
+            quantite: vals.quantite, motif: vals.motif, created_by: user?.id,
           });
         }
       }
@@ -84,6 +83,36 @@ export default function Degustations() {
 
   const totalDegustation = products.reduce((s, p) => s + getQty(p.id), 0);
 
+  const handleExport = () => {
+    const data = products.map(p => ({ Produit: p.nom, Quantité: getQty(p.id), Motif: getMotif(p.id) }));
+    exportToExcel(data, `degustations_${selectedDate}`);
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(`Dégustations — ${selectedDate}`,
+      ['Produit', 'Quantité', 'Motif'],
+      products.map(p => [p.nom, getQty(p.id), getMotif(p.id)]));
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const rows = await parseExcelFile(file);
+      let imported = 0;
+      for (const row of rows) {
+        const name = String(row['Produit'] || Object.values(row)[0] || '');
+        const pid = findProductByName(name, products);
+        if (pid) {
+          setLocal(prev => ({
+            ...prev,
+            [pid]: { quantite: Number(row['Quantité'] || row['quantite'] || 0), motif: String(row['Motif'] || row['motif'] || '') },
+          }));
+          imported++;
+        }
+      }
+      toast.success(`${imported} produits importés — pensez à sauvegarder`);
+    } catch { toast.error('Erreur de lecture du fichier'); }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -91,9 +120,12 @@ export default function Degustations() {
           <h1 className="text-2xl font-heading font-bold">Dégustations</h1>
           <p className="text-sm text-muted-foreground">Total du jour : <span className="font-semibold text-foreground">{totalDegustation}</span> pièces</p>
         </div>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          <Save className="h-4 w-4 mr-1" /> Sauvegarder
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="h-4 w-4 mr-1" /> Sauvegarder
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
