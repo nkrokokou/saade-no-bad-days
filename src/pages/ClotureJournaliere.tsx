@@ -53,7 +53,13 @@ export default function ClotureJournaliere() {
       for (const [pid, vals] of Object.entries(local)) {
         const existing = entries.find((e: any) => e.produit_id === pid);
         if (existing) {
-          await supabase.from('cloture_journaliere').update(vals).eq('id', existing.id);
+          await supabase.from('cloture_journaliere').update({
+            qte_vendue: vals.qte_vendue ?? getVal(pid, 'qte_vendue'),
+            qte_invendu: vals.qte_invendu ?? getVal(pid, 'qte_invendu'),
+            prix_invendu_50: vals.prix_invendu_50 ?? getVal(pid, 'prix_invendu_50'),
+            qte_perte: vals.qte_perte ?? getVal(pid, 'qte_perte'),
+            qte_degustation: vals.qte_degustation ?? getVal(pid, 'qte_degustation'),
+          }).eq('id', existing.id);
         } else {
           await supabase.from('cloture_journaliere').insert({
             produit_id: pid,
