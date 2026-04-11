@@ -89,6 +89,91 @@ export type Database = {
         }
         Relationships: []
       }
+      cloture_journaliere: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_cloture: string
+          id: string
+          prix_invendu_50: number
+          produit_id: string
+          qte_degustation: number
+          qte_invendu: number
+          qte_perte: number
+          qte_vendue: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_cloture: string
+          id?: string
+          prix_invendu_50?: number
+          produit_id: string
+          qte_degustation?: number
+          qte_invendu?: number
+          qte_perte?: number
+          qte_vendue?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_cloture?: string
+          id?: string
+          prix_invendu_50?: number
+          produit_id?: string
+          qte_degustation?: number
+          qte_invendu?: number
+          qte_perte?: number
+          qte_vendue?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cloture_journaliere_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      degustations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_degustation: string
+          id: string
+          motif: string | null
+          produit_id: string
+          quantite: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_degustation: string
+          id?: string
+          motif?: string | null
+          produit_id: string
+          quantite?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_degustation?: string
+          id?: string
+          motif?: string | null
+          produit_id?: string
+          quantite?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "degustations_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventaire: {
         Row: {
           created_at: string
