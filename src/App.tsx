@@ -12,6 +12,8 @@ import StockTampon from "./pages/StockTampon";
 import Pertes from "./pages/Pertes";
 import ProductionLabo from "./pages/ProductionLabo";
 import Inventaire from "./pages/Inventaire";
+import ClotureJournaliere from "./pages/ClotureJournaliere";
+import Degustations from "./pages/Degustations";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
@@ -57,6 +59,16 @@ const App = () => (
             {/* Inventaire */}
             <Route element={<AppLayout allowedRoles={['ceo', 'cuisine_salee']} />}>
               <Route path="/inventaire" element={<Inventaire />} />
+            </Route>
+
+            {/* Clôture Journalière & Invendus -50% */}
+            <Route element={<AppLayout allowedRoles={['ceo', 'salle']} />}>
+              <Route path="/cloture" element={<ClotureJournaliere />} />
+            </Route>
+
+            {/* Dégustations */}
+            <Route element={<AppLayout allowedRoles={['ceo', 'salle']} />}>
+              <Route path="/degustations" element={<Degustations />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
