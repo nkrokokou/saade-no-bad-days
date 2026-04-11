@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
 import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -36,16 +38,7 @@ export default function ClotureJournaliere() {
   };
 
   const setVal = (pid: string, field: string, val: number) => {
-    setLocal(prev => ({
-      ...prev,
-      [pid]: { ...prev[pid], [field]: val },
-    }));
-  };
-
-  // Auto-calculate prix invendu -50% (we assume unit price is tracked via qte_invendu)
-  const getInvenduTotal = (pid: string) => {
-    const invendu = getVal(pid, 'qte_invendu');
-    return invendu;
+    setLocal(prev => ({ ...prev, [pid]: { ...prev[pid], [field]: val } }));
   };
 
   const save = useMutation({
@@ -62,14 +55,10 @@ export default function ClotureJournaliere() {
           }).eq('id', existing.id);
         } else {
           await supabase.from('cloture_journaliere').insert({
-            produit_id: pid,
-            date_cloture: selectedDate,
-            qte_vendue: vals.qte_vendue ?? 0,
-            qte_invendu: vals.qte_invendu ?? 0,
-            prix_invendu_50: vals.prix_invendu_50 ?? 0,
-            qte_perte: vals.qte_perte ?? 0,
-            qte_degustation: vals.qte_degustation ?? 0,
-            created_by: user?.id,
+            produit_id: pid, date_cloture: selectedDate,
+            qte_vendue: vals.qte_vendue ?? 0, qte_invendu: vals.qte_invendu ?? 0,
+            prix_invendu_50: vals.prix_invendu_50 ?? 0, qte_perte: vals.qte_perte ?? 0,
+            qte_degustation: vals.qte_degustation ?? 0, created_by: user?.id,
           });
         }
       }
@@ -89,13 +78,57 @@ export default function ClotureJournaliere() {
     return acc;
   }, {} as Record<string, typeof products>);
 
+  const handleExport = () => {
+    const data = products.map(p => ({
+      Produit: p.nom, Catégorie: p.categorie, Vendus: getVal(p.id, 'qte_vendue'),
+      Invendus: getVal(p.id, 'qte_invendu'), 'Invendus -50%': getVal(p.id, 'prix_invendu_50'),
+      Pertes: getVal(p.id, 'qte_perte'), Dégustations: getVal(p.id, 'qte_degustation'),
+    }));
+    exportToExcel(data, `cloture_${selectedDate}`);
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(`Clôture Journalière — ${selectedDate}`,
+      ['Produit', 'Vendus', 'Invendus', '-50%', 'Pertes', 'Dégust.'],
+      products.map(p => [p.nom, getVal(p.id, 'qte_vendue'), getVal(p.id, 'qte_invendu'),
+        getVal(p.id, 'prix_invendu_50'), getVal(p.id, 'qte_perte'), getVal(p.id, 'qte_degustation')]));
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const rows = await parseExcelFile(file);
+      let imported = 0;
+      for (const row of rows) {
+        const name = String(row['Produit'] || row['PRODUITS'] || Object.values(row)[0] || '');
+        const pid = findProductByName(name, products);
+        if (pid) {
+          setLocal(prev => ({
+            ...prev,
+            [pid]: {
+              qte_vendue: Number(row['Vendus'] || row['qte_vendue'] || 0),
+              qte_invendu: Number(row['Invendus'] || row['qte_invendu'] || 0),
+              prix_invendu_50: Number(row['Invendus -50%'] || row['prix_invendu_50'] || 0),
+              qte_perte: Number(row['Pertes'] || row['qte_perte'] || 0),
+              qte_degustation: Number(row['Dégustations'] || row['qte_degustation'] || 0),
+            },
+          }));
+          imported++;
+        }
+      }
+      toast.success(`${imported} produits importés — pensez à sauvegarder`);
+    } catch { toast.error('Erreur de lecture du fichier'); }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold">Clôture Journalière</h1>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          <Save className="h-4 w-4 mr-1" /> Sauvegarder
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="h-4 w-4 mr-1" /> Sauvegarder
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">

@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
 import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -62,13 +64,53 @@ export default function ProductionLabo() {
     },
   });
 
+  const handleExport = () => {
+    const data = products.map(p => ({
+      Produit: p.nom, 'Qté Produite': getVal(p.id, 'qte_produite'),
+      'Sortie en Salle': getVal(p.id, 'qte_sortie_en_salle'), Perte: getVal(p.id, 'qte_perte'),
+    }));
+    exportToExcel(data, `production_${selectedDate}`);
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(`Production Labo — ${selectedDate}`,
+      ['Produit', 'Qté Produite', 'Sortie en Salle', 'Perte'],
+      products.map(p => [p.nom, getVal(p.id, 'qte_produite'), getVal(p.id, 'qte_sortie_en_salle'), getVal(p.id, 'qte_perte')]));
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const rows = await parseExcelFile(file);
+      let imported = 0;
+      for (const row of rows) {
+        const name = String(row['Produit'] || row['PRODUITS'] || Object.values(row)[0] || '');
+        const pid = findProductByName(name, products);
+        if (pid) {
+          setLocal(prev => ({
+            ...prev,
+            [pid]: {
+              qte_produite: Number(row['Qté Produite'] || row['qte_produite'] || 0),
+              qte_sortie_en_salle: Number(row['Sortie en Salle'] || row['qte_sortie_en_salle'] || 0),
+              qte_perte: Number(row['Perte'] || row['qte_perte'] || 0),
+            },
+          }));
+          imported++;
+        }
+      }
+      toast.success(`${imported} produits importés — pensez à sauvegarder`);
+    } catch { toast.error('Erreur de lecture du fichier'); }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold">Production Labo</h1>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          <Save className="h-4 w-4 mr-1" /> Sauvegarder
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="h-4 w-4 mr-1" /> Sauvegarder
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
