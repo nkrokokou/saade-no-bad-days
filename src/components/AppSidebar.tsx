@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine,
+  DollarSign, Wine, Settings,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { title: 'Inventaire', url: '/inventaire', icon: ClipboardList, roles: ['ceo', 'cuisine_salee'] },
   { title: 'Clôture & Invendus', url: '/cloture', icon: DollarSign, roles: ['ceo', 'salle'] },
   { title: 'Dégustations', url: '/degustations', icon: Wine, roles: ['ceo', 'salle'] },
+  { title: 'Administration', url: '/admin', icon: Settings, roles: ['ceo'] },
 ];
 
 export function AppSidebar() {
@@ -50,7 +51,6 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        {/* Brand */}
         <div className="px-4 py-6 border-b border-sidebar-border">
           {!collapsed && (
             <h1 className="text-2xl font-heading font-bold text-sidebar-primary tracking-wide">SAADÉ</h1>
