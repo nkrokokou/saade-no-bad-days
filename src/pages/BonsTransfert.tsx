@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Eye, Send, CheckCircle, Lock } from 'lucide-react';
+import { Plus, Eye, Send, CheckCircle, Lock, Download, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { exportToExcel, exportToPDF } from '@/hooks/useExcelImportExport';
 
 const statusColors: Record<string, string> = {
   brouillon: 'bg-secondary text-secondary-foreground',
