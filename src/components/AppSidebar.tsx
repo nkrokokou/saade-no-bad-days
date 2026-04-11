@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
+  DollarSign, Wine,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
