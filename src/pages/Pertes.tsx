@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -90,13 +92,55 @@ export default function Pertes() {
 
   const allowedTabs = profile?.role === 'ceo' ? LABS : LABS.filter(l => l.key === profile?.role);
 
+  const handleExport = () => {
+    const data = products.map(p => {
+      const row: Record<string, any> = { Produit: p.nom };
+      DAYS.forEach(d => { row[d.charAt(0).toUpperCase() + d.slice(1)] = getVal(p.id, d); });
+      row['Total'] = getTotal(p.id);
+      return row;
+    });
+    exportToExcel(data, `pertes_${activeTab}_${weekStartStr}`);
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Produit', ...DAYS.map(d => d.slice(0, 3).toUpperCase()), 'Total'];
+    const rows = products.map(p => [p.nom, ...DAYS.map(d => getVal(p.id, d)), getTotal(p.id)]);
+    exportToPDF(`Pertes ${LABS.find(l => l.key === activeTab)?.label} — Semaine du ${format(weekStart, 'dd/MM/yyyy')}`, headers, rows);
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const rows = await parseExcelFile(file);
+      let imported = 0;
+      for (const row of rows) {
+        const name = String(row['Produit'] || row['PRODUITS'] || Object.values(row)[0] || '');
+        const pid = findProductByName(name, products);
+        if (pid) {
+          const updates: Record<string, number> = {};
+          for (const day of DAYS) {
+            const val = Number(row[day] || row[day.charAt(0).toUpperCase() + day.slice(1)] || row[day.slice(0, 3).toUpperCase()] || 0);
+            if (val > 0) updates[day] = val;
+          }
+          if (Object.keys(updates).length > 0) {
+            setLocalData(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), ...updates } }));
+            imported++;
+          }
+        }
+      }
+      toast.success(`${imported} produits importés — pensez à sauvegarder`);
+    } catch { toast.error('Erreur de lecture du fichier'); }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold">Pertes Hebdomadaires</h1>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          <Save className="h-4 w-4 mr-1" /> Sauvegarder
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save className="h-4 w-4 mr-1" /> Sauvegarder
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
