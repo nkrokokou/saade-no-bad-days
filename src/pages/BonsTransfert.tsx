@@ -113,7 +113,19 @@ export default function BonsTransfert() {
             <h1 className="text-xl font-heading font-bold">Bon #{currentBon.id.slice(0, 8)}</h1>
             <Badge className={statusColors[currentBon.statut]}>{statusLabels[currentBon.statut]}</Badge>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => {
+              const data = lignes.map((l: any) => ({
+                Produit: l.produits?.nom || '', 'Qté Prévue': l.qte_prevue, 'Solde Ouverture': l.solde_ouverture,
+                'Qté Reçue': l.qte_recue, Perte: l.perte, 'Solde Fin': l.solde_fin,
+              }));
+              exportToExcel(data, `bon_${currentBon.id.slice(0, 8)}`);
+            }}><Download className="h-3.5 w-3.5 mr-1" /> Excel</Button>
+            <Button size="sm" variant="outline" onClick={() => {
+              exportToPDF(`Bon de Transfert #${currentBon.id.slice(0, 8)} — ${currentBon.date_transfert}`,
+                ['Produit', 'Qté Prévue', 'Solde Ouv.', 'Qté Reçue', 'Perte', 'Solde Fin'],
+                lignes.map((l: any) => [l.produits?.nom || '', l.qte_prevue, l.solde_ouverture, l.qte_recue, l.perte, l.solde_fin]));
+            }}><FileText className="h-3.5 w-3.5 mr-1" /> PDF</Button>
             {canDeliver && (
               <Button size="sm" onClick={() => updateStatus.mutate({ id: currentBon.id, status: 'livre' })}>
                 <Send className="h-4 w-4 mr-1" /> Marquer livré
