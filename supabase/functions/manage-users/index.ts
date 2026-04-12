@@ -28,21 +28,18 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    // Verify caller via getClaims (local JWT validation, no network call)
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
-
+    // Verify caller using admin client (reliable, no RLS issues)
+    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    
     const token = authHeader.replace('Bearer ', '')
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token)
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user: caller }, error: userError } = await adminClient.auth.getUser(token)
+    if (userError || !caller) {
       return jsonResponse({ error: 'Non autorisé' }, 401)
     }
 
-    const callerId = claimsData.claims.sub as string
+    const callerId = caller.id
 
-    // Check caller is CEO using service role (bypasses RLS)
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    // Check caller is CEO
     const { data: callerProfile } = await adminClient.from('profiles').select('role').eq('id', callerId).single()
     if (callerProfile?.role !== 'ceo') {
       return jsonResponse({ error: 'Accès réservé au CEO' }, 403)
