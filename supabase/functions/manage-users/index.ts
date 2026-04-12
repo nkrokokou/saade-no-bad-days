@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
     
     const token = authHeader.replace('Bearer ', '')
     const { data: { user: caller }, error: userError } = await adminClient.auth.getUser(token)
+    console.log('getUser result:', { callerId: caller?.id, error: userError?.message })
     if (userError || !caller) {
       return jsonResponse({ error: 'Non autorisé' }, 401)
     }
