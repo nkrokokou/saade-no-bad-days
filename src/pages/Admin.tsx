@@ -21,12 +21,15 @@ const ROLES: { value: UserRole; label: string }[] = [
   { value: 'salle', label: 'Salle' },
 ];
 
-function invokeManageUsers(body: any) {
-  return supabase.functions.invoke('manage-users', { body });
+async function invokeManageUsers(body: any) {
+  const { data, error } = await supabase.functions.invoke('manage-users', { body });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
 export default function Admin() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const qc = useQueryClient();
 
   // ── Profile tab ──
@@ -34,37 +37,42 @@ export default function Admin() {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => { if (profile) setFullName(profile.full_name); }, [profile]);
 
   const updateProfile = async () => {
-    if (fullName !== profile?.full_name) {
-      await supabase.from('profiles').update({ full_name: fullName }).eq('id', user!.id);
+    setSavingProfile(true);
+    try {
+      if (fullName !== profile?.full_name) {
+        const { error } = await supabase.from('profiles').update({ full_name: fullName }).eq('id', user!.id);
+        if (error) { toast.error(error.message); return; }
+      }
+      if (newEmail) {
+        const { error } = await supabase.auth.updateUser({ email: newEmail });
+        if (error) { toast.error(error.message); return; }
+      }
+      if (newPassword) {
+        if (newPassword !== confirmPassword) { toast.error('Les mots de passe ne correspondent pas'); return; }
+        if (newPassword.length < 6) { toast.error('Minimum 6 caractères'); return; }
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) { toast.error(error.message); return; }
+      }
+      await refreshProfile();
+      toast.success('Profil mis à jour');
+      setNewEmail('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } finally {
+      setSavingProfile(false);
     }
-    if (newEmail) {
-      const { error } = await supabase.auth.updateUser({ email: newEmail });
-      if (error) { toast.error(error.message); return; }
-    }
-    if (newPassword) {
-      if (newPassword !== confirmPassword) { toast.error('Les mots de passe ne correspondent pas'); return; }
-      if (newPassword.length < 6) { toast.error('Minimum 6 caractères'); return; }
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) { toast.error(error.message); return; }
-    }
-    toast.success('Profil mis à jour');
-    setNewEmail('');
-    setNewPassword('');
-    setConfirmPassword('');
   };
 
   // ── Users tab ──
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: async () => {
-      const { data, error } = await invokeManageUsers({ action: 'list' });
-      if (error) throw error;
-      return data as any[];
-    },
+    queryFn: () => invokeManageUsers({ action: 'list' }),
+    retry: 1,
   });
 
   const [showCreate, setShowCreate] = useState(false);
@@ -72,58 +80,54 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<any>(null);
 
   const createUser = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await invokeManageUsers({ action: 'create', ...newUser });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-    },
+    mutationFn: () => invokeManageUsers({ action: 'create', ...newUser }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-users'] });
       setShowCreate(false);
       setNewUser({ email: '', password: '', full_name: '', role: 'salle' });
       toast.success('Utilisateur créé');
     },
-    onError: (e: any) => toast.error(e.message || 'Erreur'),
+    onError: (e: any) => toast.error(e.message || 'Erreur lors de la création'),
   });
 
   const updateUser = useMutation({
-    mutationFn: async (data: any) => {
-      const { data: res, error } = await invokeManageUsers({ action: 'update', ...data });
-      if (error) throw error;
-      if (res?.error) throw new Error(res.error);
-    },
+    mutationFn: (data: any) => invokeManageUsers({ action: 'update', ...data }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-users'] });
       setEditingUser(null);
       toast.success('Utilisateur modifié');
     },
+    onError: (e: any) => toast.error(e.message || 'Erreur'),
   });
 
   const deleteUser = useMutation({
-    mutationFn: async (userId: string) => {
-      const { data, error } = await invokeManageUsers({ action: 'delete', user_id: userId });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-    },
+    mutationFn: (userId: string) => invokeManageUsers({ action: 'delete', user_id: userId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('Utilisateur supprimé');
     },
+    onError: (e: any) => toast.error(e.message || 'Erreur'),
   });
 
   // ── Backup tab ──
+  const [exporting, setExporting] = useState(false);
   const exportBackup = async () => {
-    toast.info('Export en cours...');
-    const { data, error } = await invokeManageUsers({ action: 'export_all' });
-    if (error) { toast.error('Erreur export'); return; }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `saade_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Sauvegarde téléchargée');
+    setExporting(true);
+    try {
+      const data = await invokeManageUsers({ action: 'export_all' });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `saade_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Sauvegarde téléchargée');
+    } catch {
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const importBackup = async (file: File) => {
@@ -134,7 +138,6 @@ export default function Admin() {
       let count = 0;
       for (const table of tables) {
         if (!Array.isArray(backup[table]) || backup[table].length === 0) continue;
-        // Insert rows (skip conflicts)
         for (const row of backup[table]) {
           await supabase.from(table as any).upsert(row as any, { onConflict: 'id' });
           count++;
@@ -169,7 +172,9 @@ export default function Admin() {
               <div><Label>Nouvel email (optionnel)</Label><Input type="email" placeholder={user?.email} value={newEmail} onChange={e => setNewEmail(e.target.value)} /></div>
               <div><Label>Nouveau mot de passe (optionnel)</Label><Input type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} /></div>
               {newPassword && <div><Label>Confirmer le mot de passe</Label><Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></div>}
-              <Button onClick={updateProfile}><Save className="h-4 w-4 mr-1" /> Enregistrer</Button>
+              <Button onClick={updateProfile} disabled={savingProfile}>
+                <Save className="h-4 w-4 mr-1" /> {savingProfile ? 'Enregistrement...' : 'Enregistrer'}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -195,57 +200,67 @@ export default function Admin() {
                         <SelectContent>{ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                    <Button className="w-full" onClick={() => createUser.mutate()} disabled={createUser.isPending}>Créer</Button>
+                    <Button className="w-full" onClick={() => createUser.mutate()} disabled={createUser.isPending}>
+                      {createUser.isPending ? 'Création...' : 'Créer'}
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Rôle</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u: any) => (
-                    <TableRow key={u.id}>
-                      <TableCell>{editingUser?.id === u.id ? (
-                        <Input value={editingUser.full_name} onChange={e => setEditingUser((p: any) => ({ ...p, full_name: e.target.value }))} />
-                      ) : u.full_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
-                      <TableCell>{editingUser?.id === u.id ? (
-                        <Select value={editingUser.role} onValueChange={v => setEditingUser((p: any) => ({ ...p, role: v }))}>
-                          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                          <SelectContent>{ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
-                        </Select>
-                      ) : ROLES.find(r => r.value === u.role)?.label || u.role}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {editingUser?.id === u.id ? (
-                            <Button size="icon" variant="ghost" onClick={() => updateUser.mutate({ user_id: u.id, full_name: editingUser.full_name, role: editingUser.role })}>
-                              <Save className="h-4 w-4 text-primary" />
-                            </Button>
-                          ) : (
-                            <Button size="icon" variant="ghost" onClick={() => setEditingUser({ ...u })}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {u.id !== user?.id && (
-                            <Button size="icon" variant="ghost" onClick={() => { if (confirm('Supprimer cet utilisateur ?')) deleteUser.mutate(u.id); }}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+              {usersError && (
+                <p className="text-sm text-destructive mb-4">Erreur de chargement des utilisateurs. Vérifiez votre connexion.</p>
+              )}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Rôle</TableHead>
+                      <TableHead className="w-24">Actions</TableHead>
                     </TableRow>
-                  ))}
-                  {usersLoading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Chargement...</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((u: any) => (
+                      <TableRow key={u.id}>
+                        <TableCell>{editingUser?.id === u.id ? (
+                          <Input value={editingUser.full_name} onChange={e => setEditingUser((p: any) => ({ ...p, full_name: e.target.value }))} />
+                        ) : u.full_name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                        <TableCell>{editingUser?.id === u.id ? (
+                          <Select value={editingUser.role} onValueChange={v => setEditingUser((p: any) => ({ ...p, role: v }))}>
+                            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                            <SelectContent>{ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
+                          </Select>
+                        ) : ROLES.find(r => r.value === u.role)?.label || u.role}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {editingUser?.id === u.id ? (
+                              <Button size="icon" variant="ghost" onClick={() => updateUser.mutate({ user_id: u.id, full_name: editingUser.full_name, role: editingUser.role })}>
+                                <Save className="h-4 w-4 text-primary" />
+                              </Button>
+                            ) : (
+                              <Button size="icon" variant="ghost" onClick={() => setEditingUser({ ...u })}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {u.id !== user?.id && (
+                              <Button size="icon" variant="ghost" onClick={() => { if (confirm('Supprimer cet utilisateur ?')) deleteUser.mutate(u.id); }}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {usersLoading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Chargement...</TableCell></TableRow>}
+                    {!usersLoading && users.length === 0 && !usersError && (
+                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Aucun utilisateur</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -257,14 +272,16 @@ export default function Admin() {
               <CardHeader><CardTitle className="flex items-center gap-2"><Download className="h-5 w-5" /> Sauvegarde</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">Exporter toutes les données de l'application en fichier JSON.</p>
-                <Button onClick={exportBackup}><Download className="h-4 w-4 mr-1" /> Télécharger la sauvegarde</Button>
+                <Button onClick={exportBackup} disabled={exporting}>
+                  <Download className="h-4 w-4 mr-1" /> {exporting ? 'Export...' : 'Télécharger la sauvegarde'}
+                </Button>
               </CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5" /> Restauration</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">Restaurer les données à partir d'un fichier de sauvegarde JSON.</p>
-                <input type="file" accept=".json" className="text-sm" onChange={e => { const f = e.target.files?.[0]; if (f) importBackup(f); }} />
+                <Input type="file" accept=".json" className="text-sm" onChange={e => { const f = e.target.files?.[0]; if (f) importBackup(f); }} />
               </CardContent>
             </Card>
           </div>
