@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
 }
 
@@ -19,29 +19,27 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+    // Admin client (service role — bypasses RLS)
+    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+
+    // Get and verify caller from Authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return jsonResponse({ error: 'Non autorisé' }, 401)
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-
-    // Verify caller using admin client (reliable, no RLS issues)
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
-    
     const token = authHeader.replace('Bearer ', '')
     const { data: { user: caller }, error: userError } = await adminClient.auth.getUser(token)
-    console.log('getUser result:', { callerId: caller?.id, error: userError?.message })
     if (userError || !caller) {
+      console.error('Auth error:', userError?.message)
       return jsonResponse({ error: 'Non autorisé' }, 401)
     }
 
-    const callerId = caller.id
-
     // Check caller is CEO
-    const { data: callerProfile } = await adminClient.from('profiles').select('role').eq('id', callerId).single()
+    const { data: callerProfile } = await adminClient.from('profiles').select('role').eq('id', caller.id).single()
     if (callerProfile?.role !== 'ceo') {
       return jsonResponse({ error: 'Accès réservé au CEO' }, 403)
     }
@@ -71,6 +69,7 @@ Deno.serve(async (req) => {
       if (createError) {
         return jsonResponse({ error: createError.message }, 400)
       }
+      // Update profile role (trigger creates profile with default role)
       await adminClient.from('profiles').update({ role, full_name }).eq('id', newUser.user.id)
       return jsonResponse({ success: true, user: newUser.user })
     }
@@ -97,7 +96,7 @@ Deno.serve(async (req) => {
 
     if (action === 'delete') {
       const { user_id } = body
-      if (!user_id || user_id === callerId) {
+      if (!user_id || user_id === caller.id) {
         return jsonResponse({ error: 'Impossible de supprimer ce compte' }, 400)
       }
       await adminClient.auth.admin.deleteUser(user_id)
@@ -106,7 +105,7 @@ Deno.serve(async (req) => {
 
     if (action === 'export_all') {
       const tables = ['produits', 'bons_transfert', 'bon_transfert_lignes', 'stock_tampon', 'pertes', 'production_labo', 'inventaire', 'cloture_journaliere', 'degustations']
-      const backup: Record<string, any[]> = {}
+      const backup: Record<string, unknown[]> = {}
       for (const t of tables) {
         const { data } = await adminClient.from(t).select('*')
         backup[t] = data || []
@@ -117,6 +116,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Action inconnue' }, 400)
 
   } catch (err) {
+    console.error('Edge function error:', err)
     return jsonResponse({ error: String(err) }, 500)
   }
 })
