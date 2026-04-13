@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      achats_mp: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_achat: string
+          fournisseur: string
+          id: string
+          prix_total: number
+          prix_unitaire: number
+          produit: string
+          quantite: number
+          unite: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_achat: string
+          fournisseur?: string
+          id?: string
+          prix_total?: number
+          prix_unitaire?: number
+          produit: string
+          quantite?: number
+          unite?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_achat?: string
+          fournisseur?: string
+          id?: string
+          prix_total?: number
+          prix_unitaire?: number
+          produit?: string
+          quantite?: number
+          unite?: string | null
+        }
+        Relationships: []
+      }
       bon_transfert_lignes: {
         Row: {
           bon_transfert_id: string
@@ -100,7 +139,9 @@ export type Database = {
           qte_degustation: number
           qte_invendu: number
           qte_perte: number
+          qte_recue: number
           qte_vendue: number
+          stock_ouverture: number
         }
         Insert: {
           created_at?: string
@@ -112,7 +153,9 @@ export type Database = {
           qte_degustation?: number
           qte_invendu?: number
           qte_perte?: number
+          qte_recue?: number
           qte_vendue?: number
+          stock_ouverture?: number
         }
         Update: {
           created_at?: string
@@ -124,7 +167,9 @@ export type Database = {
           qte_degustation?: number
           qte_invendu?: number
           qte_perte?: number
+          qte_recue?: number
           qte_vendue?: number
+          stock_ouverture?: number
         }
         Relationships: [
           {
@@ -206,6 +251,47 @@ export type Database = {
           unite?: string | null
         }
         Relationships: []
+      }
+      mouvements_stock: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_mouvement: string
+          id: string
+          motif: string | null
+          produit_id: string
+          quantite: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_mouvement: string
+          id?: string
+          motif?: string | null
+          produit_id: string
+          quantite?: number
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_mouvement?: string
+          id?: string
+          motif?: string | null
+          produit_id?: string
+          quantite?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mouvements_stock_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pertes: {
         Row: {
