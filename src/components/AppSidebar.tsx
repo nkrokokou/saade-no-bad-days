@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings,
+  DollarSign, Wine, Settings, ShoppingCart, Bot,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
@@ -27,12 +27,14 @@ interface NavItem { title: string; url: string; icon: React.ElementType; roles: 
 
 const navItems: NavItem[] = [
   { title: 'Tableau de bord', url: '/dashboard', icon: LayoutDashboard, roles: ['ceo'] },
+  { title: 'Assistant IA', url: '/insights', icon: Bot, roles: ['ceo'] },
+  { title: 'Achats MP', url: '/achats-mp', icon: ShoppingCart, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
   { title: 'Bons de Transfert', url: '/bons-transfert', icon: FileText, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'salle'] },
   { title: 'Stock Tampon', url: '/stock-tampon', icon: Package, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
   { title: 'Pertes', url: '/pertes', icon: TrendingDown, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
   { title: 'Production Labo', url: '/production', icon: ChefHat, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie'] },
   { title: 'Inventaire', url: '/inventaire', icon: ClipboardList, roles: ['ceo', 'cuisine_salee'] },
-  { title: 'Clôture & Invendus', url: '/cloture', icon: DollarSign, roles: ['ceo', 'salle'] },
+  { title: 'Clôture & Salle', url: '/cloture', icon: DollarSign, roles: ['ceo', 'salle'] },
   { title: 'Dégustations', url: '/degustations', icon: Wine, roles: ['ceo', 'salle'] },
   { title: 'Administration', url: '/admin', icon: Settings, roles: ['ceo'] },
 ];
