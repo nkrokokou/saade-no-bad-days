@@ -14,6 +14,8 @@ import ProductionLabo from "./pages/ProductionLabo";
 import Inventaire from "./pages/Inventaire";
 import ClotureJournaliere from "./pages/ClotureJournaliere";
 import Degustations from "./pages/Degustations";
+import AchatsMP from "./pages/AchatsMP";
+import InsightsBot from "./pages/InsightsBot";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
@@ -36,6 +38,12 @@ const App = () => (
             <Route element={<AppLayout allowedRoles={['ceo']} />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/insights" element={<InsightsBot />} />
+            </Route>
+
+            {/* Achats MP */}
+            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee']} />}>
+              <Route path="/achats-mp" element={<AchatsMP />} />
             </Route>
 
             {/* Bons de Transfert */}
