@@ -31,6 +31,12 @@ export default function ClotureJournaliere() {
 
   const [local, setLocal] = useState<Record<string, Record<string, number>>>({});
 
+  const fields = ['stock_ouverture', 'qte_recue', 'qte_vendue', 'qte_invendu', 'prix_invendu_50', 'qte_perte', 'qte_degustation'] as const;
+  const fieldLabels: Record<string, string> = {
+    stock_ouverture: 'Stock Ouv.', qte_recue: 'Reçu', qte_vendue: 'Vendus',
+    qte_invendu: 'Invendus', prix_invendu_50: '-50%', qte_perte: 'Pertes', qte_degustation: 'Dégust.',
+  };
+
   const getVal = (pid: string, field: string) => {
     if (local[pid]?.[field] !== undefined) return local[pid][field];
     const e = entries.find((x: any) => x.produit_id === pid);
@@ -41,24 +47,30 @@ export default function ClotureJournaliere() {
     setLocal(prev => ({ ...prev, [pid]: { ...prev[pid], [field]: val } }));
   };
 
+  // Calculate stock fin = stock_ouverture + qte_recue - qte_vendue - qte_invendu - qte_perte - qte_degustation
+  const getStockFin = (pid: string) => {
+    const ouv = getVal(pid, 'stock_ouverture');
+    const recu = getVal(pid, 'qte_recue');
+    const vendu = getVal(pid, 'qte_vendue');
+    const invendu = getVal(pid, 'qte_invendu');
+    const perte = getVal(pid, 'qte_perte');
+    const degust = getVal(pid, 'qte_degustation');
+    return ouv + recu - vendu - invendu - perte - degust;
+  };
+
   const save = useMutation({
     mutationFn: async () => {
       for (const [pid, vals] of Object.entries(local)) {
         const existing = entries.find((e: any) => e.produit_id === pid);
+        const fullVals: any = {};
+        for (const f of fields) {
+          fullVals[f] = vals[f] ?? getVal(pid, f);
+        }
         if (existing) {
-          await supabase.from('cloture_journaliere').update({
-            qte_vendue: vals.qte_vendue ?? getVal(pid, 'qte_vendue'),
-            qte_invendu: vals.qte_invendu ?? getVal(pid, 'qte_invendu'),
-            prix_invendu_50: vals.prix_invendu_50 ?? getVal(pid, 'prix_invendu_50'),
-            qte_perte: vals.qte_perte ?? getVal(pid, 'qte_perte'),
-            qte_degustation: vals.qte_degustation ?? getVal(pid, 'qte_degustation'),
-          }).eq('id', existing.id);
+          await supabase.from('cloture_journaliere').update(fullVals).eq('id', existing.id);
         } else {
           await supabase.from('cloture_journaliere').insert({
-            produit_id: pid, date_cloture: selectedDate,
-            qte_vendue: vals.qte_vendue ?? 0, qte_invendu: vals.qte_invendu ?? 0,
-            prix_invendu_50: vals.prix_invendu_50 ?? 0, qte_perte: vals.qte_perte ?? 0,
-            qte_degustation: vals.qte_degustation ?? 0, created_by: user?.id,
+            produit_id: pid, date_cloture: selectedDate, ...fullVals, created_by: user?.id,
           });
         }
       }
@@ -80,18 +92,21 @@ export default function ClotureJournaliere() {
 
   const handleExport = () => {
     const data = products.map(p => ({
-      Produit: p.nom, Catégorie: p.categorie, Vendus: getVal(p.id, 'qte_vendue'),
-      Invendus: getVal(p.id, 'qte_invendu'), 'Invendus -50%': getVal(p.id, 'prix_invendu_50'),
-      Pertes: getVal(p.id, 'qte_perte'), Dégustations: getVal(p.id, 'qte_degustation'),
+      Produit: p.nom, Catégorie: p.categorie,
+      'Stock Ouv.': getVal(p.id, 'stock_ouverture'), 'Reçu': getVal(p.id, 'qte_recue'),
+      Vendus: getVal(p.id, 'qte_vendue'), Invendus: getVal(p.id, 'qte_invendu'),
+      '-50%': getVal(p.id, 'prix_invendu_50'), Pertes: getVal(p.id, 'qte_perte'),
+      Dégustations: getVal(p.id, 'qte_degustation'), 'Stock Fin': getStockFin(p.id),
     }));
     exportToExcel(data, `cloture_${selectedDate}`);
   };
 
   const handleExportPDF = () => {
     exportToPDF(`Clôture Journalière — ${selectedDate}`,
-      ['Produit', 'Vendus', 'Invendus', '-50%', 'Pertes', 'Dégust.'],
-      products.map(p => [p.nom, getVal(p.id, 'qte_vendue'), getVal(p.id, 'qte_invendu'),
-        getVal(p.id, 'prix_invendu_50'), getVal(p.id, 'qte_perte'), getVal(p.id, 'qte_degustation')]));
+      ['Produit', 'Ouv.', 'Reçu', 'Vendus', 'Inv.', '-50%', 'Pertes', 'Dég.', 'Fin'],
+      products.map(p => [p.nom, getVal(p.id, 'stock_ouverture'), getVal(p.id, 'qte_recue'),
+        getVal(p.id, 'qte_vendue'), getVal(p.id, 'qte_invendu'), getVal(p.id, 'prix_invendu_50'),
+        getVal(p.id, 'qte_perte'), getVal(p.id, 'qte_degustation'), getStockFin(p.id)]));
   };
 
   const handleImport = async (file: File) => {
@@ -105,9 +120,11 @@ export default function ClotureJournaliere() {
           setLocal(prev => ({
             ...prev,
             [pid]: {
+              stock_ouverture: Number(row['Stock Ouv.'] || row['stock_ouverture'] || 0),
+              qte_recue: Number(row['Reçu'] || row['qte_recue'] || 0),
               qte_vendue: Number(row['Vendus'] || row['qte_vendue'] || 0),
               qte_invendu: Number(row['Invendus'] || row['qte_invendu'] || 0),
-              prix_invendu_50: Number(row['Invendus -50%'] || row['prix_invendu_50'] || 0),
+              prix_invendu_50: Number(row['-50%'] || row['prix_invendu_50'] || 0),
               qte_perte: Number(row['Pertes'] || row['qte_perte'] || 0),
               qte_degustation: Number(row['Dégustations'] || row['qte_degustation'] || 0),
             },
@@ -150,24 +167,24 @@ export default function ClotureJournaliere() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[180px] sticky left-0 bg-card">Produit</TableHead>
-                  <TableHead>Vendus</TableHead>
-                  <TableHead>Invendus</TableHead>
-                  <TableHead>Invendus -50%</TableHead>
-                  <TableHead>Pertes</TableHead>
-                  <TableHead>Dégust.</TableHead>
+                  <TableHead className="min-w-[140px] sticky left-0 bg-card z-10">Produit</TableHead>
+                  {fields.map(f => <TableHead key={f} className="text-center">{fieldLabels[f]}</TableHead>)}
+                  <TableHead className="text-center font-bold">Stock Fin</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {prods.map(p => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium sticky left-0 bg-card">{p.nom}</TableCell>
-                    {['qte_vendue', 'qte_invendu', 'prix_invendu_50', 'qte_perte', 'qte_degustation'].map(f => (
+                    <TableCell className="font-medium sticky left-0 bg-card z-10">{p.nom}</TableCell>
+                    {fields.map(f => (
                       <TableCell key={f}>
-                        <Input type="number" className="w-20" value={getVal(p.id, f) || ''}
+                        <Input type="number" className="w-16 text-center" value={getVal(p.id, f) || ''}
                           onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} />
                       </TableCell>
                     ))}
+                    <TableCell className={`text-center font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>
+                      {getStockFin(p.id)}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
