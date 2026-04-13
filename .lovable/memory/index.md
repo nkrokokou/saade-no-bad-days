@@ -6,6 +6,7 @@ Design: cream #FAF6F0, caramel #C49A5A, espresso #2C1A0E. Playfair Display + DM 
 Lovable Cloud backend. ~80 real products from Excel in `produits` table.
 Roles: ceo, labo_patisserie, labo_viennoiserie, cuisine_salee, salle — stored in `profiles.role`.
 All sections have Excel import/export + PDF export. Admin panel (CEO only) for user/role CRUD, profile, backup/restore.
+AI insights bot (CEO only) using Lovable AI gateway for data analysis.
 
 ## Memories
 - [Roles & access](mem://features/roles) — Which modules each role can access
