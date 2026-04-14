@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
@@ -29,6 +29,7 @@ const navItems: NavItem[] = [
   { title: 'Tableau de bord', url: '/dashboard', icon: LayoutDashboard, roles: ['ceo'] },
   { title: 'Assistant IA', url: '/insights', icon: Bot, roles: ['ceo'] },
   { title: 'Achats MP', url: '/achats-mp', icon: ShoppingCart, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
+  { title: 'Fiches Techniques', url: '/fiches-techniques', icon: BookOpen, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie'] },
   { title: 'Bons de Transfert', url: '/bons-transfert', icon: FileText, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'salle'] },
   { title: 'Stock Tampon', url: '/stock-tampon', icon: Package, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
   { title: 'Pertes', url: '/pertes', icon: TrendingDown, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
@@ -43,7 +44,6 @@ export function AppSidebar() {
   const { profile, signOut } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
-  const location = useLocation();
 
   if (!profile) return null;
 
@@ -54,9 +54,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <div className="px-4 py-6 border-b border-sidebar-border">
-          {!collapsed && (
-            <h1 className="text-2xl font-heading font-bold text-sidebar-primary tracking-wide">SAADÉ</h1>
-          )}
+          {!collapsed && <h1 className="text-2xl font-heading font-bold text-sidebar-primary tracking-wide">SAADÉ</h1>}
           {collapsed && <h1 className="text-lg font-heading font-bold text-sidebar-primary text-center">S</h1>}
           {!collapsed && (
             <div className="mt-3 flex items-center gap-2">
@@ -73,12 +71,7 @@ export function AppSidebar() {
               {visibleItems.map(item => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === '/dashboard'}
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
+                    <NavLink to={item.url} end={item.url === '/dashboard'} className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
@@ -91,20 +84,10 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        {!collapsed && (
-          <div className="px-4 pb-2">
-            <p className="text-xs text-sidebar-foreground/50 truncate">{profile.full_name}</p>
-          </div>
-        )}
+        {!collapsed && <div className="px-4 pb-2"><p className="text-xs text-sidebar-foreground/50 truncate">{profile.full_name}</p></div>}
         <div className="px-2 pb-4">
-          <Button
-            variant="ghost"
-            size={collapsed ? 'icon' : 'sm'}
-            className="w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={signOut}
-          >
-            <LogOut className="h-4 w-4" />
-            {!collapsed && <span className="ml-2">Déconnexion</span>}
+          <Button variant="ghost" size={collapsed ? 'icon' : 'sm'} className="w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={signOut}>
+            <LogOut className="h-4 w-4" />{!collapsed && <span className="ml-2">Déconnexion</span>}
           </Button>
         </div>
       </SidebarFooter>

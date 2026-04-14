@@ -6,6 +6,7 @@ export interface Produit {
   nom: string;
   categorie: string;
   unite?: string;
+  prix_vente?: number;
 }
 
 export function useProducts(categorie?: string) {

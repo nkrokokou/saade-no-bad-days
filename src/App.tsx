@@ -16,6 +16,7 @@ import ClotureJournaliere from "./pages/ClotureJournaliere";
 import Degustations from "./pages/Degustations";
 import AchatsMP from "./pages/AchatsMP";
 import InsightsBot from "./pages/InsightsBot";
+import FichesTechniques from "./pages/FichesTechniques";
 import Admin from "./pages/Admin";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,11 @@ const App = () => (
             {/* Achats MP */}
             <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee']} />}>
               <Route path="/achats-mp" element={<AchatsMP />} />
+            </Route>
+
+            {/* Fiches Techniques */}
+            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie']} />}>
+              <Route path="/fiches-techniques" element={<FichesTechniques />} />
             </Route>
 
             {/* Bons de Transfert */}

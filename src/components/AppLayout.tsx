@@ -2,6 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function AppLayout({ allowedRoles }: { allowedRoles?: UserRole[] }) {
@@ -31,6 +32,7 @@ export function AppLayout({ allowedRoles }: { allowedRoles?: UserRole[] }) {
             <SidebarTrigger className="mr-4" />
             <h2 className="text-lg font-heading font-semibold text-foreground">SAADÉ</h2>
             <span className="ml-2 text-xs text-muted-foreground hidden sm:inline">Laboratoire & Boutique</span>
+            <div className="ml-auto"><ThemeToggle /></div>
           </header>
           <main className="flex-1 p-4 md:p-6 animate-fade-in">
             <Outlet />
