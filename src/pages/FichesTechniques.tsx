@@ -1,0 +1,231 @@
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProducts } from '@/hooks/useProducts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { SearchFilter } from '@/components/SearchFilter';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { toast } from 'sonner';
+import { Plus, Trash2, BookOpen, Calculator } from 'lucide-react';
+
+export default function FichesTechniques() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: products = [] } = useProducts();
+  const [search, setSearch] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [form, setForm] = useState({ matiere_premiere: '', quantite_mp: 0, unite_mp: 'kg', cout_unitaire_mp: 0 });
+
+  const { data: fiches = [] } = useQuery({
+    queryKey: ['fiches_techniques', selectedProduct],
+    enabled: !!selectedProduct,
+    queryFn: async () => {
+      const { data } = await supabase.from('fiches_techniques')
+        .select('*')
+        .eq('produit_id', selectedProduct)
+        .order('created_at');
+      return data || [];
+    },
+  });
+
+  const filteredProducts = useMemo(() => {
+    if (!search) return products;
+    const s = search.toLowerCase();
+    return products.filter(p => p.nom.toLowerCase().includes(s) || p.categorie.toLowerCase().includes(s));
+  }, [products, search]);
+
+  const grouped = filteredProducts.reduce((acc, p) => {
+    const cat = p.categorie || 'DIVERS';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(p);
+    return acc;
+  }, {} as Record<string, typeof products>);
+
+  const addFiche = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('fiches_techniques').insert({
+        produit_id: selectedProduct!,
+        matiere_premiere: form.matiere_premiere,
+        quantite_mp: form.quantite_mp,
+        unite_mp: form.unite_mp,
+        cout_unitaire_mp: form.cout_unitaire_mp,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      setShowAdd(false);
+      setForm({ matiere_premiere: '', quantite_mp: 0, unite_mp: 'kg', cout_unitaire_mp: 0 });
+      toast.success('Ingrédient ajouté');
+    },
+  });
+
+  const deleteFiche = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('fiches_techniques').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      setDeleteId(null);
+      toast.success('Ingrédient supprimé');
+    },
+  });
+
+  const selectedProd = products.find(p => p.id === selectedProduct);
+  const coutTotal = fiches.reduce((s: number, f: any) => s + (f.quantite_mp * f.cout_unitaire_mp), 0);
+
+  if (selectedProduct && selectedProd) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => setSelectedProduct(null)}>← Retour</Button>
+            <h1 className="text-xl font-heading font-bold">{selectedProd.nom}</h1>
+          </div>
+          <Dialog open={showAdd} onOpenChange={setShowAdd}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-1" /> Ajouter MP</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Ajouter une matière première</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div><Label>Matière première</Label><Input value={form.matiere_premiere} onChange={e => setForm(p => ({ ...p, matiere_premiere: e.target.value }))} placeholder="Ex: Farine T55" /></div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label>Quantité</Label><Input type="number" value={form.quantite_mp || ''} onChange={e => setForm(p => ({ ...p, quantite_mp: parseFloat(e.target.value) || 0 }))} /></div>
+                  <div><Label>Unité</Label>
+                    <Select value={form.unite_mp} onValueChange={v => setForm(p => ({ ...p, unite_mp: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {['kg', 'g', 'L', 'mL', 'pièce', 'unité'].map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div><Label>Coût unitaire (FCFA/{form.unite_mp})</Label><Input type="number" value={form.cout_unitaire_mp || ''} onChange={e => setForm(p => ({ ...p, cout_unitaire_mp: parseFloat(e.target.value) || 0 }))} /></div>
+                <p className="text-sm text-muted-foreground">Coût : {((form.quantite_mp || 0) * (form.cout_unitaire_mp || 0)).toLocaleString('fr-FR')} FCFA</p>
+                <Button className="w-full" onClick={() => addFiche.mutate()} disabled={addFiche.isPending || !form.matiere_premiere}>
+                  {addFiche.isPending ? 'Ajout...' : 'Ajouter'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground">Coût de revient</p>
+              <p className="text-xl font-bold text-primary">{coutTotal.toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground">Prix de vente</p>
+              <p className="text-xl font-bold">{(selectedProd.prix_vente || 0).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs text-muted-foreground">Marge</p>
+              <p className={`text-xl font-bold ${(selectedProd.prix_vente || 0) - coutTotal > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                {((selectedProd.prix_vente || 0) - coutTotal).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardContent className="overflow-x-auto pt-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Matière première</TableHead>
+                  <TableHead>Quantité</TableHead>
+                  <TableHead>Unité</TableHead>
+                  <TableHead>Coût/unité</TableHead>
+                  <TableHead>Coût total</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {fiches.map((f: any) => (
+                  <TableRow key={f.id}>
+                    <TableCell className="font-medium">{f.matiere_premiere}</TableCell>
+                    <TableCell>{f.quantite_mp}</TableCell>
+                    <TableCell>{f.unite_mp}</TableCell>
+                    <TableCell>{f.cout_unitaire_mp?.toLocaleString('fr-FR')}</TableCell>
+                    <TableCell className="font-medium">{(f.quantite_mp * f.cout_unitaire_mp).toLocaleString('fr-FR')}</TableCell>
+                    <TableCell>
+                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(f.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {fiches.length === 0 && (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucun ingrédient — ajoutez les matières premières</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <ConfirmDialog
+          open={!!deleteId}
+          onOpenChange={() => setDeleteId(null)}
+          title="Supprimer l'ingrédient ?"
+          description="Cette action est irréversible."
+          destructive
+          onConfirm={() => deleteId && deleteFiche.mutate(deleteId)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
+          <BookOpen className="h-6 w-6 text-primary" /> Fiches Techniques
+        </h1>
+        <SearchFilter value={search} onChange={setSearch} className="w-64" />
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        <Calculator className="h-4 w-4 inline mr-1" />
+        Sélectionnez un produit pour voir/éditer sa fiche technique (recette + coût de revient)
+      </p>
+
+      {Object.entries(grouped).map(([cat, prods]) => (
+        <Card key={cat}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm uppercase text-muted-foreground tracking-wider">{cat}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {prods.map(p => (
+                <Button key={p.id} variant="outline" className="justify-start h-auto py-3 px-4" onClick={() => setSelectedProduct(p.id)}>
+                  <div className="text-left">
+                    <p className="font-medium text-sm">{p.nom}</p>
+                    {(p.prix_vente ?? 0) > 0 && <p className="text-xs text-muted-foreground">{p.prix_vente?.toLocaleString('fr-FR')} FCFA</p>}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
