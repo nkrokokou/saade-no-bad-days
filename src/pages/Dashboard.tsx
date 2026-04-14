@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingDown, Package, Activity, ShoppingCart, DollarSign, ChefHat } from 'lucide-react';
+import { FileText, TrendingDown, Package, ChefHat, ShoppingCart, AlertTriangle, ArrowRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { format, startOfWeek, endOfWeek, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
-const COLORS = ['hsl(33, 45%, 56%)', 'hsl(33, 45%, 40%)', 'hsl(33, 45%, 70%)', 'hsl(20, 50%, 50%)', 'hsl(45, 60%, 55%)'];
+const COLORS = ['hsl(33, 45%, 56%)', 'hsl(142, 50%, 45%)', 'hsl(0, 60%, 50%)', 'hsl(38, 92%, 50%)', 'hsl(220, 50%, 50%)'];
 
 export default function Dashboard() {
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -25,9 +26,7 @@ export default function Dashboard() {
   const { data: weeklyLosses = [] } = useQuery({
     queryKey: ['weekly-losses'],
     queryFn: async () => {
-      const { data } = await supabase.from('pertes')
-        .select('type_labo, quantite')
-        .gte('semaine_debut', weekStart).lte('semaine_debut', weekEnd);
+      const { data } = await supabase.from('pertes').select('type_labo, quantite').gte('semaine_debut', weekStart).lte('semaine_debut', weekEnd);
       return data || [];
     },
   });
@@ -35,9 +34,7 @@ export default function Dashboard() {
   const { data: weekProduction = [] } = useQuery({
     queryKey: ['week-production'],
     queryFn: async () => {
-      const { data } = await supabase.from('production_labo')
-        .select('date_production, qte_produite, qte_sortie_en_salle, qte_perte')
-        .gte('date_production', last7[0]).lte('date_production', last7[6]);
+      const { data } = await supabase.from('production_labo').select('date_production, qte_produite, qte_sortie_en_salle, qte_perte, produit_id, produits(nom)').gte('date_production', last7[0]).lte('date_production', last7[6]);
       return data || [];
     },
   });
@@ -45,9 +42,7 @@ export default function Dashboard() {
   const { data: weekCloture = [] } = useQuery({
     queryKey: ['week-cloture'],
     queryFn: async () => {
-      const { data } = await supabase.from('cloture_journaliere')
-        .select('date_cloture, qte_vendue, qte_invendu, qte_perte, prix_invendu_50')
-        .gte('date_cloture', last7[0]).lte('date_cloture', last7[6]);
+      const { data } = await supabase.from('cloture_journaliere').select('date_cloture, qte_vendue, qte_invendu, qte_perte, prix_invendu_50, produit_id, produits(nom)').gte('date_cloture', last7[0]).lte('date_cloture', last7[6]);
       return data || [];
     },
   });
@@ -56,8 +51,7 @@ export default function Dashboard() {
     queryKey: ['month-achats'],
     queryFn: async () => {
       const monthStart = format(subDays(new Date(), 30), 'yyyy-MM-dd');
-      const { data } = await supabase.from('achats_mp').select('prix_total, date_achat')
-        .gte('date_achat', monthStart);
+      const { data } = await supabase.from('achats_mp').select('prix_total, date_achat').gte('date_achat', monthStart);
       return data || [];
     },
   });
@@ -65,9 +59,7 @@ export default function Dashboard() {
   const { data: recentBons = [] } = useQuery({
     queryKey: ['recent-bons'],
     queryFn: async () => {
-      const { data } = await supabase.from('bons_transfert')
-        .select('id, date_transfert, statut, created_at')
-        .order('created_at', { ascending: false }).limit(5);
+      const { data } = await supabase.from('bons_transfert').select('id, date_transfert, statut, created_at').order('created_at', { ascending: false }).limit(5);
       return data || [];
     },
   });
@@ -76,13 +68,11 @@ export default function Dashboard() {
   const totalAchats = monthAchats.reduce((s: number, a: any) => s + (a.prix_total || 0), 0);
   const totalProd = weekProduction.reduce((s: number, p: any) => s + (p.qte_produite || 0), 0);
   const totalVendu = weekCloture.reduce((s: number, c: any) => s + (c.qte_vendue || 0), 0);
+  const totalSortie = weekProduction.reduce((s: number, p: any) => s + (p.qte_sortie_en_salle || 0), 0);
+  const totalInvendu = weekCloture.reduce((s: number, c: any) => s + (c.qte_invendu || 0), 0);
+  const totalPertesCloture = weekCloture.reduce((s: number, c: any) => s + (c.qte_perte || 0), 0);
 
-  const lossChartData = ['labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'].map(lab => ({
-    name: lab === 'labo_patisserie' ? 'Pâtisserie' : lab === 'labo_viennoiserie' ? 'Viennoiserie' : 'Cuisine',
-    total: weeklyLosses.filter((l: any) => l.type_labo === lab).reduce((s: number, l: any) => s + (l.quantite || 0), 0),
-  }));
-
-  // Production vs Ventes trend
+  // Trend data
   const trendData = last7.map(d => {
     const dayProd = weekProduction.filter((p: any) => p.date_production === d);
     const dayClo = weekCloture.filter((c: any) => c.date_cloture === d);
@@ -94,12 +84,24 @@ export default function Dashboard() {
     };
   });
 
-  // Reconciliation pie
+  // Reconciliation
   const reconcData = [
-    { name: 'Vendu', value: totalVendu },
-    { name: 'Pertes', value: totalLosses },
-    { name: 'Invendus', value: weekCloture.reduce((s: number, c: any) => s + (c.qte_invendu || 0), 0) },
+    { name: 'Vendu', value: totalVendu, color: COLORS[1] },
+    { name: 'Invendu', value: totalInvendu, color: COLORS[3] },
+    { name: 'Pertes Salle', value: totalPertesCloture, color: COLORS[2] },
+    { name: 'Pertes Labo', value: totalLosses, color: 'hsl(0, 40%, 65%)' },
   ].filter(d => d.value > 0);
+
+  const lossChartData = ['labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'].map(lab => ({
+    name: lab === 'labo_patisserie' ? 'Pâtisserie' : lab === 'labo_viennoiserie' ? 'Viennoiserie' : 'Cuisine',
+    total: weeklyLosses.filter((l: any) => l.type_labo === lab).reduce((s: number, l: any) => s + (l.quantite || 0), 0),
+  }));
+
+  // Alerts
+  const alerts: { message: string; type: 'warning' | 'danger' }[] = [];
+  if (totalLosses > 20) alerts.push({ message: `⚠️ Pertes élevées cette semaine : ${totalLosses} unités`, type: 'danger' });
+  if (totalProd > 0 && totalSortie / totalProd < 0.7) alerts.push({ message: `⚠️ Seulement ${Math.round(totalSortie / totalProd * 100)}% de la production arrive en salle`, type: 'warning' });
+  if (totalVendu > 0 && totalInvendu / totalVendu > 0.2) alerts.push({ message: `⚠️ Taux d'invendus élevé : ${Math.round(totalInvendu / totalVendu * 100)}%`, type: 'warning' });
 
   const statusLabel: Record<string, string> = { brouillon: 'Brouillon', livre: 'Livré', recu: 'Reçu', cloture: 'Clôturé' };
 
@@ -107,39 +109,60 @@ export default function Dashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-heading font-bold">Tableau de bord</h1>
 
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.map((a, i) => (
+            <div key={i} className={`flex items-center gap-2 p-3 rounded-lg text-sm ${a.type === 'danger' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {a.message}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Transferts auj.</CardTitle>
-            <FileText className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{transfersToday.length}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Pertes (sem.)</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{totalLosses}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Production (sem.)</CardTitle>
-            <ChefHat className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{totalProd}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Achats MP (mois)</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><p className="text-lg font-bold">{totalAchats.toLocaleString('fr-FR')} <span className="text-xs text-muted-foreground">FCFA</span></p></CardContent>
-        </Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Transferts auj.</CardTitle><FileText className="h-4 w-4 text-primary" /></CardHeader><CardContent><p className="text-2xl font-bold">{transfersToday.length}</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Pertes (sem.)</CardTitle><TrendingDown className="h-4 w-4 text-destructive" /></CardHeader><CardContent><p className="text-2xl font-bold">{totalLosses}</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Production (sem.)</CardTitle><ChefHat className="h-4 w-4 text-primary" /></CardHeader><CardContent><p className="text-2xl font-bold">{totalProd}</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Achats MP (mois)</CardTitle><ShoppingCart className="h-4 w-4 text-primary" /></CardHeader><CardContent><p className="text-lg font-bold">{totalAchats.toLocaleString('fr-FR')} <span className="text-xs text-muted-foreground">FCFA</span></p></CardContent></Card>
       </div>
 
-      {/* Charts row */}
+      {/* Reconciliation Flow */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Réconciliation (7 jours)</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-center text-sm">
+            <div className="bg-primary/10 rounded-lg p-3 min-w-[100px]">
+              <p className="text-2xl font-bold text-primary">{totalProd}</p>
+              <p className="text-xs text-muted-foreground">Produit</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
+            <div className="bg-primary/10 rounded-lg p-3 min-w-[100px]">
+              <p className="text-2xl font-bold text-primary">{totalSortie}</p>
+              <p className="text-xs text-muted-foreground">→ Salle</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
+            <div className="bg-green-500/10 rounded-lg p-3 min-w-[100px]">
+              <p className="text-2xl font-bold text-green-600">{totalVendu}</p>
+              <p className="text-xs text-muted-foreground">Vendu</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
+            <div className="bg-warning/10 rounded-lg p-3 min-w-[100px]">
+              <p className="text-2xl font-bold text-warning">{totalInvendu}</p>
+              <p className="text-xs text-muted-foreground">Invendu</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
+            <div className="bg-destructive/10 rounded-lg p-3 min-w-[100px]">
+              <p className="text-2xl font-bold text-destructive">{totalLosses + totalPertesCloture}</p>
+              <p className="text-xs text-muted-foreground">Pertes</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle className="text-base">Production vs Ventes (7j)</CardTitle></CardHeader>
@@ -164,7 +187,7 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={reconcData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {reconcData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    {reconcData.map((d, i) => <Cell key={i} fill={d.color} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -201,9 +224,7 @@ export default function Dashboard() {
                     <p className="text-sm font-medium">Bon #{bon.id.slice(0, 8)}</p>
                     <p className="text-xs text-muted-foreground">{format(new Date(bon.created_at), 'dd/MM/yyyy HH:mm')}</p>
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
-                    {statusLabel[bon.statut] || bon.statut}
-                  </span>
+                  <Badge variant="secondary">{statusLabel[bon.statut] || bon.statut}</Badge>
                 </div>
               ))}
               {recentBons.length === 0 && <p className="text-sm text-muted-foreground">Aucune activité récente</p>}
