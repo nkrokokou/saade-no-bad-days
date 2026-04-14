@@ -219,6 +219,47 @@ export type Database = {
           },
         ]
       }
+      fiches_techniques: {
+        Row: {
+          cout_unitaire_mp: number
+          created_at: string
+          created_by: string | null
+          id: string
+          matiere_premiere: string
+          produit_id: string
+          quantite_mp: number
+          unite_mp: string
+        }
+        Insert: {
+          cout_unitaire_mp?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matiere_premiere: string
+          produit_id: string
+          quantite_mp?: number
+          unite_mp?: string
+        }
+        Update: {
+          cout_unitaire_mp?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matiere_premiere?: string
+          produit_id?: string
+          quantite_mp?: number
+          unite_mp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiches_techniques_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventaire: {
         Row: {
           created_at: string
@@ -381,6 +422,7 @@ export type Database = {
           created_at: string
           id: string
           nom: string
+          prix_vente: number
           unite: string | null
         }
         Insert: {
@@ -388,6 +430,7 @@ export type Database = {
           created_at?: string
           id?: string
           nom: string
+          prix_vente?: number
           unite?: string | null
         }
         Update: {
@@ -395,6 +438,7 @@ export type Database = {
           created_at?: string
           id?: string
           nom?: string
+          prix_vente?: number
           unite?: string | null
         }
         Relationships: []
