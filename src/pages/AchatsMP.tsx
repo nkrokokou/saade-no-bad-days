@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { SearchFilter } from '@/components/SearchFilter';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { exportToExcel, exportToPDF, parseExcelFile } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
@@ -19,104 +21,72 @@ export default function AchatsMP() {
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0 });
 
   const { data: achats = [] } = useQuery({
     queryKey: ['achats_mp', selectedDate],
-    queryFn: async () => {
-      const { data } = await supabase.from('achats_mp')
-        .select('*')
-        .eq('date_achat', selectedDate)
-        .order('created_at', { ascending: false });
-      return data || [];
-    },
+    queryFn: async () => { const { data } = await supabase.from('achats_mp').select('*').eq('date_achat', selectedDate).order('created_at', { ascending: false }); return data || []; },
   });
+
+  const filteredAchats = useMemo(() => {
+    if (!search) return achats;
+    const s = search.toLowerCase();
+    return achats.filter((a: any) => a.produit.toLowerCase().includes(s) || a.fournisseur.toLowerCase().includes(s));
+  }, [achats, search]);
 
   const addAchat = useMutation({
     mutationFn: async () => {
-      const prix_total = form.quantite * form.prix_unitaire;
-      const { error } = await supabase.from('achats_mp').insert({
-        date_achat: selectedDate,
-        fournisseur: form.fournisseur,
-        produit: form.produit,
-        quantite: form.quantite,
-        unite: form.unite,
-        prix_unitaire: form.prix_unitaire,
-        prix_total,
-        created_by: user?.id,
-      });
+      const { error } = await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur: form.fournisseur, produit: form.produit, quantite: form.quantite, unite: form.unite, prix_unitaire: form.prix_unitaire, prix_total: form.quantite * form.prix_unitaire, created_by: user?.id });
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['achats_mp'] });
-      setShowAdd(false);
-      setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0 });
-      toast.success('Achat ajouté');
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0 }); toast.success('Achat ajouté'); },
     onError: () => toast.error('Erreur'),
   });
 
   const deleteAchat = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('achats_mp').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['achats_mp'] });
-      toast.success('Achat supprimé');
-    },
+    mutationFn: async (id: string) => { const { error } = await supabase.from('achats_mp').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); setDeleteId(null); toast.success('Achat supprimé'); },
   });
 
   const totalJour = achats.reduce((s: number, a: any) => s + (a.prix_total || 0), 0);
 
   const handleExport = () => {
-    exportToExcel(achats.map((a: any) => ({
-      Fournisseur: a.fournisseur, Produit: a.produit, Quantité: a.quantite,
-      Unité: a.unite, 'Prix Unit.': a.prix_unitaire, 'Prix Total': a.prix_total,
-    })), `achats_mp_${selectedDate}`);
+    exportToExcel(achats.map((a: any) => ({ Fournisseur: a.fournisseur, Produit: a.produit, Quantité: a.quantite, Unité: a.unite, 'Prix Unit.': a.prix_unitaire, 'Prix Total': a.prix_total })), `achats_mp_${selectedDate}`);
   };
-
   const handleExportPDF = () => {
-    exportToPDF(`Achats MP — ${selectedDate}`,
-      ['Fournisseur', 'Produit', 'Qté', 'Unité', 'P.U.', 'Total'],
+    exportToPDF(`Achats MP — ${selectedDate}`, ['Fournisseur', 'Produit', 'Qté', 'Unité', 'P.U.', 'Total'],
       achats.map((a: any) => [a.fournisseur, a.produit, a.quantite, a.unite, a.prix_unitaire, a.prix_total]));
   };
-
   const handleImport = async (file: File) => {
     try {
       const rows = await parseExcelFile(file);
       let imported = 0;
       for (const row of rows) {
-        const produit = String(row['Produit'] || row['produit'] || Object.values(row)[1] || '');
-        const fournisseur = String(row['Fournisseur'] || row['fournisseur'] || Object.values(row)[0] || '');
-        const quantite = Number(row['Quantité'] || row['quantite'] || row['QTE'] || 0);
-        const unite = String(row['Unité'] || row['unite'] || 'kg');
-        const prix_unitaire = Number(row['Prix Unit.'] || row['prix_unitaire'] || 0);
-        const prix_total = Number(row['Prix Total'] || row['prix_total'] || quantite * prix_unitaire);
+        const produit = String(row['Produit'] || Object.values(row)[1] || '');
+        const fournisseur = String(row['Fournisseur'] || Object.values(row)[0] || '');
+        const quantite = Number(row['Quantité'] || 0);
+        const prix_unitaire = Number(row['Prix Unit.'] || 0);
         if (produit) {
-          await supabase.from('achats_mp').insert({
-            date_achat: selectedDate, fournisseur, produit, quantite, unite, prix_unitaire, prix_total, created_by: user?.id,
-          });
+          await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur, produit, quantite, unite: String(row['Unité'] || 'kg'), prix_unitaire, prix_total: quantite * prix_unitaire, created_by: user?.id });
           imported++;
         }
       }
       qc.invalidateQueries({ queryKey: ['achats_mp'] });
       toast.success(`${imported} achats importés`);
-    } catch { toast.error('Erreur de lecture du fichier'); }
+    } catch { toast.error('Erreur'); }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
-          <ShoppingCart className="h-6 w-6 text-primary" /> Achats Matières Premières
-        </h1>
+        <h1 className="text-2xl font-heading font-bold flex items-center gap-2"><ShoppingCart className="h-6 w-6 text-primary" /> Achats MP</h1>
         <div className="flex gap-2 flex-wrap">
+          <SearchFilter value={search} onChange={setSearch} placeholder="Rechercher…" className="w-48" />
           <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
           <Dialog open={showAdd} onOpenChange={setShowAdd}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
-            </DialogTrigger>
+            <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Ajouter</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Nouvel achat</DialogTitle></DialogHeader>
               <div className="space-y-3">
@@ -128,9 +98,7 @@ export default function AchatsMP() {
                 </div>
                 <div><Label>Prix unitaire (FCFA)</Label><Input type="number" value={form.prix_unitaire || ''} onChange={e => setForm(p => ({ ...p, prix_unitaire: parseFloat(e.target.value) || 0 }))} /></div>
                 <p className="text-sm text-muted-foreground">Total : {((form.quantite || 0) * (form.prix_unitaire || 0)).toLocaleString('fr-FR')} FCFA</p>
-                <Button className="w-full" onClick={() => addAchat.mutate()} disabled={addAchat.isPending || !form.produit}>
-                  {addAchat.isPending ? 'Ajout...' : 'Ajouter'}
-                </Button>
+                <Button className="w-full" onClick={() => addAchat.mutate()} disabled={addAchat.isPending || !form.produit}>{addAchat.isPending ? 'Ajout...' : 'Ajouter'}</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -138,58 +106,49 @@ export default function AchatsMP() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronLeft className="h-4 w-4" /></Button>
         <Input type="date" className="w-44" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
-        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronRight className="h-4 w-4" /></Button>
       </div>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex justify-between">
-            <span>Achats du jour</span>
-            <span className="text-primary font-bold">{totalJour.toLocaleString('fr-FR')} FCFA</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fournisseur</TableHead>
-                <TableHead>Produit</TableHead>
-                <TableHead>Qté</TableHead>
-                <TableHead>Unité</TableHead>
-                <TableHead>P.U.</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm flex justify-between"><span>Achats du jour</span><span className="text-primary font-bold">{totalJour.toLocaleString('fr-FR')} FCFA</span></CardTitle></CardHeader>
+        <CardContent>
+          {/* Mobile */}
+          <div className="block md:hidden space-y-3">
+            {filteredAchats.map((a: any) => (
+              <div key={a.id} className="border rounded-lg p-3">
+                <div className="flex justify-between items-start">
+                  <div><p className="font-medium text-sm">{a.produit}</p><p className="text-xs text-muted-foreground">{a.fournisseur}</p></div>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(a.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                </div>
+                <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                  <span>{a.quantite} {a.unite}</span>
+                  <span>P.U. {a.prix_unitaire?.toLocaleString('fr-FR')}</span>
+                  <span className="font-medium text-foreground">{a.prix_total?.toLocaleString('fr-FR')} FCFA</span>
+                </div>
+              </div>
+            ))}
+            {filteredAchats.length === 0 && <p className="text-center text-muted-foreground py-4">Aucun achat</p>}
+          </div>
+          {/* Desktop */}
+          <Table className="hidden md:table">
+            <TableHeader><TableRow><TableHead>Fournisseur</TableHead><TableHead>Produit</TableHead><TableHead>Qté</TableHead><TableHead>Unité</TableHead><TableHead>P.U.</TableHead><TableHead>Total</TableHead><TableHead className="w-12"></TableHead></TableRow></TableHeader>
             <TableBody>
-              {achats.map((a: any) => (
+              {filteredAchats.map((a: any) => (
                 <TableRow key={a.id}>
-                  <TableCell>{a.fournisseur}</TableCell>
-                  <TableCell className="font-medium">{a.produit}</TableCell>
-                  <TableCell>{a.quantite}</TableCell>
-                  <TableCell>{a.unite}</TableCell>
-                  <TableCell>{a.prix_unitaire?.toLocaleString('fr-FR')}</TableCell>
-                  <TableCell className="font-medium">{a.prix_total?.toLocaleString('fr-FR')}</TableCell>
-                  <TableCell>
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm('Supprimer ?')) deleteAchat.mutate(a.id); }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+                  <TableCell>{a.fournisseur}</TableCell><TableCell className="font-medium">{a.produit}</TableCell><TableCell>{a.quantite}</TableCell><TableCell>{a.unite}</TableCell>
+                  <TableCell>{a.prix_unitaire?.toLocaleString('fr-FR')}</TableCell><TableCell className="font-medium">{a.prix_total?.toLocaleString('fr-FR')}</TableCell>
+                  <TableCell><Button size="icon" variant="ghost" onClick={() => setDeleteId(a.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>
               ))}
-              {achats.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucun achat ce jour</TableCell></TableRow>
-              )}
+              {filteredAchats.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucun achat ce jour</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <ConfirmDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)} title="Supprimer cet achat ?" description="Cette action est irréversible." destructive onConfirm={() => deleteId && deleteAchat.mutate(deleteId)} />
     </div>
   );
 }
