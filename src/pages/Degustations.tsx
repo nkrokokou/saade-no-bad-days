@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { PhotoUpload } from '@/components/PhotoUpload';
 import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
@@ -29,7 +30,7 @@ export default function Degustations() {
     },
   });
 
-  const [local, setLocal] = useState<Record<string, { quantite: number; motif: string }>>({});
+  const [local, setLocal] = useState<Record<string, { quantite: number; motif: string; photo_url?: string | null }>>({});
 
   const getQty = (pid: string) => {
     if (local[pid]?.quantite !== undefined) return local[pid].quantite;
@@ -43,25 +44,36 @@ export default function Degustations() {
     return e?.motif ?? '';
   };
 
+  const getPhoto = (pid: string): string | null => {
+    if (local[pid]?.photo_url !== undefined) return local[pid].photo_url ?? null;
+    const e = entries.find((x: any) => x.produit_id === pid);
+    return (e as any)?.photo_url ?? null;
+  };
+
   const setQty = (pid: string, val: number) => {
-    setLocal(prev => ({ ...prev, [pid]: { quantite: val, motif: prev[pid]?.motif ?? getMotif(pid) } }));
+    setLocal(prev => ({ ...prev, [pid]: { quantite: val, motif: prev[pid]?.motif ?? getMotif(pid), photo_url: prev[pid]?.photo_url ?? getPhoto(pid) } }));
   };
 
   const setMotif = (pid: string, val: string) => {
-    setLocal(prev => ({ ...prev, [pid]: { quantite: prev[pid]?.quantite ?? getQty(pid), motif: val } }));
+    setLocal(prev => ({ ...prev, [pid]: { quantite: prev[pid]?.quantite ?? getQty(pid), motif: val, photo_url: prev[pid]?.photo_url ?? getPhoto(pid) } }));
+  };
+
+  const setPhoto = (pid: string, url: string | null) => {
+    setLocal(prev => ({ ...prev, [pid]: { quantite: prev[pid]?.quantite ?? getQty(pid), motif: prev[pid]?.motif ?? getMotif(pid), photo_url: url } }));
   };
 
   const save = useMutation({
     mutationFn: async () => {
       for (const [pid, vals] of Object.entries(local)) {
-        if (vals.quantite === 0 && !vals.motif) continue;
+        if (vals.quantite === 0 && !vals.motif && !vals.photo_url) continue;
         const existing = entries.find((e: any) => e.produit_id === pid);
+        const payload: any = { quantite: vals.quantite, motif: vals.motif, photo_url: vals.photo_url ?? null };
         if (existing) {
-          await supabase.from('degustations').update(vals).eq('id', existing.id);
+          await supabase.from('degustations').update(payload).eq('id', existing.id);
         } else {
           await supabase.from('degustations').insert({
             produit_id: pid, date_degustation: selectedDate,
-            quantite: vals.quantite, motif: vals.motif, created_by: user?.id,
+            ...payload, created_by: user?.id,
           });
         }
       }
@@ -143,13 +155,30 @@ export default function Degustations() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm uppercase text-muted-foreground tracking-wider">{cat}</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
+          <CardContent className="overflow-x-auto p-3 sm:p-6">
+            {/* Mobile cards */}
+            <div className="block md:hidden space-y-2">
+              {prods.map(p => (
+                <div key={p.id} className="border rounded-lg p-2.5 space-y-2">
+                  <p className="font-medium text-sm">{p.nom}</p>
+                  <div className="flex gap-2 items-center">
+                    <Input type="number" className="w-20 h-9" placeholder="Qté" value={getQty(p.id) || ''}
+                      onChange={e => setQty(p.id, parseFloat(e.target.value) || 0)} />
+                    <Input placeholder="Motif" className="flex-1 h-9" value={getMotif(p.id)}
+                      onChange={e => setMotif(p.id, e.target.value)} />
+                    <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <Table className="hidden md:table">
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[180px]">Produit</TableHead>
                   <TableHead className="w-24">Quantité</TableHead>
                   <TableHead>Motif</TableHead>
+                  <TableHead className="w-32">Photo</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -163,6 +192,9 @@ export default function Degustations() {
                     <TableCell>
                       <Input placeholder="Client, événement..." className="w-full" value={getMotif(p.id)}
                         onChange={e => setMotif(p.id, e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
                     </TableCell>
                   </TableRow>
                 ))}

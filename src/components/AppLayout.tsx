@@ -54,7 +54,7 @@ export function AppLayout({ module }: { module?: ModuleKey }) {
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 animate-fade-in">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 animate-fade-in tap-highlight safe-bottom">
             <Outlet />
           </main>
         </div>
