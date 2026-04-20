@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
   { title: 'Clôture & Salle', url: '/cloture', icon: DollarSign, module: 'cloture' },
   { title: 'Dégustations', url: '/degustations', icon: Wine, module: 'degustations' },
   { title: 'Administration', url: '/admin', icon: Settings, module: 'admin' },
+  { title: "Journal d'activité", url: '/audit', icon: History, module: 'admin' },
 ];
 
 export function AppSidebar() {
