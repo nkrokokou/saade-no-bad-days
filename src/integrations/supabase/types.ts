@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          record_id: string | null
+          table_name: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          record_id?: string | null
+          table_name: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          record_id?: string | null
+          table_name?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       bon_transfert_lignes: {
         Row: {
           bon_transfert_id: string
@@ -110,21 +143,42 @@ export type Database = {
           created_by: string | null
           date_transfert: string
           id: string
+          notes: string | null
+          received_at: string | null
+          received_by: string | null
+          sent_at: string | null
+          sent_by: string | null
           statut: string
+          validated_at: string | null
+          validated_by: string | null
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           date_transfert: string
           id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
           statut?: string
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string | null
           date_transfert?: string
           id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
           statut?: string
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Relationships: []
       }
