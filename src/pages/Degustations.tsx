@@ -30,7 +30,7 @@ export default function Degustations() {
     },
   });
 
-  const [local, setLocal] = useState<Record<string, { quantite: number; motif: string }>>({});
+  const [local, setLocal] = useState<Record<string, { quantite: number; motif: string; photo_url?: string | null }>>({});
 
   const getQty = (pid: string) => {
     if (local[pid]?.quantite !== undefined) return local[pid].quantite;
@@ -44,25 +44,36 @@ export default function Degustations() {
     return e?.motif ?? '';
   };
 
+  const getPhoto = (pid: string): string | null => {
+    if (local[pid]?.photo_url !== undefined) return local[pid].photo_url ?? null;
+    const e = entries.find((x: any) => x.produit_id === pid);
+    return (e as any)?.photo_url ?? null;
+  };
+
   const setQty = (pid: string, val: number) => {
-    setLocal(prev => ({ ...prev, [pid]: { quantite: val, motif: prev[pid]?.motif ?? getMotif(pid) } }));
+    setLocal(prev => ({ ...prev, [pid]: { quantite: val, motif: prev[pid]?.motif ?? getMotif(pid), photo_url: prev[pid]?.photo_url ?? getPhoto(pid) } }));
   };
 
   const setMotif = (pid: string, val: string) => {
-    setLocal(prev => ({ ...prev, [pid]: { quantite: prev[pid]?.quantite ?? getQty(pid), motif: val } }));
+    setLocal(prev => ({ ...prev, [pid]: { quantite: prev[pid]?.quantite ?? getQty(pid), motif: val, photo_url: prev[pid]?.photo_url ?? getPhoto(pid) } }));
+  };
+
+  const setPhoto = (pid: string, url: string | null) => {
+    setLocal(prev => ({ ...prev, [pid]: { quantite: prev[pid]?.quantite ?? getQty(pid), motif: prev[pid]?.motif ?? getMotif(pid), photo_url: url } }));
   };
 
   const save = useMutation({
     mutationFn: async () => {
       for (const [pid, vals] of Object.entries(local)) {
-        if (vals.quantite === 0 && !vals.motif) continue;
+        if (vals.quantite === 0 && !vals.motif && !vals.photo_url) continue;
         const existing = entries.find((e: any) => e.produit_id === pid);
+        const payload: any = { quantite: vals.quantite, motif: vals.motif, photo_url: vals.photo_url ?? null };
         if (existing) {
-          await supabase.from('degustations').update(vals).eq('id', existing.id);
+          await supabase.from('degustations').update(payload).eq('id', existing.id);
         } else {
           await supabase.from('degustations').insert({
             produit_id: pid, date_degustation: selectedDate,
-            quantite: vals.quantite, motif: vals.motif, created_by: user?.id,
+            ...payload, created_by: user?.id,
           });
         }
       }
