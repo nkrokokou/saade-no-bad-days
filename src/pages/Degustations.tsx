@@ -155,13 +155,30 @@ export default function Degustations() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm uppercase text-muted-foreground tracking-wider">{cat}</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
+          <CardContent className="overflow-x-auto p-3 sm:p-6">
+            {/* Mobile cards */}
+            <div className="block md:hidden space-y-2">
+              {prods.map(p => (
+                <div key={p.id} className="border rounded-lg p-2.5 space-y-2">
+                  <p className="font-medium text-sm">{p.nom}</p>
+                  <div className="flex gap-2 items-center">
+                    <Input type="number" className="w-20 h-9" placeholder="Qté" value={getQty(p.id) || ''}
+                      onChange={e => setQty(p.id, parseFloat(e.target.value) || 0)} />
+                    <Input placeholder="Motif" className="flex-1 h-9" value={getMotif(p.id)}
+                      onChange={e => setMotif(p.id, e.target.value)} />
+                    <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <Table className="hidden md:table">
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[180px]">Produit</TableHead>
                   <TableHead className="w-24">Quantité</TableHead>
                   <TableHead>Motif</TableHead>
+                  <TableHead className="w-32">Photo</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -175,6 +192,9 @@ export default function Degustations() {
                     <TableCell>
                       <Input placeholder="Client, événement..." className="w-full" value={getMotif(p.id)}
                         onChange={e => setMotif(p.id, e.target.value)} />
+                    </TableCell>
+                    <TableCell>
+                      <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
                     </TableCell>
                   </TableRow>
                 ))}
