@@ -14,7 +14,21 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!
-    const db = createClient(supabaseUrl, supabaseKey)
+
+    // Require authentication
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const token = authHeader.replace('Bearer ', '')
+    const authClient = createClient(supabaseUrl, supabaseKey)
+    const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token)
+    if (claimsErr || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // User-scoped DB client (RLS enforced)
+    const db = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } })
 
     // Fetch recent data for context
     const today = new Date().toISOString().slice(0, 10)
@@ -75,12 +89,12 @@ ${dataContext}`
       if (status === 402) return new Response(JSON.stringify({ error: 'Credits exhausted' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       const t = await response.text()
       console.error('AI error:', status, t)
-      return new Response(JSON.stringify({ error: 'AI error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'AI service unavailable' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     return new Response(response.body, { headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' } })
   } catch (e) {
     console.error('Error:', e)
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })

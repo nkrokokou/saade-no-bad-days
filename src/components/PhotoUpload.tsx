@@ -1,10 +1,33 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Camera, X, Loader2, ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+/** Resolve a stored value (storage path or legacy public URL) to a displayable URL. */
+async function resolvePhotoUrl(value: string): Promise<string | null> {
+  if (!value) return null;
+  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  const { data, error } = await supabase.storage.from('evidence-photos').createSignedUrl(value, 3600);
+  if (error) {
+    console.error('Signed URL error:', error.message);
+    return null;
+  }
+  return data?.signedUrl ?? null;
+}
+
+function useResolvedPhoto(value?: string | null) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!value) { setUrl(null); return; }
+    resolvePhotoUrl(value).then(u => { if (active) setUrl(u); });
+    return () => { active = false; };
+  }, [value]);
+  return url;
+}
 
 interface PhotoUploadProps {
   value?: string | null;
@@ -13,11 +36,12 @@ interface PhotoUploadProps {
   size?: 'sm' | 'md';
 }
 
-/** Reusable photo upload component with camera capture support, used for losses/tastings evidence. */
+/** Reusable photo upload component with camera capture, used for losses/tastings evidence. */
 export function PhotoUpload({ value, onChange, className, size = 'md' }: PhotoUploadProps) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const resolvedUrl = useResolvedPhoto(value);
 
   const handleFile = async (file: File) => {
     if (!user) return;
@@ -35,8 +59,8 @@ export function PhotoUpload({ value, onChange, className, size = 'md' }: PhotoUp
         contentType: file.type,
       });
       if (error) throw error;
-      const { data } = supabase.storage.from('evidence-photos').getPublicUrl(path);
-      onChange(data.publicUrl);
+      // Store the storage path; signed URLs are generated on demand for display
+      onChange(path);
       toast.success('Photo ajoutée');
     } catch (e: any) {
       toast.error(e.message || 'Échec upload');
@@ -46,14 +70,19 @@ export function PhotoUpload({ value, onChange, className, size = 'md' }: PhotoUp
   };
 
   const remove = () => onChange(null);
-
   const dim = size === 'sm' ? 'h-10 w-10' : 'h-16 w-16';
 
   if (value) {
     return (
       <div className={cn('relative group inline-block', className)}>
-        <a href={value} target="_blank" rel="noopener noreferrer" className="block">
-          <img src={value} alt="Preuve" className={cn(dim, 'rounded-md object-cover border-2 border-border hover:border-primary transition-colors')} />
+        <a href={resolvedUrl ?? '#'} target="_blank" rel="noopener noreferrer" className="block">
+          {resolvedUrl ? (
+            <img src={resolvedUrl} alt="Preuve" className={cn(dim, 'rounded-md object-cover border-2 border-border hover:border-primary transition-colors')} />
+          ) : (
+            <div className={cn(dim, 'rounded-md border-2 border-border flex items-center justify-center bg-muted')}>
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </a>
         <button
           type="button"
@@ -97,10 +126,12 @@ export function PhotoUpload({ value, onChange, className, size = 'md' }: PhotoUp
 }
 
 export function PhotoThumbnail({ url }: { url?: string | null }) {
+  const resolved = useResolvedPhoto(url);
   if (!url) return <ImageIcon className="h-4 w-4 text-muted-foreground/40" />;
+  if (!resolved) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/60" />;
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer">
-      <img src={url} alt="Preuve" className="h-8 w-8 rounded object-cover border" />
+    <a href={resolved} target="_blank" rel="noopener noreferrer">
+      <img src={resolved} alt="Preuve" className="h-8 w-8 rounded object-cover border" />
     </a>
   );
 }
