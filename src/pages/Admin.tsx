@@ -319,3 +319,84 @@ export default function Admin() {
     </div>
   );
 }
+
+function PermissionsMatrix() {
+  const qc = useQueryClient();
+  const { data: perms = [], isLoading } = useQuery({
+    queryKey: ['module-permissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('module_permissions').select('*');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const toggle = useMutation({
+    mutationFn: async ({ role, module, action, value }: { role: string; module: string; action: string; value: boolean }) => {
+      const existing = perms.find((p: any) => p.role === role && p.module === module);
+      if (existing) {
+        const { error } = await supabase.from('module_permissions').update({ [action]: value }).eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('module_permissions').insert({ role, module, [action]: value });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['module-permissions'] }),
+    onError: (e: any) => toast.error(e.message || 'Erreur'),
+  });
+
+  const getPerm = (role: string, module: string, action: string): boolean => {
+    const p = perms.find((x: any) => x.role === role && x.module === module);
+    return p ? !!p[action] : false;
+  };
+
+  const ROLES_NO_CEO = ROLES.filter(r => r.value !== 'ceo');
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" /> Matrice des permissions</CardTitle>
+        <p className="text-sm text-muted-foreground">Le CEO a tous les droits par défaut. Cochez/décochez pour autoriser une action à un rôle.</p>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? <p className="text-muted-foreground text-sm">Chargement...</p> : (
+          <div className="space-y-6">
+            {ROLES_NO_CEO.map(role => (
+              <div key={role.value} className="border rounded-lg p-3">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Badge variant="secondary">{role.label}</Badge>
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-muted-foreground">
+                        <th className="py-2 pr-4 font-medium">Module</th>
+                        {ACTIONS.map(a => <th key={a.key} className="py-2 px-2 text-center font-medium">{a.label}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {MODULES.map(mod => (
+                        <tr key={mod.key} className="border-t">
+                          <td className="py-2 pr-4">{mod.label}</td>
+                          {ACTIONS.map(a => (
+                            <td key={a.key} className="py-2 px-2 text-center">
+                              <Checkbox
+                                checked={getPerm(role.value, mod.key, a.key)}
+                                onCheckedChange={v => toggle.mutate({ role: role.value, module: mod.key, action: a.key, value: !!v })}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
