@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingDown, Package, ChefHat, ShoppingCart, AlertTriangle, ArrowRight } from 'lucide-react';
+import { FileText, TrendingDown, Package, ChefHat, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, Minus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { format, startOfWeek, endOfWeek, subDays } from 'date-fns';
+import { format, startOfWeek, endOfWeek, subDays, subWeeks } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 
@@ -13,6 +13,8 @@ export default function Dashboard() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
   const weekEnd = format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  const prevWeekStart = format(startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  const prevWeekEnd = format(endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 }), 'yyyy-MM-dd');
   const last7 = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), 'yyyy-MM-dd'));
 
   const { data: transfersToday = [] } = useQuery({
@@ -64,6 +66,22 @@ export default function Dashboard() {
     },
   });
 
+  // Comparaison semaine précédente
+  const { data: prevWeekLosses = [] } = useQuery({
+    queryKey: ['prev-week-losses'],
+    queryFn: async () => {
+      const { data } = await supabase.from('pertes').select('quantite').gte('semaine_debut', prevWeekStart).lte('semaine_debut', prevWeekEnd);
+      return data || [];
+    },
+  });
+  const { data: prevWeekCloture = [] } = useQuery({
+    queryKey: ['prev-week-cloture'],
+    queryFn: async () => {
+      const { data } = await supabase.from('cloture_journaliere').select('qte_vendue, qte_perte').gte('date_cloture', prevWeekStart).lte('date_cloture', prevWeekEnd);
+      return data || [];
+    },
+  });
+
   const totalLosses = weeklyLosses.reduce((s: number, l: any) => s + (l.quantite || 0), 0);
   const totalAchats = monthAchats.reduce((s: number, a: any) => s + (a.prix_total || 0), 0);
   const totalProd = weekProduction.reduce((s: number, p: any) => s + (p.qte_produite || 0), 0);
@@ -71,6 +89,22 @@ export default function Dashboard() {
   const totalSortie = weekProduction.reduce((s: number, p: any) => s + (p.qte_sortie_en_salle || 0), 0);
   const totalInvendu = weekCloture.reduce((s: number, c: any) => s + (c.qte_invendu || 0), 0);
   const totalPertesCloture = weekCloture.reduce((s: number, c: any) => s + (c.qte_perte || 0), 0);
+
+  const prevLosses = prevWeekLosses.reduce((s: number, l: any) => s + (l.quantite || 0), 0);
+  const prevVendu = prevWeekCloture.reduce((s: number, c: any) => s + (c.qte_vendue || 0), 0);
+  const evolLosses = prevLosses === 0 ? 0 : ((totalLosses - prevLosses) / prevLosses) * 100;
+  const evolVentes = prevVendu === 0 ? 0 : ((totalVendu - prevVendu) / prevVendu) * 100;
+  const Trend = ({ value, inverse = false }: { value: number; inverse?: boolean }) => {
+    if (Math.abs(value) < 1) return <span className="text-xs text-muted-foreground flex items-center gap-1"><Minus className="h-3 w-3" /> stable</span>;
+    const isUp = value > 0;
+    const isGood = inverse ? !isUp : isUp;
+    return (
+      <span className={`text-xs flex items-center gap-1 ${isGood ? 'text-success' : 'text-destructive'}`}>
+        {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+        {value > 0 ? '+' : ''}{value.toFixed(0)}% vs sem. dern.
+      </span>
+    );
+  };
 
   // Trend data
   const trendData = last7.map(d => {
@@ -124,8 +158,8 @@ export default function Dashboard() {
       {/* KPI Cards */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Transferts auj.</CardTitle><FileText className="h-4 w-4 text-primary" /></CardHeader><CardContent><p className="text-2xl font-bold">{transfersToday.length}</p></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Pertes (sem.)</CardTitle><TrendingDown className="h-4 w-4 text-destructive" /></CardHeader><CardContent><p className="text-2xl font-bold">{totalLosses}</p></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Production (sem.)</CardTitle><ChefHat className="h-4 w-4 text-primary" /></CardHeader><CardContent><p className="text-2xl font-bold">{totalProd}</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Pertes (sem.)</CardTitle><TrendingDown className="h-4 w-4 text-destructive" /></CardHeader><CardContent><p className="text-2xl font-bold">{totalLosses}</p><Trend value={evolLosses} inverse /></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Ventes (sem.)</CardTitle><ChefHat className="h-4 w-4 text-primary" /></CardHeader><CardContent><p className="text-2xl font-bold">{totalVendu}</p><Trend value={evolVentes} /></CardContent></Card>
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Achats MP (mois)</CardTitle><ShoppingCart className="h-4 w-4 text-primary" /></CardHeader><CardContent><p className="text-lg font-bold">{totalAchats.toLocaleString('fr-FR')} <span className="text-xs text-muted-foreground">FCFA</span></p></CardContent></Card>
       </div>
 

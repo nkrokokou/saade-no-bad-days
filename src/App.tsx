@@ -18,6 +18,7 @@ import AchatsMP from "./pages/AchatsMP";
 import InsightsBot from "./pages/InsightsBot";
 import FichesTechniques from "./pages/FichesTechniques";
 import Admin from "./pages/Admin";
+import AuditLog from "./pages/AuditLog";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,7 @@ const App = () => (
             </Route>
             <Route element={<AppLayout module="admin" />}>
               <Route path="/admin" element={<Admin />} />
+              <Route path="/audit" element={<AuditLog />} />
             </Route>
             <Route element={<AppLayout module="achats_mp" />}>
               <Route path="/achats-mp" element={<AchatsMP />} />
