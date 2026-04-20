@@ -101,4 +101,24 @@
   .gradient-dark {
     background: linear-gradient(180deg, hsl(20 60% 8%), hsl(20 50% 12%));
   }
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+  }
+  .tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Mobile-first: respect safe areas on notched devices */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 640px) {
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
