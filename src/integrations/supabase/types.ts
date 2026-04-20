@@ -242,6 +242,7 @@ export type Database = {
           date_degustation: string
           id: string
           motif: string | null
+          photo_url: string | null
           produit_id: string
           quantite: number
         }
@@ -251,6 +252,7 @@ export type Database = {
           date_degustation: string
           id?: string
           motif?: string | null
+          photo_url?: string | null
           produit_id: string
           quantite?: number
         }
@@ -260,6 +262,7 @@ export type Database = {
           date_degustation?: string
           id?: string
           motif?: string | null
+          photo_url?: string | null
           produit_id?: string
           quantite?: number
         }
@@ -424,6 +427,7 @@ export type Database = {
           created_by: string | null
           id: string
           jour: string
+          photo_url: string | null
           produit_id: string
           quantite: number
           semaine_debut: string
@@ -434,6 +438,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           jour: string
+          photo_url?: string | null
           produit_id: string
           quantite?: number
           semaine_debut: string
@@ -444,6 +449,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           jour?: string
+          photo_url?: string | null
           produit_id?: string
           quantite?: number
           semaine_debut?: string
