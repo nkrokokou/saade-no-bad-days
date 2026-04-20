@@ -335,10 +335,10 @@ function PermissionsMatrix() {
     mutationFn: async ({ role, module, action, value }: { role: string; module: string; action: string; value: boolean }) => {
       const existing = perms.find((p: any) => p.role === role && p.module === module);
       if (existing) {
-        const { error } = await supabase.from('module_permissions').update({ [action]: value }).eq('id', existing.id);
+        const { error } = await supabase.from('module_permissions').update({ [action]: value } as any).eq('id', existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('module_permissions').insert({ role, module, [action]: value });
+        const { error } = await supabase.from('module_permissions').insert({ role, module, [action]: value } as any);
         if (error) throw error;
       }
     },
