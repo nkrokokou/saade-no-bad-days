@@ -35,8 +35,8 @@ export function PhotoUpload({ value, onChange, className, size = 'md' }: PhotoUp
         contentType: file.type,
       });
       if (error) throw error;
-      const { data } = supabase.storage.from('evidence-photos').getPublicUrl(path);
-      onChange(data.publicUrl);
+      // Store the storage path; signed URLs are generated on demand for display
+      onChange(path);
       toast.success('Photo ajoutée');
     } catch (e: any) {
       toast.error(e.message || 'Échec upload');
