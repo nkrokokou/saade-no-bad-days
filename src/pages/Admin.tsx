@@ -11,7 +11,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Settings, Users, Database, Plus, Trash2, Edit, Save, Download, Upload } from 'lucide-react';
+import { Settings, Users, Database, Plus, Trash2, Edit, Save, Download, Upload, Shield } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+
+const MODULES: { key: string; label: string }[] = [
+  { key: 'dashboard', label: 'Tableau de bord' },
+  { key: 'insights', label: 'Assistant IA' },
+  { key: 'admin', label: 'Administration' },
+  { key: 'achats_mp', label: 'Achats MP' },
+  { key: 'fiches_techniques', label: 'Fiches Techniques' },
+  { key: 'bons_transfert', label: 'Bons Transfert' },
+  { key: 'stock_tampon', label: 'Stock Tampon' },
+  { key: 'pertes', label: 'Pertes' },
+  { key: 'production', label: 'Production' },
+  { key: 'inventaire', label: 'Inventaire' },
+  { key: 'cloture', label: 'Clôture' },
+  { key: 'degustations', label: 'Dégustations' },
+];
+const ACTIONS: { key: 'can_read' | 'can_create' | 'can_update' | 'can_delete'; label: string }[] = [
+  { key: 'can_read', label: 'Lire' },
+  { key: 'can_create', label: 'Créer' },
+  { key: 'can_update', label: 'Modifier' },
+  { key: 'can_delete', label: 'Supprimer' },
+];
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: 'ceo', label: 'CEO' },
@@ -157,9 +180,10 @@ export default function Admin() {
       </h1>
 
       <Tabs defaultValue="profile">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="profile"><Settings className="h-3.5 w-3.5 mr-1" /> Mon Profil</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> Utilisateurs</TabsTrigger>
+          <TabsTrigger value="permissions"><Shield className="h-3.5 w-3.5 mr-1" /> Permissions</TabsTrigger>
           <TabsTrigger value="backup"><Database className="h-3.5 w-3.5 mr-1" /> Sauvegarde</TabsTrigger>
         </TabsList>
 
@@ -263,6 +287,11 @@ export default function Admin() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── PERMISSIONS MATRIX ── */}
+        <TabsContent value="permissions">
+          <PermissionsMatrix />
         </TabsContent>
 
         {/* ── BACKUP ── */}
