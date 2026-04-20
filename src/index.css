@@ -86,11 +86,19 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
     @apply bg-background text-foreground font-body antialiased;
+    overscroll-behavior-y: none;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
+  }
+  /* Better default focus rings */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
@@ -100,5 +108,25 @@
   }
   .gradient-dark {
     background: linear-gradient(180deg, hsl(20 60% 8%), hsl(20 50% 12%));
+  }
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+  }
+  .tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Mobile-first: respect safe areas on notched devices */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 640px) {
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
   }
 }
