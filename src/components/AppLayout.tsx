@@ -1,14 +1,16 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions, ModuleKey } from '@/hooks/usePermissions';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function AppLayout({ allowedRoles }: { allowedRoles?: UserRole[] }) {
-  const { profile, loading, session } = useAuth();
+export function AppLayout({ module }: { module?: ModuleKey }) {
+  const { profile, loading: authLoading, session } = useAuth();
+  const { canAccess, loading: permLoading } = usePermissions();
 
-  if (loading) {
+  if (authLoading || permLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-4 w-64">
@@ -21,7 +23,7 @@ export function AppLayout({ allowedRoles }: { allowedRoles?: UserRole[] }) {
 
   if (!session) return <Navigate to="/login" replace />;
   if (!profile) return <Navigate to="/login" replace />;
-  if (allowedRoles && !allowedRoles.includes(profile.role)) return <Navigate to="/unauthorized" replace />;
+  if (module && !canAccess(module)) return <Navigate to="/unauthorized" replace />;
 
   return (
     <SidebarProvider>
