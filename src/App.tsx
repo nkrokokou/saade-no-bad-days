@@ -35,55 +35,40 @@ const App = () => (
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* CEO only */}
-            <Route element={<AppLayout allowedRoles={['ceo']} />}>
+            <Route element={<AppLayout module="dashboard" />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/admin" element={<Admin />} />
+            </Route>
+            <Route element={<AppLayout module="insights" />}>
               <Route path="/insights" element={<InsightsBot />} />
             </Route>
-
-            {/* Achats MP */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee']} />}>
+            <Route element={<AppLayout module="admin" />}>
+              <Route path="/admin" element={<Admin />} />
+            </Route>
+            <Route element={<AppLayout module="achats_mp" />}>
               <Route path="/achats-mp" element={<AchatsMP />} />
             </Route>
-
-            {/* Fiches Techniques */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie']} />}>
+            <Route element={<AppLayout module="fiches_techniques" />}>
               <Route path="/fiches-techniques" element={<FichesTechniques />} />
             </Route>
-
-            {/* Bons de Transfert */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie', 'salle']} />}>
+            <Route element={<AppLayout module="bons_transfert" />}>
               <Route path="/bons-transfert" element={<BonsTransfert />} />
             </Route>
-
-            {/* Stock Tampon */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee']} />}>
+            <Route element={<AppLayout module="stock_tampon" />}>
               <Route path="/stock-tampon" element={<StockTampon />} />
             </Route>
-
-            {/* Pertes */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee']} />}>
+            <Route element={<AppLayout module="pertes" />}>
               <Route path="/pertes" element={<Pertes />} />
             </Route>
-
-            {/* Production */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'labo_patisserie', 'labo_viennoiserie']} />}>
+            <Route element={<AppLayout module="production" />}>
               <Route path="/production" element={<ProductionLabo />} />
             </Route>
-
-            {/* Inventaire */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'cuisine_salee']} />}>
+            <Route element={<AppLayout module="inventaire" />}>
               <Route path="/inventaire" element={<Inventaire />} />
             </Route>
-
-            {/* Clôture Journalière */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'salle']} />}>
+            <Route element={<AppLayout module="cloture" />}>
               <Route path="/cloture" element={<ClotureJournaliere />} />
             </Route>
-
-            {/* Dégustations */}
-            <Route element={<AppLayout allowedRoles={['ceo', 'salle']} />}>
+            <Route element={<AppLayout module="degustations" />}>
               <Route path="/degustations" element={<Degustations />} />
             </Route>
 

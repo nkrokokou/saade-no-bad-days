@@ -1,4 +1,3 @@
-import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
@@ -6,6 +5,7 @@ import {
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { usePermissions, ModuleKey } from '@/hooks/usePermissions';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -23,32 +23,34 @@ const roleLabels: Record<UserRole, string> = {
   cuisine_salee: 'Cuisine Salée', salle: 'Salle',
 };
 
-interface NavItem { title: string; url: string; icon: React.ElementType; roles: UserRole[]; }
+interface NavItem { title: string; url: string; icon: React.ElementType; module: ModuleKey; }
 
 const navItems: NavItem[] = [
-  { title: 'Tableau de bord', url: '/dashboard', icon: LayoutDashboard, roles: ['ceo'] },
-  { title: 'Assistant IA', url: '/insights', icon: Bot, roles: ['ceo'] },
-  { title: 'Achats MP', url: '/achats-mp', icon: ShoppingCart, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
-  { title: 'Fiches Techniques', url: '/fiches-techniques', icon: BookOpen, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie'] },
-  { title: 'Bons de Transfert', url: '/bons-transfert', icon: FileText, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'salle'] },
-  { title: 'Stock Tampon', url: '/stock-tampon', icon: Package, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
-  { title: 'Pertes', url: '/pertes', icon: TrendingDown, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie', 'cuisine_salee'] },
-  { title: 'Production Labo', url: '/production', icon: ChefHat, roles: ['ceo', 'labo_patisserie', 'labo_viennoiserie'] },
-  { title: 'Inventaire', url: '/inventaire', icon: ClipboardList, roles: ['ceo', 'cuisine_salee'] },
-  { title: 'Clôture & Salle', url: '/cloture', icon: DollarSign, roles: ['ceo', 'salle'] },
-  { title: 'Dégustations', url: '/degustations', icon: Wine, roles: ['ceo', 'salle'] },
-  { title: 'Administration', url: '/admin', icon: Settings, roles: ['ceo'] },
+  { title: 'Tableau de bord', url: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
+  { title: 'Assistant IA', url: '/insights', icon: Bot, module: 'insights' },
+  { title: 'Achats MP', url: '/achats-mp', icon: ShoppingCart, module: 'achats_mp' },
+  { title: 'Fiches Techniques', url: '/fiches-techniques', icon: BookOpen, module: 'fiches_techniques' },
+  { title: 'Bons de Transfert', url: '/bons-transfert', icon: FileText, module: 'bons_transfert' },
+  { title: 'Stock Tampon', url: '/stock-tampon', icon: Package, module: 'stock_tampon' },
+  { title: 'Pertes', url: '/pertes', icon: TrendingDown, module: 'pertes' },
+  { title: 'Production Labo', url: '/production', icon: ChefHat, module: 'production' },
+  { title: 'Inventaire', url: '/inventaire', icon: ClipboardList, module: 'inventaire' },
+  { title: 'Clôture & Salle', url: '/cloture', icon: DollarSign, module: 'cloture' },
+  { title: 'Dégustations', url: '/degustations', icon: Wine, module: 'degustations' },
+  { title: 'Administration', url: '/admin', icon: Settings, module: 'admin' },
 ];
 
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
+  const { canAccess, roles, loading } = usePermissions();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
-  if (!profile) return null;
+  if (!profile || loading) return null;
 
-  const visibleItems = navItems.filter(i => i.roles.includes(profile.role));
-  const RoleIcon = roleIcons[profile.role];
+  const visibleItems = navItems.filter(i => canAccess(i.module));
+  const primaryRole = roles[0] || profile.role;
+  const RoleIcon = roleIcons[primaryRole as UserRole] || Bell;
 
   return (
     <Sidebar collapsible="icon">
@@ -59,7 +61,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="mt-3 flex items-center gap-2">
               <RoleIcon className="h-4 w-4 text-sidebar-primary" />
-              <span className="text-xs text-sidebar-foreground/70">{roleLabels[profile.role]}</span>
+              <span className="text-xs text-sidebar-foreground/70">{roles.map(r => roleLabels[r]).join(' · ') || roleLabels[profile.role]}</span>
             </div>
           )}
         </div>
