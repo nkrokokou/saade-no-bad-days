@@ -153,6 +153,35 @@ export default function Admin() {
     }
   };
 
+  // ── Wipe all data ──
+  const [wiping, setWiping] = useState(false);
+  const [confirmWipeOpen, setConfirmWipeOpen] = useState(false);
+  const [wipeText, setWipeText] = useState('');
+
+  const WIPE_TABLES = [
+    'bon_transfert_lignes', 'bons_transfert', 'cloture_journaliere',
+    'degustations', 'pertes', 'production_labo', 'stock_tampon',
+    'mouvements_stock', 'inventaire', 'fiches_techniques', 'achats_mp',
+  ] as const;
+
+  const wipeAllData = async () => {
+    setWiping(true);
+    try {
+      for (const t of WIPE_TABLES) {
+        const { error } = await supabase.from(t as any).delete().not('id', 'is', null);
+        if (error) throw error;
+      }
+      toast.success('Toutes les données opérationnelles ont été effacées');
+      qc.invalidateQueries();
+      setConfirmWipeOpen(false);
+      setWipeText('');
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur lors de l\'effacement');
+    } finally {
+      setWiping(false);
+    }
+  };
+
   const importBackup = async (file: File) => {
     try {
       const text = await file.text();
