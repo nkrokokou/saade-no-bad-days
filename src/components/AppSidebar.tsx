@@ -26,21 +26,6 @@ const roleLabels: Record<UserRole, string> = {
 
 interface NavItem { title: string; url: string; icon: React.ElementType; module: ModuleKey; }
 
-const navItems: NavItem[] = [
-  { title: 'Tableau de bord', url: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
-  { title: 'Assistant IA', url: '/insights', icon: Bot, module: 'insights' },
-  { title: 'Achats MP', url: '/achats-mp', icon: ShoppingCart, module: 'achats_mp' },
-  { title: 'Fiches Techniques', url: '/fiches-techniques', icon: BookOpen, module: 'fiches_techniques' },
-  { title: 'Bons de Transfert', url: '/bons-transfert', icon: FileText, module: 'bons_transfert' },
-  { title: 'Stock Tampon', url: '/stock-tampon', icon: Package, module: 'stock_tampon' },
-  { title: 'Pertes', url: '/pertes', icon: TrendingDown, module: 'pertes' },
-  { title: 'Production Labo', url: '/production', icon: ChefHat, module: 'production' },
-  { title: 'Inventaire', url: '/inventaire', icon: ClipboardList, module: 'inventaire' },
-  { title: 'Clôture & Salle', url: '/cloture', icon: DollarSign, module: 'cloture' },
-  { title: 'Dégustations', url: '/degustations', icon: Wine, module: 'degustations' },
-  { title: 'Administration', url: '/admin', icon: Settings, module: 'admin' },
-  { title: "Journal d'activité", url: '/audit', icon: History, module: 'admin' },
-];
 
 export function AppSidebar() {
   const { profile, signOut } = useAuth();
