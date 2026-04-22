@@ -34,7 +34,9 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/index" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/home" element={<Navigate to="/dashboard" replace />} />
 
             <Route element={<AppLayout module="dashboard" />}>
               <Route path="/dashboard" element={<Dashboard />} />
