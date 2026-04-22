@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Settings, Users, Database, Plus, Trash2, Edit, Save, Download, Upload, Shield } from 'lucide-react';
+import { Settings, Users, Database, Plus, Trash2, Edit, Save, Download, Upload, Shield, AlertTriangle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
@@ -150,6 +150,35 @@ export default function Admin() {
       toast.error('Erreur lors de l\'export');
     } finally {
       setExporting(false);
+    }
+  };
+
+  // ── Wipe all data ──
+  const [wiping, setWiping] = useState(false);
+  const [confirmWipeOpen, setConfirmWipeOpen] = useState(false);
+  const [wipeText, setWipeText] = useState('');
+
+  const WIPE_TABLES = [
+    'bon_transfert_lignes', 'bons_transfert', 'cloture_journaliere',
+    'degustations', 'pertes', 'production_labo', 'stock_tampon',
+    'mouvements_stock', 'inventaire', 'fiches_techniques', 'achats_mp',
+  ] as const;
+
+  const wipeAllData = async () => {
+    setWiping(true);
+    try {
+      for (const t of WIPE_TABLES) {
+        const { error } = await supabase.from(t as any).delete().not('id', 'is', null);
+        if (error) throw error;
+      }
+      toast.success('Toutes les données opérationnelles ont été effacées');
+      qc.invalidateQueries();
+      setConfirmWipeOpen(false);
+      setWipeText('');
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur lors de l\'effacement');
+    } finally {
+      setWiping(false);
     }
   };
 
@@ -314,6 +343,49 @@ export default function Admin() {
               </CardContent>
             </Card>
           </div>
+
+          {profile?.role === 'ceo' && (
+            <Card className="mt-4 border-destructive/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" /> Zone de danger
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Effacer <strong>toutes les données opérationnelles</strong> (achats, fiches techniques, transferts, production, pertes, stock, inventaire, dégustations, clôtures). Les utilisateurs, rôles et permissions sont conservés. Cette action est <strong>irréversible</strong>.
+                </p>
+                <Dialog open={confirmWipeOpen} onOpenChange={setConfirmWipeOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive">
+                      <Trash2 className="h-4 w-4 mr-1" /> Effacer toutes les données
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-destructive">
+                        <AlertTriangle className="h-5 w-5" /> Confirmation requise
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <p className="text-sm">
+                        Cette action supprimera définitivement toutes les données opérationnelles. Pour confirmer, tapez <strong>EFFACER</strong> ci-dessous.
+                      </p>
+                      <Input value={wipeText} onChange={e => setWipeText(e.target.value)} placeholder="EFFACER" />
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        disabled={wipeText !== 'EFFACER' || wiping}
+                        onClick={wipeAllData}
+                      >
+                        {wiping ? 'Effacement...' : 'Confirmer l\'effacement'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
