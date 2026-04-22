@@ -4,6 +4,7 @@ import { usePermissions, ModuleKey } from '@/hooks/usePermissions';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { CommandPalette } from '@/components/CommandPalette';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,6 +52,7 @@ export function AppLayout({ module }: { module?: ModuleKey }) {
               <Button variant="ghost" size="icon" className="md:hidden" onClick={openPalette}>
                 <Search className="h-4 w-4" />
               </Button>
+              <LanguageSwitcher />
               <ThemeToggle />
             </div>
           </header>
