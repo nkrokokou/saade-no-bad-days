@@ -343,6 +343,49 @@ export default function Admin() {
               </CardContent>
             </Card>
           </div>
+
+          {profile?.role === 'ceo' && (
+            <Card className="mt-4 border-destructive/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" /> Zone de danger
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Effacer <strong>toutes les données opérationnelles</strong> (achats, fiches techniques, transferts, production, pertes, stock, inventaire, dégustations, clôtures). Les utilisateurs, rôles et permissions sont conservés. Cette action est <strong>irréversible</strong>.
+                </p>
+                <Dialog open={confirmWipeOpen} onOpenChange={setConfirmWipeOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive">
+                      <Trash2 className="h-4 w-4 mr-1" /> Effacer toutes les données
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-destructive">
+                        <AlertTriangle className="h-5 w-5" /> Confirmation requise
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <p className="text-sm">
+                        Cette action supprimera définitivement toutes les données opérationnelles. Pour confirmer, tapez <strong>EFFACER</strong> ci-dessous.
+                      </p>
+                      <Input value={wipeText} onChange={e => setWipeText(e.target.value)} placeholder="EFFACER" />
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        disabled={wipeText !== 'EFFACER' || wiping}
+                        onClick={wipeAllData}
+                      >
+                        {wiping ? 'Effacement...' : 'Confirmer l\'effacement'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
