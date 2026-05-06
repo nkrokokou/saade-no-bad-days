@@ -69,7 +69,8 @@ export default function Catalogue() {
         unite: p.unite || 'pièce', prix_vente: Number(p.prix_vente) || 0,
         prix_cout: Number(p.prix_cout) || 0, photo_url: p.photo_url || null,
         actif: p.actif !== false,
-      };
+        poste_preparation: p.poste_preparation || 'salle',
+      } as any;
       if (p.id) {
         const { error } = await supabase.from('produits').update(payload).eq('id', p.id);
         if (error) throw error;
