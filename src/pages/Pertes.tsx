@@ -177,6 +177,7 @@ export default function Pertes() {
                       <TableHead className="min-w-[180px] sticky left-0 bg-card">Produit</TableHead>
                       {DAYS.map(d => <TableHead key={d} className="text-center capitalize min-w-[70px]">{d.slice(0, 3)}</TableHead>)}
                       <TableHead className="text-center font-bold">Total</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -189,6 +190,7 @@ export default function Pertes() {
                           </TableCell>
                         ))}
                         <TableCell className="text-center font-bold">{getTotal(p.id)}</TableCell>
+                        <TableCell>{hasData(p.id) && <Button size="icon" variant="ghost" onClick={() => setDeletePid(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -198,6 +200,7 @@ export default function Pertes() {
           </TabsContent>
         ))}
       </Tabs>
+      <ConfirmDialog open={!!deletePid} onOpenChange={() => setDeletePid(null)} title="Effacer les pertes de cette ligne ?" description="Toutes les saisies de la semaine pour ce produit seront supprimées." destructive onConfirm={() => deletePid && deleteRow.mutate(deletePid)} />
     </div>
   );
 }
