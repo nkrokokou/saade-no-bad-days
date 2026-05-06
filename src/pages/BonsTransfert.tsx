@@ -172,6 +172,7 @@ export default function BonsTransfert() {
             {canSend && <Button size="sm" onClick={() => advanceStatus.mutate({ id: currentBon.id, status: 'envoye' })}><Send className="h-4 w-4 mr-1" /> Envoyer</Button>}
             {canReceive && <Button size="sm" onClick={() => advanceStatus.mutate({ id: currentBon.id, status: 'recu' })}><CheckCircle className="h-4 w-4 mr-1" /> Confirmer réception</Button>}
             {canValidate && <Button size="sm" variant="default" onClick={() => advanceStatus.mutate({ id: currentBon.id, status: 'valide' })}><ShieldCheck className="h-4 w-4 mr-1" /> Valider définitivement</Button>}
+            {isDraft && can('bons_transfert', 'delete') && <Button size="sm" variant="destructive" onClick={() => setDeleteBonId(currentBon.id)}><Trash2 className="h-4 w-4 mr-1" /> Supprimer</Button>}
           </div>
         </div>
 
