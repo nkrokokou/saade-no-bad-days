@@ -106,6 +106,22 @@ export default function BonsTransfert() {
     },
   });
 
+  const deleteBon = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from('bon_transfert_lignes').delete().eq('bon_transfert_id', id);
+      const { error } = await supabase.from('bons_transfert').delete().eq('id', id);
+      if (error) throw error;
+      audit('delete', 'bons_transfert', id, {});
+    },
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['bons_transfert'] });
+      setDeleteBonId(null);
+      if (selectedBon === id) setSelectedBon(null);
+      toast.success('Bon supprimé');
+    },
+    onError: () => toast.error('Suppression impossible'),
+  });
+
   const updateNotes = async (id: string, notes: string) => {
     await supabase.from('bons_transfert').update({ notes } as any).eq('id', id);
     qc.invalidateQueries({ queryKey: ['bons_transfert'] });
