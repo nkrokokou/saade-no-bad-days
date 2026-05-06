@@ -65,6 +65,14 @@ export default function ClotureJournaliere() {
     onError: () => toast.error('Erreur'),
   });
 
+  const deleteEntry = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('cloture_journaliere').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cloture_journaliere'] }); setDeleteId(null); toast.success('Entrée supprimée'); },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
+
   const handleExport = () => {
     exportToExcel(products.map(p => ({
       Produit: p.nom, 'Stock Ouv.': getVal(p.id, 'stock_ouverture'), Reçu: getVal(p.id, 'qte_recue'),
