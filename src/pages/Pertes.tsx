@@ -34,6 +34,7 @@ export default function Pertes() {
   const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const defaultTab = profile?.role === 'cuisine_salee' ? 'cuisine_salee' : profile?.role === 'labo_viennoiserie' ? 'labo_viennoiserie' : 'labo_patisserie';
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [deletePid, setDeletePid] = useState<string | null>(null);
 
   const { data: pertes = [] } = useQuery({
     queryKey: ['pertes', weekStartStr, activeTab],
