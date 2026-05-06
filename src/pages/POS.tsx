@@ -50,6 +50,7 @@ export default function POS() {
   const [fondInitial, setFondInitial] = useState(0);
   const [fondCompte, setFondCompte] = useState(0);
   const [lastTicket, setLastTicket] = useState<any>(null);
+  const [cartOpen, setCartOpen] = useState(false);
 
   // Produits
   const { data: produits = [] } = useQuery({
@@ -180,24 +181,43 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const printTicket = (data: any) => {
+  const printTicket = (data: any, kitchen = false) => {
     if (!data) return;
     const html = `<html><head><title>Ticket ${data.vente.numero_ticket}</title>
-      <style>body{font-family:monospace;padding:8px;width:280px}h2{text-align:center;margin:4px 0;font-family:serif}
-      hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}
-      .total{font-size:14px;font-weight:bold}small{color:#555}</style></head><body>
-      <h2>SAADÉ</h2><div style="text-align:center"><small>Lomé, Togo</small></div><hr/>
-      <div class="row"><span>Ticket #${data.vente.numero_ticket}</span><span>${new Date(data.vente.date_vente).toLocaleString('fr-FR')}</span></div>
-      ${data.vente.client_nom ? `<div>Client: ${data.vente.client_nom}</div>` : ''}<hr/>
-      ${data.lignes.map((l: any) => `<div class="row"><span>${l.quantite}× ${l.produit_nom}</span><span>${Number(l.total_ligne).toLocaleString()} F</span></div>`).join('')}
-      <hr/>${data.vente.remise_globale > 0 ? `<div class="row"><span>Remise</span><span>-${Number(data.vente.remise_globale).toLocaleString()} F</span></div>` : ''}
-      <div class="row total"><span>TOTAL</span><span>${Number(data.vente.total).toLocaleString()} F</span></div>
-      <div class="row"><span>${PAYMENT_LABELS[data.vente.mode_paiement as PaymentMode]}</span><span>${Number(data.vente.montant_recu).toLocaleString()} F</span></div>
-      ${data.vente.rendu > 0 ? `<div class="row"><span>Rendu</span><span>${Number(data.vente.rendu).toLocaleString()} F</span></div>` : ''}
-      <hr/><div style="text-align:center"><small>Merci de votre visite ❤</small></div>
+      <style>
+        @page { size: 72mm auto; margin: 2mm; }
+        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: 72mm; font-size: 12px; line-height: 1.35; color: #000; }
+        h2 { text-align: center; margin: 2px 0; font-family: serif; font-size: 18px; letter-spacing: 2px; }
+        hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+        .row { display: flex; justify-content: space-between; gap: 4px; }
+        .total { font-size: 15px; font-weight: bold; }
+        .center { text-align: center; }
+        .big { font-size: 14px; font-weight: bold; }
+        small { font-size: 10px; }
+      </style></head><body>
+      <h2>SAADÉ</h2>
+      <div class="center"><small>Lomé · Togo</small></div>
+      <hr/>
+      <div class="row"><span>#${data.vente.numero_ticket}</span><span>${new Date(data.vente.date_vente).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span></div>
+      ${data.vente.client_nom ? `<div>Client: ${data.vente.client_nom}</div>` : ''}
+      ${kitchen ? '<div class="center big">--- CUISINE ---</div>' : ''}
+      <hr/>
+      ${data.lignes.map((l: any) => kitchen
+        ? `<div class="big">${l.quantite}× ${l.produit_nom}</div>`
+        : `<div class="row"><span>${l.quantite}× ${l.produit_nom}</span><span>${Number(l.total_ligne).toLocaleString()} F</span></div>`).join('')}
+      <hr/>
+      ${kitchen ? '' : `
+        ${data.vente.remise_globale > 0 ? `<div class="row"><span>Remise</span><span>-${Number(data.vente.remise_globale).toLocaleString()} F</span></div>` : ''}
+        <div class="row total"><span>TOTAL</span><span>${Number(data.vente.total).toLocaleString()} F</span></div>
+        <div class="row"><span>${PAYMENT_LABELS[data.vente.mode_paiement as PaymentMode]}</span><span>${Number(data.vente.montant_recu).toLocaleString()} F</span></div>
+        ${data.vente.rendu > 0 ? `<div class="row"><span>Rendu</span><span>${Number(data.vente.rendu).toLocaleString()} F</span></div>` : ''}
+        <hr/>
+        <div class="center"><small>Merci de votre visite ❤</small></div>
+      `}
+      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
       </body></html>`;
     const w = window.open('', '_blank', 'width=320,height=600');
-    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
+    if (w) { w.document.write(html); w.document.close(); }
   };
 
   return (
