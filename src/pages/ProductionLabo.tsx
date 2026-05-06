@@ -94,7 +94,7 @@ export default function ProductionLabo() {
   const fields = [
     { key: 'qte_produite', label: 'Produite' },
     { key: 'qte_sortie_en_salle', label: 'Sortie Salle' },
-    { key: 'qte_perte', label: 'Perte' },
+    { key: 'qte_perte', label: 'Perte (auto)' },
   ];
 
   return (
