@@ -149,6 +149,7 @@ export default function ProductionLabo() {
             <TableBody>
               {filteredProducts.map(p => {
                 const eid = getEntryId(p.id);
+                const hasData = eid || local[p.id];
                 return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.nom}</TableCell>
@@ -157,7 +158,7 @@ export default function ProductionLabo() {
                       <Input type="number" className="w-24" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
                     </TableCell>
                   ))}
-                  <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
+                  <TableCell><Button size="icon" variant="ghost" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>
                 );
               })}
