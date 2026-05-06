@@ -343,6 +343,43 @@ export default function POS() {
     Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
   };
 
+  // Impression via iframe cachée — évite le blocage des popups
+  const printViaIframe = (html: string, label: string) => {
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow?.document;
+      if (!doc) throw new Error('iframe doc indisponible');
+      doc.open();
+      doc.write(html);
+      doc.close();
+      const triggerPrint = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          toast.success(`🖨️ ${label} envoyé à l'imprimante`);
+        } catch (err: any) {
+          toast.error(`Impression ${label} : ${err?.message || 'erreur'}`);
+        }
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 2000);
+      };
+      // Laisse le temps au DOM de se peindre
+      if (iframe.contentWindow?.document.readyState === 'complete') {
+        setTimeout(triggerPrint, 200);
+      } else {
+        iframe.onload = () => setTimeout(triggerPrint, 200);
+      }
+    } catch (err: any) {
+      toast.error(`Impression échouée : ${err?.message || 'erreur'}`);
+    }
+  };
+
   const printPrepTicket = (poste: string, lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const date = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
     const rows = lines.map(l => `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}</div>`).join('');
@@ -362,10 +399,8 @@ export default function POS() {
       ${rows}
       <hr/>
       <div style="text-align:center;font-size:11px;">À PRÉPARER</div>
-      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
       </body></html>`;
-    const w = window.open('', '_blank', 'width=340,height=600');
-    if (w) { w.document.write(html); w.document.close(); }
+    printViaIframe(html, `Bon ${POSTE_LABELS[poste] || poste}`);
   };
 
   const printTicket = (data: any) => {
@@ -427,10 +462,8 @@ export default function POS() {
       <div style="font-size:11px;">caissier : ${caissier}</div>
       <hr/>
       <div class="footer">Merci de votre visite,<br/>SAADÉ vous souhaite une belle journée !</div>
-      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
       </body></html>`;
-    const w = window.open('', '_blank', 'width=340,height=600');
-    if (w) { w.document.write(html); w.document.close(); }
+    printViaIframe(html, `Ticket caisse #${v.numero_ticket}`);
   };
 
   return (
