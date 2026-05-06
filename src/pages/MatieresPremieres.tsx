@@ -167,12 +167,17 @@ export default function MatieresPremieres() {
               <TableHead>Nom</TableHead><TableHead>Marque</TableHead><TableHead>Fournisseur</TableHead>
               <TableHead className="text-right">Colisage</TableHead><TableHead>Unité</TableHead>
               <TableHead className="text-right">Prix achat</TableHead><TableHead className="text-right">Prix unitaire</TableHead>
+              <TableHead className="text-right">Stock dispo</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Chargement…</TableCell></TableRow>}
-              {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Aucune matière première</TableCell></TableRow>}
-              {filtered.map(m => (
+              {isLoading && <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Chargement…</TableCell></TableRow>}
+              {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Aucune matière première</TableCell></TableRow>}
+              {filtered.map(m => {
+                const s = stockById[m.id];
+                const stock = s?.stock_actuel ?? 0;
+                const alerte = s?.alerte_stock;
+                return (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.nom}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{m.marque}</TableCell>
@@ -181,12 +186,16 @@ export default function MatieresPremieres() {
                   <TableCell>{m.unite}</TableCell>
                   <TableCell className="text-right">{m.prix_achat?.toLocaleString('fr-FR')}</TableCell>
                   <TableCell className="text-right font-medium">{m.prix_unitaire?.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}</TableCell>
+                  <TableCell className={`text-right font-semibold ${alerte ? 'text-destructive' : stock > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {stock.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} {m.unite}
+                    {alerte && <span className="ml-1 text-[10px]">⚠</span>}
+                  </TableCell>
                   <TableCell className="text-right">
                     {canUpdate && <Button size="icon" variant="ghost" onClick={() => setEditing(m)}><Pencil className="h-4 w-4" /></Button>}
                     {canDelete && <Button size="icon" variant="ghost" onClick={() => setToDelete(m)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
                 </TableRow>
-              ))}
+              );})}
             </TableBody>
           </Table>
         </CardContent>
