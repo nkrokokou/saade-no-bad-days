@@ -12,7 +12,8 @@ import { PhotoUpload } from '@/components/PhotoUpload';
 import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
-import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export default function Degustations() {
   const { user } = useAuth();
