@@ -508,28 +508,43 @@ export type Database = {
       }
       produits: {
         Row: {
+          actif: boolean
           categorie: string
           created_at: string
           id: string
           nom: string
+          photo_url: string | null
+          prix_cout: number
           prix_vente: number
+          sous_categorie: string | null
           unite: string | null
+          updated_at: string
         }
         Insert: {
+          actif?: boolean
           categorie?: string
           created_at?: string
           id?: string
           nom: string
+          photo_url?: string | null
+          prix_cout?: number
           prix_vente?: number
+          sous_categorie?: string | null
           unite?: string | null
+          updated_at?: string
         }
         Update: {
+          actif?: boolean
           categorie?: string
           created_at?: string
           id?: string
           nom?: string
+          photo_url?: string | null
+          prix_cout?: number
           prix_vente?: number
+          sous_categorie?: string | null
           unite?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
