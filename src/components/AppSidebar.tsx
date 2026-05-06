@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
