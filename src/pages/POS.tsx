@@ -266,8 +266,8 @@ export default function POS() {
           </div>
         </div>
 
-        {/* Panier */}
-        <Card className="lg:sticky lg:top-16 self-start">
+        {/* Panier desktop uniquement */}
+        <Card className="hidden lg:block lg:sticky lg:top-16 self-start">
           <CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="font-heading font-semibold">Ticket en cours</h2>
@@ -298,10 +298,59 @@ export default function POS() {
               <span>Total</span><span className="text-primary">{totalTicket.toLocaleString()} F</span>
             </div>
             <Button className="w-full" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
-            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer dernier ticket</Button>}
+            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer</Button>}
           </CardContent>
         </Card>
       </div>
+
+      {/* FAB mobile + drawer panier */}
+      {cart.length > 0 && (
+        <Button onClick={() => setCartOpen(true)}
+          className="lg:hidden fixed bottom-4 right-4 z-40 h-14 px-5 rounded-full shadow-2xl gap-2 text-base">
+          <ShoppingCart className="h-5 w-5" />
+          <span className="font-bold">{totalTicket.toLocaleString()} F</span>
+          <span className="bg-primary-foreground/20 px-2 py-0.5 rounded-full text-xs">{cart.reduce((s, l) => s + l.quantite, 0)}</span>
+        </Button>
+      )}
+
+      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-4 lg:hidden">
+          <SheetHeader>
+            <SheetTitle className="flex items-center justify-between">
+              <span>Ticket en cours</span>
+              {cart.length > 0 && <Button size="sm" variant="ghost" onClick={clearCart}>Vider</Button>}
+            </SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="flex-1 -mx-4 px-4 my-2">
+            {cart.length === 0 && <div className="text-center text-muted-foreground py-12 text-sm">Cliquez sur des produits</div>}
+            {cart.map(l => (
+              <div key={l.produit.id} className="flex items-center gap-2 py-3 border-b">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{l.produit.nom}</div>
+                  <div className="text-xs text-muted-foreground">{(l.produit.prix_vente || 0).toLocaleString()} F × {l.quantite}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, -1)}><Minus className="h-4 w-4" /></Button>
+                  <span className="w-7 text-center font-medium">{l.quantite}</span>
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, 1)}><Plus className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeLine(l.produit.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+            ))}
+          </ScrollArea>
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Remise</Label>
+              <Input type="number" inputMode="decimal" value={remiseGlobale || ''} placeholder="0" onChange={e => setRemiseGlobale(Number(e.target.value) || 0)} />
+            </div>
+            <div className="flex justify-between text-2xl font-bold">
+              <span>Total</span><span className="text-primary">{totalTicket.toLocaleString()} F</span>
+            </div>
+            <Button size="lg" className="w-full text-base" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
+            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer dernier</Button>}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Dialog paiement */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
