@@ -226,8 +226,11 @@ export default function MatieresPremieres() {
               <p className="text-xs text-muted-foreground">
                 Prix unitaire calculé : <strong>{(((Number(editing.prix_achat) || 0) / (Number(editing.colisage) || 1)) || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} FCFA / {editing.unite}</strong>
               </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Stock min (alerte)</Label><Input type="number" step="0.01" value={editing.stock_min ?? 0} onChange={e => setEditing({ ...editing, stock_min: Number(e.target.value) })} /></div>
+                <div className="flex items-end gap-2 pb-1"><Switch checked={editing.actif !== false} onCheckedChange={v => setEditing({ ...editing, actif: v })} /><Label>Active</Label></div>
+              </div>
               <div><Label>Notes</Label><Input value={editing.notes || ''} onChange={e => setEditing({ ...editing, notes: e.target.value })} /></div>
-              <div className="flex items-center gap-2"><Switch checked={editing.actif !== false} onCheckedChange={v => setEditing({ ...editing, actif: v })} /><Label>Active</Label></div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditing(null)}>Annuler</Button>
