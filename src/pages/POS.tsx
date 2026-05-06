@@ -316,23 +316,6 @@ export default function POS() {
         </DialogContent>
       </Dialog>
 
-      {/* Auto-print after sale */}
-      {lastTicket && validateSale.isSuccess && <AutoPrint data={lastTicket} onDone={() => { /* keep for reprint */ }} />}
     </div>
   );
-}
-
-function AutoPrint({ data, onDone }: { data: any; onDone: () => void }) {
-  useEffect(() => {
-    const html = `<html><head><title>Ticket ${data.vente.numero_ticket}</title>
-      <style>body{font-family:monospace;padding:8px;width:280px}h2{text-align:center;margin:4px 0;font-family:serif}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.total{font-size:14px;font-weight:bold}</style></head><body>
-      <h2>SAADÉ</h2><hr/>
-      <div class="row"><span>Ticket #${data.vente.numero_ticket}</span><span>${new Date(data.vente.date_vente).toLocaleString('fr-FR')}</span></div>
-      ${data.lignes.map((l: any) => `<div class="row"><span>${l.quantite}× ${l.produit_nom}</span><span>${Number(l.total_ligne).toLocaleString()} F</span></div>`).join('')}
-      <hr/><div class="row total"><span>TOTAL</span><span>${Number(data.vente.total).toLocaleString()} F</span></div>
-      </body></html>`;
-    const w = window.open('', '_blank', 'width=320,height=600');
-    if (w) { w.document.write(html); w.document.close(); setTimeout(() => { w.print(); onDone(); }, 300); }
-  }, []);
-  return null;
 }
