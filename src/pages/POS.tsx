@@ -462,10 +462,8 @@ export default function POS() {
       <div style="font-size:11px;">caissier : ${caissier}</div>
       <hr/>
       <div class="footer">Merci de votre visite,<br/>SAADÉ vous souhaite une belle journée !</div>
-      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
       </body></html>`;
-    const w = window.open('', '_blank', 'width=340,height=600');
-    if (w) { w.document.write(html); w.document.close(); }
+    printViaIframe(html, `Ticket caisse #${v.numero_ticket}`);
   };
 
   return (
