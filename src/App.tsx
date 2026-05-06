@@ -49,6 +49,9 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/audit" element={<AuditLog />} />
             </Route>
+            <Route element={<AppLayout module="catalogue" />}>
+              <Route path="/catalogue" element={<Catalogue />} />
+            </Route>
             <Route element={<AppLayout module="achats_mp" />}>
               <Route path="/achats-mp" element={<AchatsMP />} />
             </Route>
