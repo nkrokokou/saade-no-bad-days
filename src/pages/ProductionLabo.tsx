@@ -127,12 +127,16 @@ export default function ProductionLabo() {
                 <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {fields.map(f => (
-                  <div key={f.key}>
-                    <p className="text-[10px] text-muted-foreground">{f.label}</p>
-                    <Input type="number" className="h-8 text-xs" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
-                  </div>
-                ))}
+                {fields.map(f => {
+                  const isPerte = f.key === 'qte_perte';
+                  const val = isPerte ? computePerte(p.id) : getVal(p.id, f.key);
+                  return (
+                    <div key={f.key}>
+                      <p className="text-[10px] text-muted-foreground">{f.label}{isPerte && ' (auto)'}</p>
+                      <Input type="number" readOnly={isPerte} className={`h-8 text-xs ${isPerte ? 'bg-muted text-destructive font-semibold' : ''}`} value={val || ''} onChange={e => !isPerte && setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
