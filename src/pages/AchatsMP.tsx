@@ -44,10 +44,10 @@ export default function AchatsMP() {
 
   const addAchat = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur: form.fournisseur, produit: form.produit, quantite: form.quantite, unite: form.unite, prix_unitaire: form.prix_unitaire, prix_total: form.quantite * form.prix_unitaire, created_by: user?.id });
+      const { error } = await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur: form.fournisseur, produit: form.produit, quantite: form.quantite, unite: form.unite, prix_unitaire: form.prix_unitaire, prix_total: form.quantite * form.prix_unitaire, matiere_premiere_id: form.matiere_premiere_id, created_by: user?.id } as any);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0 }); toast.success('Achat ajouté'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0, matiere_premiere_id: null }); toast.success('Achat ajouté — stock MP mis à jour'); },
     onError: () => toast.error('Erreur'),
   });
 
