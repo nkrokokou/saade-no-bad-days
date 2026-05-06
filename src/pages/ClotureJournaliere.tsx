@@ -129,7 +129,8 @@ export default function ClotureJournaliere() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Formule : Stock Fin = Ouverture + Reçu − Vendu − Invendu − Perte − Dégustation
+        Saisis le <strong>Stock physique compté</strong> en fin de journée — la <strong>Perte est calculée automatiquement</strong> :
+        Perte = Ouverture + Reçu − Vendu − Invendu − Dégustation − Compté.
       </p>
 
       {Object.entries(grouped).map(([cat, prods]) => (
@@ -140,20 +141,21 @@ export default function ClotureJournaliere() {
             <div className="block md:hidden space-y-3">
               {prods.map(p => {
                 const eid = getEntryId(p.id);
+                const perte = getPerteAuto(p.id);
                 return (
                 <div key={p.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex justify-between items-center">
                     <p className="font-medium text-sm">{p.nom}</p>
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>Fin: {getStockFin(p.id)}</span>
+                      <span className="text-xs text-destructive font-bold">Perte: {perte}</span>
                       {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
                     </div>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {fields.map(f => (
                       <div key={f}>
-                        <p className="text-[10px] text-muted-foreground">{fieldLabels[f]}</p>
-                        <Input type="number" className="h-8 text-xs text-center px-1" value={getVal(p.id, f) || ''} onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} />
+                        <p className={`text-[10px] ${f === 'stock_fin_compte' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>{fieldLabels[f]}</p>
+                        <Input type="number" inputMode="decimal" className="h-8 text-xs text-center px-1" value={getVal(p.id, f) || ''} placeholder="0" onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} />
                       </div>
                     ))}
                   </div>
@@ -166,8 +168,8 @@ export default function ClotureJournaliere() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[140px] sticky left-0 bg-card z-10">Produit</TableHead>
-                  {fields.map(f => <TableHead key={f} className="text-center">{fieldLabels[f]}</TableHead>)}
-                  <TableHead className="text-center font-bold">Stock Fin</TableHead>
+                  {fields.map(f => <TableHead key={f} className={`text-center ${f === 'stock_fin_compte' ? 'text-primary' : ''}`}>{fieldLabels[f]}</TableHead>)}
+                  <TableHead className="text-center font-bold text-destructive">Perte (auto)</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -178,9 +180,9 @@ export default function ClotureJournaliere() {
                   <TableRow key={p.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10">{p.nom}</TableCell>
                     {fields.map(f => (
-                      <TableCell key={f}><Input type="number" className="w-16 text-center" value={getVal(p.id, f) || ''} onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} /></TableCell>
+                      <TableCell key={f}><Input type="number" inputMode="decimal" className="w-16 text-center" value={getVal(p.id, f) || ''} placeholder="0" onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} /></TableCell>
                     ))}
-                    <TableCell className={`text-center font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>{getStockFin(p.id)}</TableCell>
+                    <TableCell className="text-center font-bold text-destructive">{getPerteAuto(p.id)}</TableCell>
                     <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                   </TableRow>
                   );
