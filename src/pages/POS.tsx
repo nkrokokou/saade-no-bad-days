@@ -164,6 +164,7 @@ export default function POS() {
       setPayOpen(false);
       clearCart();
       qc.invalidateQueries({ queryKey: ['ventes'] });
+      setTimeout(() => printTicket({ vente, lignes }), 100);
     },
     onError: (e: any) => toast.error(e.message),
   });
