@@ -184,40 +184,76 @@ export default function POS() {
 
   const printTicket = (data: any, kitchen = false) => {
     if (!data) return;
-    const html = `<html><head><title>Ticket ${data.vente.numero_ticket}</title>
+    const v = data.vente;
+    const lignes = data.lignes || [];
+    const fmt = (n: number) => Number(n || 0).toLocaleString('fr-FR').replace(/,/g, ' ');
+    const date = new Date(v.date_vente).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' });
+    const caissier = (user?.email || 'CAISSIER').split('@')[0].toUpperCase();
+    const modeLabel = (PAYMENT_LABELS[v.mode_paiement as PaymentMode] || '').toUpperCase();
+
+    // Largeur 80mm ≈ 42 caractères en monospace 12px
+    const W = 42;
+    const padRow = (left: string, right: string) => {
+      const l = left.slice(0, W - right.length - 1);
+      return l + ' '.repeat(Math.max(1, W - l.length - right.length)) + right;
+    };
+
+    const articlesHeader = padRow('ARTICLES', 'P.U  Qté   MONT');
+    const articlesRows = lignes.map((l: any) => {
+      const nom = String(l.produit_nom).toUpperCase();
+      const pu = fmt(l.prix_unitaire);
+      const qte = String(l.quantite);
+      const mont = Number(l.total_ligne) === 0 ? 'offert' : fmt(l.total_ligne);
+      // Colonnes: nom (22) | pu (8) | qte (4) | mont (8)
+      const c1 = nom.slice(0, 22).padEnd(22, ' ');
+      const c2 = pu.padStart(7, ' ') + ' ';
+      const c3 = qte.padStart(3, ' ') + ' ';
+      const c4 = mont.padStart(8, ' ');
+      if (kitchen) return `<div class="big">${qte}× ${nom}</div>`;
+      return `<div class="mono">${c1}${c2}${c3}${c4}</div>`;
+    }).join('');
+
+    const html = `<html><head><title>Ticket ${v.numero_ticket}</title>
       <style>
-        @page { size: 72mm auto; margin: 2mm; }
-        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: 72mm; font-size: 12px; line-height: 1.35; color: #000; }
-        h2 { text-align: center; margin: 2px 0; font-family: serif; font-size: 18px; letter-spacing: 2px; }
-        hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+        @page { size: 80mm auto; margin: 2mm; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Courier New', 'Consolas', monospace; padding: 0; margin: 0; width: 76mm; font-size: 12px; line-height: 1.35; color: #000; }
+        h2 { text-align: center; margin: 2px 0 0; font-family: Georgia, serif; font-size: 18px; font-weight: bold; }
+        .sub { text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
+        .addr { text-align: center; font-size: 11px; }
+        hr { border: none; border-top: 1px solid #000; margin: 4px 0; }
         .row { display: flex; justify-content: space-between; gap: 4px; }
-        .total { font-size: 15px; font-weight: bold; }
+        .mono { white-space: pre; font-family: 'Courier New', monospace; font-size: 12px; }
+        .total { font-weight: bold; }
         .center { text-align: center; }
         .big { font-size: 14px; font-weight: bold; }
-        small { font-size: 10px; }
+        .footer { text-align: center; margin-top: 8px; font-size: 11px; }
       </style></head><body>
       <h2>SAADÉ</h2>
-      <div class="center"><small>Lomé · Togo</small></div>
+      <div class="sub">PÂTISSERIE · SNACK · CONCEPT STORE</div>
+      <div class="addr">Lomé · Togo</div>
+      <div class="addr">Téléphone: (+228) — — — —</div>
+      <div class="row" style="font-size:11px;margin-top:2px;"><span>${date}</span><span>Ticket N° ${v.numero_ticket}</span></div>
+      <div style="font-size:11px;">CLIENT : ${(v.client_nom || 'CLIENT CASH').toUpperCase()}</div>
       <hr/>
-      <div class="row"><span>#${data.vente.numero_ticket}</span><span>${new Date(data.vente.date_vente).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span></div>
-      ${data.vente.client_nom ? `<div>Client: ${data.vente.client_nom}</div>` : ''}
-      ${kitchen ? '<div class="center big">--- CUISINE ---</div>' : ''}
-      <hr/>
-      ${data.lignes.map((l: any) => kitchen
-        ? `<div class="big">${l.quantite}× ${l.produit_nom}</div>`
-        : `<div class="row"><span>${l.quantite}× ${l.produit_nom}</span><span>${Number(l.total_ligne).toLocaleString()} F</span></div>`).join('')}
+      ${kitchen ? '<div class="center big">--- CUISINE ---</div>' : `<div class="mono">${articlesHeader}</div>`}
+      ${articlesRows}
       <hr/>
       ${kitchen ? '' : `
-        ${data.vente.remise_globale > 0 ? `<div class="row"><span>Remise</span><span>-${Number(data.vente.remise_globale).toLocaleString()} F</span></div>` : ''}
-        <div class="row total"><span>TOTAL</span><span>${Number(data.vente.total).toLocaleString()} F</span></div>
-        <div class="row"><span>${PAYMENT_LABELS[data.vente.mode_paiement as PaymentMode]}</span><span>${Number(data.vente.montant_recu).toLocaleString()} F</span></div>
-        ${data.vente.rendu > 0 ? `<div class="row"><span>Rendu</span><span>${Number(data.vente.rendu).toLocaleString()} F</span></div>` : ''}
+        <div class="row"><span>Montant TTC</span><span>${fmt(v.total + (v.remise_globale || 0))} CFA</span></div>
+        <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
+        <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
+        <div class="row"><span>${modeLabel}</span><span>${fmt(v.montant_recu)} CFA</span></div>
+        ${Number(v.rendu) > 0 ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
         <hr/>
-        <div class="center"><small>Merci de votre visite ❤</small></div>
+        <div style="font-size:11px;">serveur : ....   table : ....</div>
+        <div style="font-size:11px;">caissier : ${caissier}</div>
+        <hr/>
+        <div class="footer">Merci de votre visite,<br/>SAADÉ vous souhaite une belle journée !</div>
       `}
       <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
       </body></html>`;
-    const w = window.open('', '_blank', 'width=320,height=600');
+    const w = window.open('', '_blank', 'width=340,height=600');
     if (w) { w.document.write(html); w.document.close(); }
   };
 
