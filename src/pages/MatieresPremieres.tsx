@@ -80,6 +80,7 @@ export default function MatieresPremieres() {
         prix_achat, prix_unitaire,
         notes: m.notes || null,
         actif: m.actif !== false,
+        stock_min: Number(m.stock_min) || 0,
       };
       if (m.id) {
         const { error } = await supabase.from('matieres_premieres').update(payload).eq('id', m.id);
