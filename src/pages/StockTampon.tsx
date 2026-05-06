@@ -112,7 +112,7 @@ export default function StockTampon() {
                 return (
                   <div key={p.id} className="flex items-center gap-2 border-b border-border pb-2 last:border-0">
                     <span className="flex-1 text-sm font-medium truncate">{p.nom}</span>
-                    <Input type="number" className="w-20 h-8 text-center text-sm" value={getQty(p.id)} onChange={e => setLocalQty(prev => ({ ...prev, [p.id]: parseFloat(e.target.value) || 0 }))} />
+                    <Input type="number" inputMode="decimal" className="w-20 h-8 text-center text-sm" value={getQty(p.id) || ''} placeholder="0" onChange={e => setLocalQty(prev => ({ ...prev, [p.id]: parseFloat(e.target.value) || 0 }))} />
                     <div className="flex gap-1">
                       {entrees > 0 && <Badge variant="outline" className="text-[10px] gap-0.5 px-1"><ArrowDown className="h-2.5 w-2.5 text-green-600" />{entrees}</Badge>}
                       {sorties > 0 && <Badge variant="outline" className="text-[10px] gap-0.5 px-1"><ArrowUp className="h-2.5 w-2.5 text-red-500" />{sorties}</Badge>}
@@ -130,7 +130,7 @@ export default function StockTampon() {
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.nom}</TableCell>
-                      <TableCell><Input type="number" className="w-20 text-center" value={getQty(p.id)} onChange={e => setLocalQty(prev => ({ ...prev, [p.id]: parseFloat(e.target.value) || 0 }))} /></TableCell>
+                      <TableCell><Input type="number" inputMode="decimal" className="w-20 text-center" value={getQty(p.id) || ''} placeholder="0" onChange={e => setLocalQty(prev => ({ ...prev, [p.id]: parseFloat(e.target.value) || 0 }))} /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 justify-center">
                           {entrees > 0 && <Badge variant="outline" className="text-xs gap-1"><ArrowDown className="h-3 w-3 text-green-600" />{entrees}</Badge>}
