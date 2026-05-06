@@ -53,7 +53,7 @@ export default function AchatsMP() {
 
   const deleteAchat = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('achats_mp').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); setDeleteId(null); toast.success('Achat supprimé'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setDeleteId(null); toast.success('Achat supprimé'); },
   });
 
   const totalJour = achats.reduce((s: number, a: any) => s + (a.prix_total || 0), 0);
