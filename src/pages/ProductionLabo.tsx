@@ -51,6 +51,14 @@ export default function ProductionLabo() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setLocal({}); toast.success('Production sauvegardée'); },
   });
 
+  const deleteEntry = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('production_labo').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setDeleteId(null); toast.success('Entrée supprimée'); },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
+
   const handleExport = () => {
     exportToExcel(products.map(p => ({ Produit: p.nom, 'Qté Produite': getVal(p.id, 'qte_produite'), 'Sortie en Salle': getVal(p.id, 'qte_sortie_en_salle'), Perte: getVal(p.id, 'qte_perte') })), `production_${selectedDate}`);
   };
