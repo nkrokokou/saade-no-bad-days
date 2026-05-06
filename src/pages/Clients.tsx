@@ -70,7 +70,7 @@ export default function Clients() {
         const { error } = await supabase.from('clients').update(c).eq('id', c.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('clients').insert({ ...c, created_by: user?.id });
+        const { error } = await supabase.from('clients').insert({ ...c, created_by: user?.id } as any);
         if (error) throw error;
       }
     },
