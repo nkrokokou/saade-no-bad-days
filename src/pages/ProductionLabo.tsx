@@ -48,7 +48,7 @@ export default function ProductionLabo() {
         else await supabase.from('production_labo').insert({ produit_id: pid, date_production: selectedDate, ...vals, created_by: user?.id });
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setLocal({}); toast.success('Production sauvegardée'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setLocal({}); toast.success('Production sauvegardée — stock MP recalculé'); },
   });
 
   const deleteEntry = useMutation({
