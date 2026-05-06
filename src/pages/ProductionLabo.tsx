@@ -33,7 +33,12 @@ export default function ProductionLabo() {
 
   const [local, setLocal] = useState<Record<string, { qte_produite: number; qte_sortie_en_salle: number; qte_perte: number }>>({});
   const getVal = (pid: string, field: string) => { if (local[pid]?.[field as keyof typeof local[string]] !== undefined) return local[pid][field as keyof typeof local[string]]; return entries.find((x: any) => x.produit_id === pid)?.[field] ?? 0; };
-  const setVal = (pid: string, field: string, val: number) => setLocal(prev => ({ ...prev, [pid]: { qte_produite: getVal(pid, 'qte_produite'), qte_sortie_en_salle: getVal(pid, 'qte_sortie_en_salle'), qte_perte: getVal(pid, 'qte_perte'), ...prev[pid], [field]: val } }));
+  const computePerte = (pid: string) => Math.max(0, Number(getVal(pid, 'qte_produite') || 0) - Number(getVal(pid, 'qte_sortie_en_salle') || 0));
+  const setVal = (pid: string, field: string, val: number) => setLocal(prev => {
+    const base = { qte_produite: getVal(pid, 'qte_produite'), qte_sortie_en_salle: getVal(pid, 'qte_sortie_en_salle'), qte_perte: getVal(pid, 'qte_perte'), ...prev[pid], [field]: val };
+    base.qte_perte = Math.max(0, Number(base.qte_produite || 0) - Number(base.qte_sortie_en_salle || 0));
+    return { ...prev, [pid]: base };
+  });
 
   const filteredProducts = useMemo(() => {
     if (!search) return products;
@@ -89,7 +94,7 @@ export default function ProductionLabo() {
   const fields = [
     { key: 'qte_produite', label: 'Produite' },
     { key: 'qte_sortie_en_salle', label: 'Sortie Salle' },
-    { key: 'qte_perte', label: 'Perte' },
+    { key: 'qte_perte', label: 'Perte (auto)' },
   ];
 
   return (
@@ -122,12 +127,16 @@ export default function ProductionLabo() {
                 <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {fields.map(f => (
-                  <div key={f.key}>
-                    <p className="text-[10px] text-muted-foreground">{f.label}</p>
-                    <Input type="number" className="h-8 text-xs" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
-                  </div>
-                ))}
+                {fields.map(f => {
+                  const isPerte = f.key === 'qte_perte';
+                  const val = isPerte ? computePerte(p.id) : getVal(p.id, f.key);
+                  return (
+                    <div key={f.key}>
+                      <p className="text-[10px] text-muted-foreground">{f.label}{isPerte && ' (auto)'}</p>
+                      <Input type="number" readOnly={isPerte} className={`h-8 text-xs ${isPerte ? 'bg-muted text-destructive font-semibold' : ''}`} value={val || ''} onChange={e => !isPerte && setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -153,11 +162,15 @@ export default function ProductionLabo() {
                 return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.nom}</TableCell>
-                  {fields.map(f => (
-                    <TableCell key={f.key}>
-                      <Input type="number" className="w-24" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
-                    </TableCell>
-                  ))}
+                  {fields.map(f => {
+                    const isPerte = f.key === 'qte_perte';
+                    const val = isPerte ? computePerte(p.id) : getVal(p.id, f.key);
+                    return (
+                      <TableCell key={f.key}>
+                        <Input type="number" readOnly={isPerte} className={`w-24 ${isPerte ? 'bg-muted text-destructive font-semibold' : ''}`} value={val || ''} onChange={e => !isPerte && setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
+                      </TableCell>
+                    );
+                  })}
                   <TableCell><Button size="icon" variant="ghost" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>
                 );
