@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, ModuleKey } from '@/hooks/usePermissions';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
@@ -7,12 +7,35 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { CommandPalette } from '@/components/CommandPalette';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search } from 'lucide-react';
+import { Search, ScanLine } from 'lucide-react';
+
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Tableau de bord',
+  '/insights': 'Assistant IA',
+  '/pos': 'Caisse / POS',
+  '/ventes': 'Ventes & Rapports',
+  '/clients': 'Clients & Crédits',
+  '/catalogue': 'Catalogue produits',
+  '/achats-mp': 'Achats matières premières',
+  '/fiches-techniques': 'Fiches techniques',
+  '/bons-transfert': 'Bons de transfert',
+  '/stock-tampon': 'Stock tampon',
+  '/pertes': 'Pertes',
+  '/production': 'Production labo',
+  '/inventaire': 'Inventaire',
+  '/cloture': 'Clôture journalière',
+  '/degustations': 'Dégustations',
+  '/admin': 'Administration',
+  '/audit': "Journal d'audit",
+};
 
 export function AppLayout({ module }: { module?: ModuleKey }) {
   const { profile, loading: authLoading, session } = useAuth();
-  const { canAccess, loading: permLoading } = usePermissions();
+  const { canAccess, loading: permLoading, roles } = usePermissions();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (authLoading || permLoading) {
     return (
@@ -33,23 +56,33 @@ export function AppLayout({ module }: { module?: ModuleKey }) {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
   };
 
+  const pageTitle = PAGE_TITLES[location.pathname] || 'SAADÉ';
+  const primaryRole = roles[0] || profile.role;
+
   return (
     <SidebarProvider>
       <CommandPalette />
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center border-b bg-card px-4 sticky top-0 z-10">
-            <SidebarTrigger className="mr-4" />
-            <h2 className="text-lg font-heading font-semibold text-foreground">SAADÉ</h2>
-            <span className="ml-2 text-xs text-muted-foreground hidden sm:inline">Laboratoire & Boutique</span>
+          <header className="h-14 flex items-center border-b bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 px-3 sm:px-4 sticky top-0 z-20">
+            <SidebarTrigger className="mr-2 sm:mr-3" />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg font-heading font-semibold text-foreground truncate">{pageTitle}</h2>
+              <p className="text-[10px] text-muted-foreground hidden sm:block leading-none">SAADÉ · {primaryRole.replace(/_/g, ' ')}</p>
+            </div>
             <div className="ml-auto flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hidden md:flex items-center gap-2" onClick={openPalette}>
+              {canAccess('pos') && location.pathname !== '/pos' && (
+                <Button variant="default" size="sm" className="hidden sm:inline-flex" onClick={() => navigate('/pos')}>
+                  <ScanLine className="h-4 w-4 mr-1" />Caisse
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" className="text-muted-foreground hidden md:inline-flex items-center gap-2" onClick={openPalette}>
                 <Search className="h-4 w-4" />
                 <span className="text-xs">Rechercher</span>
                 <kbd className="ml-2 text-[10px] bg-muted px-1.5 py-0.5 rounded">⌘K</kbd>
               </Button>
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={openPalette}>
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={openPalette} aria-label="Rechercher">
                 <Search className="h-4 w-4" />
               </Button>
               <LanguageSwitcher />
@@ -64,3 +97,4 @@ export function AppLayout({ module }: { module?: ModuleKey }) {
     </SidebarProvider>
   );
 }
+
