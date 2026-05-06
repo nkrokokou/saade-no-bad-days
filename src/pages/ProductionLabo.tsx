@@ -113,12 +113,13 @@ export default function ProductionLabo() {
       <div className="block md:hidden space-y-3">
         {filteredProducts.map(p => {
           const eid = getEntryId(p.id);
+          const hasData = eid || local[p.id];
           return (
           <Card key={p.id}>
             <CardContent className="py-3 px-4">
               <div className="flex justify-between items-center mb-2">
                 <p className="font-medium text-sm">{p.nom}</p>
-                {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {fields.map(f => (
