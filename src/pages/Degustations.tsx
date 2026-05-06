@@ -12,13 +12,15 @@ import { PhotoUpload } from '@/components/PhotoUpload';
 import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
-import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export default function Degustations() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: products = [] } = useProducts();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: entries = [] } = useQuery({
     queryKey: ['degustations', selectedDate],
@@ -85,6 +87,14 @@ export default function Degustations() {
     },
     onError: () => toast.error('Erreur lors de la sauvegarde'),
   });
+
+  const deleteEntry = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('degustations').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['degustations'] }); setDeleteId(null); toast.success('Dégustation supprimée'); },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
 
   const grouped = products.reduce((acc, p) => {
     const cat = p.categorie || 'DIVERS';
@@ -158,9 +168,14 @@ export default function Degustations() {
           <CardContent className="overflow-x-auto p-3 sm:p-6">
             {/* Mobile cards */}
             <div className="block md:hidden space-y-2">
-              {prods.map(p => (
+              {prods.map(p => {
+                const eid = getEntryId(p.id);
+                return (
                 <div key={p.id} className="border rounded-lg p-2.5 space-y-2">
-                  <p className="font-medium text-sm">{p.nom}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="font-medium text-sm">{p.nom}</p>
+                    {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                  </div>
                   <div className="flex gap-2 items-center">
                     <Input type="number" className="w-20 h-9" placeholder="Qté" value={getQty(p.id) || ''}
                       onChange={e => setQty(p.id, parseFloat(e.target.value) || 0)} />
@@ -169,7 +184,8 @@ export default function Degustations() {
                     <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             {/* Desktop table */}
             <Table className="hidden md:table">
@@ -179,10 +195,13 @@ export default function Degustations() {
                   <TableHead className="w-24">Quantité</TableHead>
                   <TableHead>Motif</TableHead>
                   <TableHead className="w-32">Photo</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {prods.map(p => (
+                {prods.map(p => {
+                  const eid = getEntryId(p.id);
+                  return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.nom}</TableCell>
                     <TableCell>
@@ -196,13 +215,16 @@ export default function Degustations() {
                     <TableCell>
                       <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
                     </TableCell>
+                    <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       ))}
+      <ConfirmDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)} title="Supprimer cette dégustation ?" description="L'enregistrement sera définitivement supprimé." destructive onConfirm={() => deleteId && deleteEntry.mutate(deleteId)} />
     </div>
   );
 }

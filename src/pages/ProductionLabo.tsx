@@ -12,7 +12,8 @@ import { SearchFilter } from '@/components/SearchFilter';
 import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
-import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export default function ProductionLabo() {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ export default function ProductionLabo() {
   const { data: products = [] } = useProducts();
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: entries = [] } = useQuery({
     queryKey: ['production_labo', selectedDate],
@@ -48,6 +50,14 @@ export default function ProductionLabo() {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setLocal({}); toast.success('Production sauvegardée'); },
   });
+
+  const deleteEntry = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('production_labo').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setDeleteId(null); toast.success('Entrée supprimée'); },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
 
   const handleExport = () => {
     exportToExcel(products.map(p => ({ Produit: p.nom, 'Qté Produite': getVal(p.id, 'qte_produite'), 'Sortie en Salle': getVal(p.id, 'qte_sortie_en_salle'), Perte: getVal(p.id, 'qte_perte') })), `production_${selectedDate}`);
@@ -97,10 +107,15 @@ export default function ProductionLabo() {
 
       {/* Mobile cards */}
       <div className="block md:hidden space-y-3">
-        {filteredProducts.map(p => (
+        {filteredProducts.map(p => {
+          const eid = getEntryId(p.id);
+          return (
           <Card key={p.id}>
             <CardContent className="py-3 px-4">
-              <p className="font-medium text-sm mb-2">{p.nom}</p>
+              <div className="flex justify-between items-center mb-2">
+                <p className="font-medium text-sm">{p.nom}</p>
+                {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 {fields.map(f => (
                   <div key={f.key}>
@@ -111,7 +126,8 @@ export default function ProductionLabo() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Desktop table */}
@@ -122,10 +138,13 @@ export default function ProductionLabo() {
               <TableRow>
                 <TableHead className="min-w-[200px]">Produit</TableHead>
                 {fields.map(f => <TableHead key={f.key}>{f.label}</TableHead>)}
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map(p => (
+              {filteredProducts.map(p => {
+                const eid = getEntryId(p.id);
+                return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.nom}</TableCell>
                   {fields.map(f => (
@@ -133,12 +152,15 @@ export default function ProductionLabo() {
                       <Input type="number" className="w-24" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
                     </TableCell>
                   ))}
+                  <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+      <ConfirmDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)} title="Supprimer cette entrée ?" description="L'enregistrement de production sera supprimé." destructive onConfirm={() => deleteId && deleteEntry.mutate(deleteId)} />
     </div>
   );
 }

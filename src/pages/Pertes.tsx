@@ -14,7 +14,8 @@ import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@
 import { toast } from 'sonner';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const LABS = [
@@ -33,6 +34,7 @@ export default function Pertes() {
   const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const defaultTab = profile?.role === 'cuisine_salee' ? 'cuisine_salee' : profile?.role === 'labo_viennoiserie' ? 'labo_viennoiserie' : 'labo_patisserie';
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [deletePid, setDeletePid] = useState<string | null>(null);
 
   const { data: pertes = [] } = useQuery({
     queryKey: ['pertes', weekStartStr, activeTab],
@@ -65,6 +67,22 @@ export default function Pertes() {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['pertes'] }); setLocalData({}); toast.success('Pertes sauvegardées'); },
   });
+
+  const deleteRow = useMutation({
+    mutationFn: async (pid: string) => {
+      const ids = pertes.filter((p: any) => p.produit_id === pid).map((p: any) => p.id);
+      if (ids.length) { const { error } = await supabase.from('pertes').delete().in('id', ids); if (error) throw error; }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pertes'] });
+      if (deletePid) setLocalData(prev => { const c = { ...prev }; delete c[deletePid]; return c; });
+      setDeletePid(null);
+      toast.success('Ligne effacée pour la semaine');
+    },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const hasData = (pid: string) => pertes.some((p: any) => p.produit_id === pid) || !!localData[pid];
 
   const allowedTabs = profile?.role === 'ceo' ? LABS : LABS.filter(l => l.key === profile?.role);
 
@@ -134,7 +152,10 @@ export default function Pertes() {
                     if (!search && total === 0 && !Object.keys(localData[p.id] || {}).length) return null;
                     return (
                       <div key={p.id} className="border rounded-lg p-3 space-y-2">
-                        <p className="font-medium text-sm">{p.nom} <span className="text-primary font-bold ml-2">Total: {total}</span></p>
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium text-sm">{p.nom} <span className="text-primary font-bold ml-2">Total: {total}</span></p>
+                          {hasData(p.id) && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeletePid(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                        </div>
                         <div className="grid grid-cols-4 gap-1">
                           {DAYS.map(d => (
                             <div key={d} className="text-center">
@@ -156,6 +177,7 @@ export default function Pertes() {
                       <TableHead className="min-w-[180px] sticky left-0 bg-card">Produit</TableHead>
                       {DAYS.map(d => <TableHead key={d} className="text-center capitalize min-w-[70px]">{d.slice(0, 3)}</TableHead>)}
                       <TableHead className="text-center font-bold">Total</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -168,6 +190,7 @@ export default function Pertes() {
                           </TableCell>
                         ))}
                         <TableCell className="text-center font-bold">{getTotal(p.id)}</TableCell>
+                        <TableCell>{hasData(p.id) && <Button size="icon" variant="ghost" onClick={() => setDeletePid(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -177,6 +200,7 @@ export default function Pertes() {
           </TabsContent>
         ))}
       </Tabs>
+      <ConfirmDialog open={!!deletePid} onOpenChange={() => setDeletePid(null)} title="Effacer les pertes de cette ligne ?" description="Toutes les saisies de la semaine pour ce produit seront supprimées." destructive onConfirm={() => deletePid && deleteRow.mutate(deletePid)} />
     </div>
   );
 }
