@@ -68,6 +68,22 @@ export default function Pertes() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['pertes'] }); setLocalData({}); toast.success('Pertes sauvegardées'); },
   });
 
+  const deleteRow = useMutation({
+    mutationFn: async (pid: string) => {
+      const ids = pertes.filter((p: any) => p.produit_id === pid).map((p: any) => p.id);
+      if (ids.length) { const { error } = await supabase.from('pertes').delete().in('id', ids); if (error) throw error; }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pertes'] });
+      if (deletePid) setLocalData(prev => { const c = { ...prev }; delete c[deletePid]; return c; });
+      setDeletePid(null);
+      toast.success('Ligne effacée pour la semaine');
+    },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const hasData = (pid: string) => pertes.some((p: any) => p.produit_id === pid) || !!localData[pid];
+
   const allowedTabs = profile?.role === 'ceo' ? LABS : LABS.filter(l => l.key === profile?.role);
 
   const handleExport = () => {
