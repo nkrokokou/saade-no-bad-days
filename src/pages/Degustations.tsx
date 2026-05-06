@@ -20,6 +20,7 @@ export default function Degustations() {
   const qc = useQueryClient();
   const { data: products = [] } = useProducts();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: entries = [] } = useQuery({
     queryKey: ['degustations', selectedDate],
