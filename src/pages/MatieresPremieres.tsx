@@ -46,6 +46,17 @@ export default function MatieresPremieres() {
     },
   });
 
+  const { data: stockRows = [] } = useQuery({
+    queryKey: ['v_stock_mp'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('v_stock_matieres_premieres' as any).select('id,total_achete,total_consomme,stock_actuel,alerte_stock');
+      if (error) { console.warn('stock view', error); return []; }
+      return (data || []) as unknown as StockRow[];
+    },
+    refetchInterval: 30000,
+  });
+  const stockById = useMemo(() => Object.fromEntries(stockRows.map(s => [s.id, s])), [stockRows]);
+
   const fournisseurs = useMemo(() => Array.from(new Set(mps.map(m => m.fournisseur).filter(Boolean))).sort() as string[], [mps]);
 
   const filtered = useMemo(() => {
