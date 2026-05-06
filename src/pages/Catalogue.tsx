@@ -20,8 +20,16 @@ import { useCategories } from '@/hooks/useCategories';
 
 const empty = (): Partial<Produit> => ({
   nom: '', categorie: 'DIVERS', sous_categorie: '', unite: 'pièce',
-  prix_vente: 0, prix_cout: 0, photo_url: '', actif: true,
+  prix_vente: 0, prix_cout: 0, photo_url: '', actif: true, poste_preparation: 'salle',
 });
+
+const POSTES: Array<{ value: NonNullable<Produit['poste_preparation']>; label: string }> = [
+  { value: 'salle', label: 'Salle (pas de ticket préparation)' },
+  { value: 'cuisine', label: 'Cuisine' },
+  { value: 'bar', label: 'Bar / Boissons' },
+  { value: 'labo_patisserie', label: 'Labo Pâtisserie' },
+  { value: 'labo_viennoiserie', label: 'Labo Viennoiserie' },
+];
 
 export default function Catalogue() {
   const qc = useQueryClient();
