@@ -407,7 +407,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
-          matiere_premiere: string
+          matiere_premiere: string | null
+          matiere_premiere_id: string | null
           produit_id: string
           quantite_mp: number
           unite_mp: string
@@ -417,7 +418,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          matiere_premiere: string
+          matiere_premiere?: string | null
+          matiere_premiere_id?: string | null
           produit_id: string
           quantite_mp?: number
           unite_mp?: string
@@ -427,12 +429,20 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          matiere_premiere?: string
+          matiere_premiere?: string | null
+          matiere_premiere_id?: string | null
           produit_id?: string
           quantite_mp?: number
           unite_mp?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fiches_techniques_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
+            referencedRelation: "matieres_premieres"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fiches_techniques_produit_id_fkey"
             columns: ["produit_id"]

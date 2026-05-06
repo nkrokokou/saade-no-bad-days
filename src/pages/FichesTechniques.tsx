@@ -15,6 +15,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 import { Plus, Trash2, BookOpen, Calculator } from 'lucide-react';
 
+type MP = { id: string; nom: string; unite: string; prix_unitaire: number };
+
 export default function FichesTechniques() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -23,7 +25,15 @@ export default function FichesTechniques() {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ matiere_premiere: '', quantite_mp: 0, unite_mp: 'kg', cout_unitaire_mp: 0 });
+  const [form, setForm] = useState<{ matiere_premiere_id: string; matiere_premiere: string; quantite_mp: number; unite_mp: string; cout_unitaire_mp: number }>({ matiere_premiere_id: '', matiere_premiere: '', quantite_mp: 0, unite_mp: 'G', cout_unitaire_mp: 0 });
+
+  const { data: mps = [] } = useQuery({
+    queryKey: ['matieres_premieres', 'select'],
+    queryFn: async () => {
+      const { data } = await supabase.from('matieres_premieres').select('id, nom, unite, prix_unitaire').eq('actif', true).order('nom');
+      return (data || []) as MP[];
+    },
+  });
 
   const { data: fiches = [] } = useQuery({
     queryKey: ['fiches_techniques', selectedProduct],
@@ -54,18 +64,21 @@ export default function FichesTechniques() {
     mutationFn: async () => {
       const { error } = await supabase.from('fiches_techniques').insert({
         produit_id: selectedProduct!,
+        matiere_premiere_id: form.matiere_premiere_id || null,
         matiere_premiere: form.matiere_premiere,
         quantite_mp: form.quantite_mp,
         unite_mp: form.unite_mp,
         cout_unitaire_mp: form.cout_unitaire_mp,
         created_by: user?.id,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['catalogue'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
       setShowAdd(false);
-      setForm({ matiere_premiere: '', quantite_mp: 0, unite_mp: 'kg', cout_unitaire_mp: 0 });
+      setForm({ matiere_premiere_id: '', matiere_premiere: '', quantite_mp: 0, unite_mp: 'G', cout_unitaire_mp: 0 });
       toast.success('Ingrédient ajouté');
     },
   });
@@ -77,6 +90,8 @@ export default function FichesTechniques() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['catalogue'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
       setDeleteId(null);
       toast.success('Ingrédient supprimé');
     },
@@ -100,20 +115,26 @@ export default function FichesTechniques() {
             <DialogContent>
               <DialogHeader><DialogTitle>Ajouter une matière première</DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <div><Label>Matière première</Label><Input value={form.matiere_premiere} onChange={e => setForm(p => ({ ...p, matiere_premiere: e.target.value }))} placeholder="Ex: Farine T55" /></div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div><Label>Quantité</Label><Input type="number" value={form.quantite_mp || ''} onChange={e => setForm(p => ({ ...p, quantite_mp: parseFloat(e.target.value) || 0 }))} /></div>
-                  <div><Label>Unité</Label>
-                    <Select value={form.unite_mp} onValueChange={v => setForm(p => ({ ...p, unite_mp: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {['kg', 'g', 'L', 'mL', 'pièce', 'unité'].map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label>Matière première *</Label>
+                  <Select
+                    value={form.matiere_premiere_id}
+                    onValueChange={v => {
+                      const mp = mps.find(m => m.id === v);
+                      if (mp) setForm(p => ({ ...p, matiere_premiere_id: mp.id, matiere_premiere: mp.nom, unite_mp: mp.unite, cout_unitaire_mp: mp.prix_unitaire }));
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Sélectionner depuis le référentiel…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {mps.map(m => <SelectItem key={m.id} value={m.id}>{m.nom} <span className="text-xs text-muted-foreground ml-2">({m.prix_unitaire?.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} F/{m.unite})</span></SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div><Label>Coût unitaire (FCFA/{form.unite_mp})</Label><Input type="number" value={form.cout_unitaire_mp || ''} onChange={e => setForm(p => ({ ...p, cout_unitaire_mp: parseFloat(e.target.value) || 0 }))} /></div>
-                <p className="text-sm text-muted-foreground">Coût : {((form.quantite_mp || 0) * (form.cout_unitaire_mp || 0)).toLocaleString('fr-FR')} FCFA</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label>Quantité ({form.unite_mp})</Label><Input type="number" step="0.001" value={form.quantite_mp || ''} onChange={e => setForm(p => ({ ...p, quantite_mp: parseFloat(e.target.value) || 0 }))} /></div>
+                  <div><Label>Coût/{form.unite_mp}</Label><Input type="number" value={form.cout_unitaire_mp || ''} onChange={e => setForm(p => ({ ...p, cout_unitaire_mp: parseFloat(e.target.value) || 0 }))} /></div>
+                </div>
+                <p className="text-sm text-muted-foreground">Coût ingrédient : <strong>{((form.quantite_mp || 0) * (form.cout_unitaire_mp || 0)).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} FCFA</strong></p>
                 <Button className="w-full" onClick={() => addFiche.mutate()} disabled={addFiche.isPending || !form.matiere_premiere}>
                   {addFiche.isPending ? 'Ajout...' : 'Ajouter'}
                 </Button>

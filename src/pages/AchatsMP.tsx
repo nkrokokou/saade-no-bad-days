@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { ExcelImportExport } from '@/components/ExcelImportExport';
 import { SearchFilter } from '@/components/SearchFilter';
@@ -28,6 +29,11 @@ export default function AchatsMP() {
   const { data: achats = [] } = useQuery({
     queryKey: ['achats_mp', selectedDate],
     queryFn: async () => { const { data } = await supabase.from('achats_mp').select('*').eq('date_achat', selectedDate).order('created_at', { ascending: false }); return data || []; },
+  });
+
+  const { data: mps = [] } = useQuery({
+    queryKey: ['matieres_premieres', 'select'],
+    queryFn: async () => { const { data } = await supabase.from('matieres_premieres').select('id, nom, unite, prix_unitaire, fournisseur').eq('actif', true).order('nom'); return (data || []) as any[]; },
   });
 
   const filteredAchats = useMemo(() => {
@@ -90,6 +96,18 @@ export default function AchatsMP() {
             <DialogContent>
               <DialogHeader><DialogTitle>Nouvel achat</DialogTitle></DialogHeader>
               <div className="space-y-3">
+                <div>
+                  <Label>Matière première (référentiel)</Label>
+                  <Select value="" onValueChange={v => {
+                    const mp = mps.find((m: any) => m.id === v);
+                    if (mp) setForm(p => ({ ...p, produit: mp.nom, unite: mp.unite, prix_unitaire: mp.prix_unitaire || p.prix_unitaire, fournisseur: mp.fournisseur || p.fournisseur }));
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Choisir une MP du référentiel…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {mps.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div><Label>Fournisseur</Label><Input value={form.fournisseur} onChange={e => setForm(p => ({ ...p, fournisseur: e.target.value }))} /></div>
                 <div><Label>Produit / MP</Label><Input value={form.produit} onChange={e => setForm(p => ({ ...p, produit: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-2">
