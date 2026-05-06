@@ -21,6 +21,7 @@ import Admin from "./pages/Admin";
 import Catalogue from "./pages/Catalogue";
 import POS from "./pages/POS";
 import Ventes from "./pages/Ventes";
+import Clients from "./pages/Clients";
 import AuditLog from "./pages/AuditLog";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
