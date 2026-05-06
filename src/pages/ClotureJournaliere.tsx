@@ -21,6 +21,7 @@ export default function ClotureJournaliere() {
   const { data: products = [] } = useProducts();
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: entries = [] } = useQuery({
     queryKey: ['cloture_journaliere', selectedDate],
