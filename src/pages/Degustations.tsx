@@ -168,9 +168,14 @@ export default function Degustations() {
           <CardContent className="overflow-x-auto p-3 sm:p-6">
             {/* Mobile cards */}
             <div className="block md:hidden space-y-2">
-              {prods.map(p => (
+              {prods.map(p => {
+                const eid = getEntryId(p.id);
+                return (
                 <div key={p.id} className="border rounded-lg p-2.5 space-y-2">
-                  <p className="font-medium text-sm">{p.nom}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="font-medium text-sm">{p.nom}</p>
+                    {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                  </div>
                   <div className="flex gap-2 items-center">
                     <Input type="number" className="w-20 h-9" placeholder="Qté" value={getQty(p.id) || ''}
                       onChange={e => setQty(p.id, parseFloat(e.target.value) || 0)} />
@@ -179,7 +184,8 @@ export default function Degustations() {
                     <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             {/* Desktop table */}
             <Table className="hidden md:table">
