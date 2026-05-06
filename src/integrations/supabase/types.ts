@@ -182,6 +182,48 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          actif: boolean
+          adresse: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          nom: string
+          notes: string | null
+          plafond_credit: number
+          telephone: string | null
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          adresse?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          nom: string
+          notes?: string | null
+          plafond_credit?: number
+          telephone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          adresse?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          nom?: string
+          notes?: string | null
+          plafond_credit?: number
+          telephone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cloture_journaliere: {
         Row: {
           created_at: string
@@ -231,6 +273,59 @@ export type Database = {
             columns: ["produit_id"]
             isOneToOne: false
             referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credits_clients: {
+        Row: {
+          client_id: string | null
+          client_nom: string
+          created_at: string
+          created_by: string | null
+          date_credit: string
+          id: string
+          montant_initial: number
+          montant_restant: number
+          notes: string | null
+          statut: string
+          updated_at: string
+          vente_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_nom: string
+          created_at?: string
+          created_by?: string | null
+          date_credit?: string
+          id?: string
+          montant_initial?: number
+          montant_restant?: number
+          notes?: string | null
+          statut?: string
+          updated_at?: string
+          vente_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          client_nom?: string
+          created_at?: string
+          created_by?: string | null
+          date_credit?: string
+          id?: string
+          montant_initial?: number
+          montant_restant?: number
+          notes?: string | null
+          statut?: string
+          updated_at?: string
+          vente_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credits_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -417,6 +512,47 @@ export type Database = {
             columns: ["produit_id"]
             isOneToOne: false
             referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paiements_credits: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          credit_id: string
+          date_paiement: string
+          id: string
+          mode_paiement: string
+          montant: number
+          notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          credit_id: string
+          date_paiement?: string
+          id?: string
+          mode_paiement?: string
+          montant?: number
+          notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          credit_id?: string
+          date_paiement?: string
+          id?: string
+          mode_paiement?: string
+          montant?: number
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paiements_credits_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "credits_clients"
             referencedColumns: ["id"]
           },
         ]
@@ -713,6 +849,7 @@ export type Database = {
       }
       ventes: {
         Row: {
+          client_id: string | null
           client_nom: string | null
           created_at: string
           date_vente: string
@@ -729,6 +866,7 @@ export type Database = {
           total: number
         }
         Insert: {
+          client_id?: string | null
           client_nom?: string | null
           created_at?: string
           date_vente?: string
@@ -745,6 +883,7 @@ export type Database = {
           total?: number
         }
         Update: {
+          client_id?: string | null
           client_nom?: string | null
           created_at?: string
           date_vente?: string

@@ -21,6 +21,7 @@ import Admin from "./pages/Admin";
 import Catalogue from "./pages/Catalogue";
 import POS from "./pages/POS";
 import Ventes from "./pages/Ventes";
+import Clients from "./pages/Clients";
 import AuditLog from "./pages/AuditLog";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
@@ -59,6 +60,9 @@ const App = () => (
             </Route>
             <Route element={<AppLayout module="ventes" />}>
               <Route path="/ventes" element={<Ventes />} />
+            </Route>
+            <Route element={<AppLayout module="clients" />}>
+              <Route path="/clients" element={<Clients />} />
             </Route>
             <Route element={<AppLayout module="achats_mp" />}>
               <Route path="/achats-mp" element={<AchatsMP />} />
