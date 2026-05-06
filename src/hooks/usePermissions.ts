@@ -7,7 +7,8 @@ export type ModuleKey =
   | 'pos' | 'ventes' | 'clients'
   | 'achats_mp' | 'fiches_techniques' | 'bons_transfert'
   | 'stock_tampon' | 'pertes' | 'production'
-  | 'inventaire' | 'cloture' | 'degustations';
+  | 'inventaire' | 'cloture' | 'degustations'
+  | 'matieres_premieres' | 'tables_restaurant';
 
 export type Action = 'read' | 'create' | 'update' | 'delete';
 

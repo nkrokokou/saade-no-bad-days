@@ -20,6 +20,8 @@ import FichesTechniques from "./pages/FichesTechniques";
 import Admin from "./pages/Admin";
 import Catalogue from "./pages/Catalogue";
 import Categories from "./pages/Categories";
+import MatieresPremieres from "./pages/MatieresPremieres";
+import TablesRestaurant from "./pages/TablesRestaurant";
 import POS from "./pages/POS";
 import Ventes from "./pages/Ventes";
 import Clients from "./pages/Clients";
@@ -68,6 +70,12 @@ const App = () => (
             </Route>
             <Route element={<AppLayout module="achats_mp" />}>
               <Route path="/achats-mp" element={<AchatsMP />} />
+            </Route>
+            <Route element={<AppLayout module="matieres_premieres" />}>
+              <Route path="/matieres-premieres" element={<MatieresPremieres />} />
+            </Route>
+            <Route element={<AppLayout module="tables_restaurant" />}>
+              <Route path="/tables-restaurant" element={<TablesRestaurant />} />
             </Route>
             <Route element={<AppLayout module="fiches_techniques" />}>
               <Route path="/fiches-techniques" element={<FichesTechniques />} />
