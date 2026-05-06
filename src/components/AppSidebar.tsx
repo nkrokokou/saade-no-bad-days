@@ -39,6 +39,7 @@ export function AppSidebar() {
     { title: t('nav.insights'), url: '/insights', icon: Bot, module: 'insights' },
     { title: 'Caisse / POS', url: '/pos', icon: ScanLine, module: 'pos' },
     { title: 'Ventes & Rapports', url: '/ventes', icon: BarChart3, module: 'ventes' },
+    { title: 'Clients & Crédits', url: '/clients', icon: Users, module: 'clients' },
     { title: 'Catalogue produits', url: '/catalogue', icon: Package2, module: 'catalogue' },
     { title: t('nav.achats'), url: '/achats-mp', icon: ShoppingCart, module: 'achats_mp' },
     { title: t('nav.fiches'), url: '/fiches-techniques', icon: BookOpen, module: 'fiches_techniques' },
