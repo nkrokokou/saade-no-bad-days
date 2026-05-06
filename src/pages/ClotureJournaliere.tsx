@@ -131,11 +131,16 @@ export default function ClotureJournaliere() {
           <CardContent className="overflow-x-auto">
             {/* Mobile cards */}
             <div className="block md:hidden space-y-3">
-              {prods.map(p => (
+              {prods.map(p => {
+                const eid = getEntryId(p.id);
+                return (
                 <div key={p.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex justify-between items-center">
                     <p className="font-medium text-sm">{p.nom}</p>
-                    <span className={`text-sm font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>Fin: {getStockFin(p.id)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>Fin: {getStockFin(p.id)}</span>
+                      {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {fields.map(f => (
@@ -146,7 +151,8 @@ export default function ClotureJournaliere() {
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             {/* Desktop table */}
             <Table className="hidden md:table">
