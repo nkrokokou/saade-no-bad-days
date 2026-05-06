@@ -152,7 +152,10 @@ export default function Pertes() {
                     if (!search && total === 0 && !Object.keys(localData[p.id] || {}).length) return null;
                     return (
                       <div key={p.id} className="border rounded-lg p-3 space-y-2">
-                        <p className="font-medium text-sm">{p.nom} <span className="text-primary font-bold ml-2">Total: {total}</span></p>
+                        <div className="flex justify-between items-center">
+                          <p className="font-medium text-sm">{p.nom} <span className="text-primary font-bold ml-2">Total: {total}</span></p>
+                          {hasData(p.id) && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeletePid(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                        </div>
                         <div className="grid grid-cols-4 gap-1">
                           {DAYS.map(d => (
                             <div key={d} className="text-center">
