@@ -233,6 +233,14 @@ export default function Catalogue() {
                 <div><Label>Prix coût (F)</Label><Input type="number" value={editing.prix_cout ?? 0} onChange={e => setEditing({ ...editing, prix_cout: Number(e.target.value) })} /></div>
               </div>
               <div><Label>Photo (URL)</Label><Input value={editing.photo_url || ''} onChange={e => setEditing({ ...editing, photo_url: e.target.value })} placeholder="https://…" /></div>
+              <div>
+                <Label>Poste de préparation</Label>
+                <Select value={editing.poste_preparation || 'salle'} onValueChange={v => setEditing({ ...editing, poste_preparation: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{POSTES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Détermine où le bon de préparation sera imprimé.</p>
+              </div>
               <div className="flex items-center gap-2"><Switch checked={editing.actif !== false} onCheckedChange={v => setEditing({ ...editing, actif: v })} /><Label>Produit actif</Label></div>
             </div>
             <DialogFooter>
