@@ -48,12 +48,16 @@ export default function ProductionLabo() {
         else await supabase.from('production_labo').insert({ produit_id: pid, date_production: selectedDate, ...vals, created_by: user?.id });
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setLocal({}); toast.success('Production sauvegardée'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setLocal({}); toast.success('Production sauvegardée — stock MP recalculé'); },
   });
 
   const deleteEntry = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('production_labo').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setDeleteId(null); toast.success('Entrée supprimée'); },
+    mutationFn: async (pid: string) => {
+      const eid = entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
+      if (eid) { const { error } = await supabase.from('production_labo').delete().eq('id', eid); if (error) throw error; }
+      setLocal(prev => { const c = { ...prev }; delete c[pid]; return c; });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setDeleteId(null); toast.success('Ligne effacée'); },
     onError: () => toast.error('Erreur'),
   });
 
@@ -109,12 +113,13 @@ export default function ProductionLabo() {
       <div className="block md:hidden space-y-3">
         {filteredProducts.map(p => {
           const eid = getEntryId(p.id);
+          const hasData = eid || local[p.id];
           return (
           <Card key={p.id}>
             <CardContent className="py-3 px-4">
               <div className="flex justify-between items-center mb-2">
                 <p className="font-medium text-sm">{p.nom}</p>
-                {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {fields.map(f => (
@@ -144,6 +149,7 @@ export default function ProductionLabo() {
             <TableBody>
               {filteredProducts.map(p => {
                 const eid = getEntryId(p.id);
+                const hasData = eid || local[p.id];
                 return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.nom}</TableCell>
@@ -152,7 +158,7 @@ export default function ProductionLabo() {
                       <Input type="number" className="w-24" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
                     </TableCell>
                   ))}
-                  <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
+                  <TableCell><Button size="icon" variant="ghost" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>
                 );
               })}

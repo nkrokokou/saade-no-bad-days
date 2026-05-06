@@ -20,10 +20,11 @@ import { usePermissions } from '@/hooks/usePermissions';
 type MP = {
   id: string; nom: string; marque: string | null; fournisseur: string | null;
   colisage: number; unite: string; prix_achat: number; prix_unitaire: number;
-  notes: string | null; actif: boolean;
+  notes: string | null; actif: boolean; stock_min?: number;
 };
+type StockRow = { id: string; total_achete: number; total_consomme: number; stock_actuel: number; alerte_stock: boolean };
 
-const empty: Partial<MP> = { nom: '', marque: '', fournisseur: '', colisage: 1, unite: 'G', prix_achat: 0, prix_unitaire: 0, actif: true };
+const empty: Partial<MP> = { nom: '', marque: '', fournisseur: '', colisage: 1, unite: 'G', prix_achat: 0, prix_unitaire: 0, actif: true, stock_min: 0 };
 
 export default function MatieresPremieres() {
   const qc = useQueryClient();
@@ -44,6 +45,17 @@ export default function MatieresPremieres() {
       return (data || []) as MP[];
     },
   });
+
+  const { data: stockRows = [] } = useQuery({
+    queryKey: ['v_stock_mp'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('v_stock_matieres_premieres' as any).select('id,total_achete,total_consomme,stock_actuel,alerte_stock');
+      if (error) { console.warn('stock view', error); return []; }
+      return (data || []) as unknown as StockRow[];
+    },
+    refetchInterval: 30000,
+  });
+  const stockById = useMemo(() => Object.fromEntries(stockRows.map(s => [s.id, s])), [stockRows]);
 
   const fournisseurs = useMemo(() => Array.from(new Set(mps.map(m => m.fournisseur).filter(Boolean))).sort() as string[], [mps]);
 
@@ -68,6 +80,7 @@ export default function MatieresPremieres() {
         prix_achat, prix_unitaire,
         notes: m.notes || null,
         actif: m.actif !== false,
+        stock_min: Number(m.stock_min) || 0,
       };
       if (m.id) {
         const { error } = await supabase.from('matieres_premieres').update(payload).eq('id', m.id);
@@ -154,12 +167,17 @@ export default function MatieresPremieres() {
               <TableHead>Nom</TableHead><TableHead>Marque</TableHead><TableHead>Fournisseur</TableHead>
               <TableHead className="text-right">Colisage</TableHead><TableHead>Unité</TableHead>
               <TableHead className="text-right">Prix achat</TableHead><TableHead className="text-right">Prix unitaire</TableHead>
+              <TableHead className="text-right">Stock dispo</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Chargement…</TableCell></TableRow>}
-              {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Aucune matière première</TableCell></TableRow>}
-              {filtered.map(m => (
+              {isLoading && <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Chargement…</TableCell></TableRow>}
+              {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Aucune matière première</TableCell></TableRow>}
+              {filtered.map(m => {
+                const s = stockById[m.id];
+                const stock = s?.stock_actuel ?? 0;
+                const alerte = s?.alerte_stock;
+                return (
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.nom}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{m.marque}</TableCell>
@@ -168,12 +186,16 @@ export default function MatieresPremieres() {
                   <TableCell>{m.unite}</TableCell>
                   <TableCell className="text-right">{m.prix_achat?.toLocaleString('fr-FR')}</TableCell>
                   <TableCell className="text-right font-medium">{m.prix_unitaire?.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}</TableCell>
+                  <TableCell className={`text-right font-semibold ${alerte ? 'text-destructive' : stock > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {stock.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} {m.unite}
+                    {alerte && <span className="ml-1 text-[10px]">⚠</span>}
+                  </TableCell>
                   <TableCell className="text-right">
                     {canUpdate && <Button size="icon" variant="ghost" onClick={() => setEditing(m)}><Pencil className="h-4 w-4" /></Button>}
                     {canDelete && <Button size="icon" variant="ghost" onClick={() => setToDelete(m)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
                 </TableRow>
-              ))}
+              );})}
             </TableBody>
           </Table>
         </CardContent>
@@ -204,8 +226,11 @@ export default function MatieresPremieres() {
               <p className="text-xs text-muted-foreground">
                 Prix unitaire calculé : <strong>{(((Number(editing.prix_achat) || 0) / (Number(editing.colisage) || 1)) || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} FCFA / {editing.unite}</strong>
               </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Stock min (alerte)</Label><Input type="number" step="0.01" value={editing.stock_min ?? 0} onChange={e => setEditing({ ...editing, stock_min: Number(e.target.value) })} /></div>
+                <div className="flex items-end gap-2 pb-1"><Switch checked={editing.actif !== false} onCheckedChange={v => setEditing({ ...editing, actif: v })} /><Label>Active</Label></div>
+              </div>
               <div><Label>Notes</Label><Input value={editing.notes || ''} onChange={e => setEditing({ ...editing, notes: e.target.value })} /></div>
-              <div className="flex items-center gap-2"><Switch checked={editing.actif !== false} onCheckedChange={v => setEditing({ ...editing, actif: v })} /><Label>Active</Label></div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditing(null)}>Annuler</Button>
