@@ -176,7 +176,8 @@ export default function POS() {
       setPayOpen(false);
       clearCart();
       qc.invalidateQueries({ queryKey: ['ventes'] });
-      setTimeout(() => printTicket({ vente, lignes }), 100);
+      setTimeout(() => { printTicket({ vente, lignes }); printTicket({ vente, lignes }, true); }, 100);
+      setCartOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
