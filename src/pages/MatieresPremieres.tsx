@@ -20,10 +20,11 @@ import { usePermissions } from '@/hooks/usePermissions';
 type MP = {
   id: string; nom: string; marque: string | null; fournisseur: string | null;
   colisage: number; unite: string; prix_achat: number; prix_unitaire: number;
-  notes: string | null; actif: boolean;
+  notes: string | null; actif: boolean; stock_min?: number;
 };
+type StockRow = { id: string; total_achete: number; total_consomme: number; stock_actuel: number; alerte_stock: boolean };
 
-const empty: Partial<MP> = { nom: '', marque: '', fournisseur: '', colisage: 1, unite: 'G', prix_achat: 0, prix_unitaire: 0, actif: true };
+const empty: Partial<MP> = { nom: '', marque: '', fournisseur: '', colisage: 1, unite: 'G', prix_achat: 0, prix_unitaire: 0, actif: true, stock_min: 0 };
 
 export default function MatieresPremieres() {
   const qc = useQueryClient();
