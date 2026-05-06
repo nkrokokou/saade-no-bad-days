@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X, ShoppingCart, PauseCircle, Utensils } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit } from '@/hooks/useProducts';
@@ -33,6 +33,15 @@ const PAYMENT_LABELS: Record<PaymentMode, string> = {
   ticket: 'Ticket / Bon',
 };
 
+const POSTE_LABELS: Record<string, string> = {
+  cuisine: 'CUISINE',
+  bar: 'BAR / BOISSONS',
+  labo_patisserie: 'LABO PÂTISSERIE',
+  labo_viennoiserie: 'LABO VIENNOISERIE',
+};
+
+interface TableResto { id: string; numero: string; zone: string | null; places: number; }
+
 export default function POS() {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -51,6 +60,10 @@ export default function POS() {
   const [fondCompte, setFondCompte] = useState(0);
   const [lastTicket, setLastTicket] = useState<any>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [tableId, setTableId] = useState<string>('comptoir');
+  const [serveur, setServeur] = useState<string>('');
+  const [tabsOpen, setTabsOpen] = useState(false);
+  const [currentTabId, setCurrentTabId] = useState<string | null>(null);
 
   // Produits
   const { data: produits = [] } = useQuery({
@@ -62,6 +75,16 @@ export default function POS() {
     },
   });
 
+  // Tables
+  const { data: tables = [] } = useQuery({
+    queryKey: ['tables-resto'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tables_restaurant' as any).select('*').eq('actif', true).order('numero');
+      if (error) throw error;
+      return (data || []) as unknown as TableResto[];
+    },
+  });
+
   // Session ouverte
   const { data: session, refetch: refetchSession } = useQuery({
     queryKey: ['session-caisse'],
@@ -69,6 +92,22 @@ export default function POS() {
       const { data, error } = await supabase.from('sessions_caisse').select('*').eq('statut', 'ouverte').order('ouvert_at', { ascending: false }).limit(1).maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Tickets en attente (tabs ouverts)
+  const { data: openTabs = [], refetch: refetchTabs } = useQuery({
+    queryKey: ['open-tabs', session?.id],
+    enabled: !!session,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ventes')
+        .select('id, numero_ticket, total, table_id, serveur_id, client_nom, notes, created_at, vente_lignes(*)')
+        .eq('session_id', session!.id)
+        .eq('statut', 'en_cours')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
     },
   });
 
@@ -103,7 +142,10 @@ export default function POS() {
     setCart(c => c.map(l => l.produit.id === id ? { ...l, quantite: Math.max(0, l.quantite + delta) } : l).filter(l => l.quantite > 0));
   };
   const removeLine = (id: string) => setCart(c => c.filter(l => l.produit.id !== id));
-  const clearCart = () => { setCart([]); setRemiseGlobale(0); setClientNom(''); setNotes(''); };
+  const clearCart = () => {
+    setCart([]); setRemiseGlobale(0); setClientNom(''); setNotes('');
+    setTableId('comptoir'); setServeur(''); setCurrentTabId(null);
+  };
 
   const openSessionMut = useMutation({
     mutationFn: async () => {
@@ -131,22 +173,126 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Construit payload vente + lignes
+  const buildVentePayload = (statut: 'validee' | 'en_cours') => {
+    const tId = tableId === 'comptoir' ? null : tableId;
+    return {
+      vente: {
+        session_id: session!.id,
+        total: totalTicket,
+        remise_globale: remiseGlobale,
+        mode_paiement: statut === 'validee' ? paymentMode : 'especes',
+        montant_recu: statut === 'validee' && paymentMode === 'especes' ? montantRecu : totalTicket,
+        rendu: statut === 'validee' ? rendu : 0,
+        encaisse_par: statut === 'validee' ? user?.id : null,
+        client_nom: clientNom || null,
+        notes: notes || null,
+        statut,
+        table_id: tId,
+        serveur_id: null as any,
+      } as any,
+      serveurNom: serveur,
+    };
+  };
+
+  // Mettre en attente (tab)
+  const holdTab = useMutation({
+    mutationFn: async () => {
+      if (!session) throw new Error('Ouvrez la caisse');
+      if (cart.length === 0) throw new Error('Panier vide');
+      const payload = buildVentePayload('en_cours');
+      // Note serveur in notes field (pas de table profiles cohérente ici)
+      const noteWithServer = serveur ? `[Serveur: ${serveur}] ${notes || ''}`.trim() : (notes || null);
+      let venteId = currentTabId;
+      if (currentTabId) {
+        await supabase.from('vente_lignes').delete().eq('vente_id', currentTabId);
+        const { error } = await supabase.from('ventes').update({
+          total: totalTicket, remise_globale: remiseGlobale, table_id: payload.vente.table_id,
+          client_nom: clientNom || null, notes: noteWithServer,
+        }).eq('id', currentTabId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('ventes').insert({
+          ...payload.vente, notes: noteWithServer,
+        }).select('id').single();
+        if (error) throw error;
+        venteId = data.id;
+      }
+      const lignes = cart.map(l => ({
+        vente_id: venteId,
+        produit_id: l.produit.id,
+        produit_nom: l.produit.nom,
+        quantite: l.quantite,
+        prix_unitaire: l.produit.prix_vente || 0,
+        remise: l.remise,
+        total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
+      }));
+      const { error: e2 } = await supabase.from('vente_lignes').insert(lignes);
+      if (e2) throw e2;
+      // Imprime tickets de préparation immédiatement
+      printPrepTickets(cart, { tableNum: tables.find(t => t.id === tableId)?.numero || 'Comptoir', serveur, numero: 'EN ATTENTE' });
+      return venteId;
+    },
+    onSuccess: () => {
+      toast.success('Ticket mis en attente');
+      refetchTabs();
+      clearCart();
+      setCartOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Reprendre un tab
+  const resumeTab = (tab: any) => {
+    const lignes = (tab.vente_lignes || []) as any[];
+    const newCart: CartLine[] = lignes.map(l => {
+      const p = produits.find(pr => pr.id === l.produit_id) || {
+        id: l.produit_id, nom: l.produit_nom, categorie: 'DIVERS', prix_vente: l.prix_unitaire,
+      } as Produit;
+      return { produit: p, quantite: Number(l.quantite), remise: Number(l.remise || 0) };
+    });
+    setCart(newCart);
+    setCurrentTabId(tab.id);
+    setTableId(tab.table_id || 'comptoir');
+    setClientNom(tab.client_nom || '');
+    const m = (tab.notes || '').match(/^\[Serveur: ([^\]]+)\]\s*(.*)$/);
+    if (m) { setServeur(m[1]); setNotes(m[2]); } else { setNotes(tab.notes || ''); }
+    setTabsOpen(false);
+    setCartOpen(true);
+  };
+
+  const cancelTab = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from('vente_lignes').delete().eq('vente_id', id);
+      const { error } = await supabase.from('ventes').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success('Ticket annulé'); refetchTabs(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const validateSale = useMutation({
     mutationFn: async () => {
       if (!session) throw new Error('Ouvrez la caisse');
       if (cart.length === 0) throw new Error('Panier vide');
-      const { data: vente, error: e1 } = await supabase.from('ventes').insert({
-        session_id: session.id,
-        total: totalTicket,
-        remise_globale: remiseGlobale,
-        mode_paiement: paymentMode,
-        montant_recu: paymentMode === 'especes' ? montantRecu : totalTicket,
-        rendu,
-        encaisse_par: user?.id,
-        client_nom: clientNom || null,
-        notes: notes || null,
-      }).select('*').single();
-      if (e1) throw e1;
+      const payload = buildVentePayload('validee');
+      const noteWithServer = serveur ? `[Serveur: ${serveur}] ${notes || ''}`.trim() : (notes || null);
+      let vente: any;
+      if (currentTabId) {
+        // Convertit le tab en vente validée
+        await supabase.from('vente_lignes').delete().eq('vente_id', currentTabId);
+        const { data, error } = await supabase.from('ventes').update({
+          ...payload.vente, notes: noteWithServer,
+        }).eq('id', currentTabId).select('*').single();
+        if (error) throw error;
+        vente = data;
+      } else {
+        const { data, error } = await supabase.from('ventes').insert({
+          ...payload.vente, notes: noteWithServer,
+        }).select('*').single();
+        if (error) throw error;
+        vente = data;
+      }
       const lignes = cart.map(l => ({
         vente_id: vente.id,
         produit_id: l.produit.id,
@@ -160,29 +306,69 @@ export default function POS() {
       if (e2) throw e2;
       if (paymentMode === 'credit' && clientNom) {
         await supabase.from('credits_clients').insert({
-          client_nom: clientNom,
-          vente_id: vente.id,
-          montant_initial: totalTicket,
-          montant_restant: totalTicket,
-          notes: notes || null,
-          created_by: user?.id,
+          client_nom: clientNom, vente_id: vente.id,
+          montant_initial: totalTicket, montant_restant: totalTicket,
+          notes: notes || null, created_by: user?.id,
         });
       }
-      return { vente, lignes };
+      return { vente, lignes, cartSnapshot: [...cart] };
     },
-    onSuccess: ({ vente, lignes }) => {
+    onSuccess: ({ vente, lignes, cartSnapshot }) => {
       toast.success('Vente enregistrée');
       setLastTicket({ vente, lignes });
       setPayOpen(false);
-      clearCart();
+      const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
+      const serveurSnap = serveur;
       qc.invalidateQueries({ queryKey: ['ventes'] });
-      setTimeout(() => { printTicket({ vente, lignes }); printTicket({ vente, lignes }, true); }, 100);
+      refetchTabs();
+      setTimeout(() => {
+        printTicket({ vente, lignes });
+        // Si pas déjà imprimé en mode "en attente" → imprime tickets cuisine/bar
+        if (!currentTabId) printPrepTickets(cartSnapshot, { tableNum, serveur: serveurSnap, numero: String(vente.numero_ticket) });
+      }, 100);
+      clearCart();
       setCartOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  const printTicket = (data: any, kitchen = false) => {
+  // Imprime un ticket par poste de préparation (cuisine, bar, labo…)
+  const printPrepTickets = (lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
+    const groups: Record<string, CartLine[]> = {};
+    lines.forEach(l => {
+      const poste = (l.produit.poste_preparation || 'salle');
+      if (poste === 'salle') return;
+      (groups[poste] = groups[poste] || []).push(l);
+    });
+    Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
+  };
+
+  const printPrepTicket = (poste: string, lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
+    const date = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    const rows = lines.map(l => `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}</div>`).join('');
+    const html = `<html><head><title>BON ${POSTE_LABELS[poste] || poste}</title>
+      <style>
+        @page { size: 80mm auto; margin: 2mm; }
+        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: 76mm; font-size: 13px; color:#000; }
+        .head { text-align:center; font-weight:bold; font-size:16px; border:2px solid #000; padding:4px; margin-bottom:6px; }
+        .info { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
+        .big { font-size: 16px; font-weight: bold; padding: 4px 0; border-bottom: 1px dashed #000; }
+        hr { border:none; border-top:2px solid #000; margin:6px 0; }
+      </style></head><body>
+      <div class="head">--- ${POSTE_LABELS[poste] || poste.toUpperCase()} ---</div>
+      <div class="info"><span>${date}</span><span>N° ${ctx.numero}</span></div>
+      <div class="info"><span>Table: <b>${ctx.tableNum}</b></span><span>Serveur: ${ctx.serveur || '-'}</span></div>
+      <hr/>
+      ${rows}
+      <hr/>
+      <div style="text-align:center;font-size:11px;">À PRÉPARER</div>
+      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
+      </body></html>`;
+    const w = window.open('', '_blank', 'width=340,height=600');
+    if (w) { w.document.write(html); w.document.close(); }
+  };
+
+  const printTicket = (data: any) => {
     if (!data) return;
     const v = data.vente;
     const lignes = data.lignes || [];
@@ -190,67 +376,57 @@ export default function POS() {
     const date = new Date(v.date_vente).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' });
     const caissier = (user?.email || 'CAISSIER').split('@')[0].toUpperCase();
     const modeLabel = (PAYMENT_LABELS[v.mode_paiement as PaymentMode] || '').toUpperCase();
+    const tableNum = tables.find(t => t.id === v.table_id)?.numero || '';
+    const serveurMatch = (v.notes || '').match(/^\[Serveur: ([^\]]+)\]/);
+    const serveurNom = serveurMatch ? serveurMatch[1] : '';
 
-    // Largeur 80mm ≈ 42 caractères en monospace 12px
     const W = 42;
     const padRow = (left: string, right: string) => {
       const l = left.slice(0, W - right.length - 1);
       return l + ' '.repeat(Math.max(1, W - l.length - right.length)) + right;
     };
-
     const articlesHeader = padRow('ARTICLES', 'P.U  Qté   MONT');
     const articlesRows = lignes.map((l: any) => {
       const nom = String(l.produit_nom).toUpperCase();
-      const pu = fmt(l.prix_unitaire);
-      const qte = String(l.quantite);
-      const mont = Number(l.total_ligne) === 0 ? 'offert' : fmt(l.total_ligne);
-      // Colonnes: nom (22) | pu (8) | qte (4) | mont (8)
       const c1 = nom.slice(0, 22).padEnd(22, ' ');
-      const c2 = pu.padStart(7, ' ') + ' ';
-      const c3 = qte.padStart(3, ' ') + ' ';
-      const c4 = mont.padStart(8, ' ');
-      if (kitchen) return `<div class="big">${qte}× ${nom}</div>`;
+      const c2 = fmt(l.prix_unitaire).padStart(7, ' ') + ' ';
+      const c3 = String(l.quantite).padStart(3, ' ') + ' ';
+      const c4 = (Number(l.total_ligne) === 0 ? 'offert' : fmt(l.total_ligne)).padStart(8, ' ');
       return `<div class="mono">${c1}${c2}${c3}${c4}</div>`;
     }).join('');
 
     const html = `<html><head><title>Ticket ${v.numero_ticket}</title>
       <style>
         @page { size: 80mm auto; margin: 2mm; }
-        * { box-sizing: border-box; }
-        body { font-family: 'Courier New', 'Consolas', monospace; padding: 0; margin: 0; width: 76mm; font-size: 12px; line-height: 1.35; color: #000; }
+        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: 76mm; font-size: 12px; line-height: 1.35; color: #000; }
         h2 { text-align: center; margin: 2px 0 0; font-family: Georgia, serif; font-size: 18px; font-weight: bold; }
         .sub { text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
         .addr { text-align: center; font-size: 11px; }
         hr { border: none; border-top: 1px solid #000; margin: 4px 0; }
         .row { display: flex; justify-content: space-between; gap: 4px; }
-        .mono { white-space: pre; font-family: 'Courier New', monospace; font-size: 12px; }
+        .mono { white-space: pre; font-size: 12px; }
         .total { font-weight: bold; }
-        .center { text-align: center; }
-        .big { font-size: 14px; font-weight: bold; }
         .footer { text-align: center; margin-top: 8px; font-size: 11px; }
       </style></head><body>
       <h2>SAADÉ</h2>
       <div class="sub">PÂTISSERIE · SNACK · CONCEPT STORE</div>
       <div class="addr">Lomé · Togo</div>
-      <div class="addr">Téléphone: (+228) — — — —</div>
       <div class="row" style="font-size:11px;margin-top:2px;"><span>${date}</span><span>Ticket N° ${v.numero_ticket}</span></div>
       <div style="font-size:11px;">CLIENT : ${(v.client_nom || 'CLIENT CASH').toUpperCase()}</div>
       <hr/>
-      ${kitchen ? '<div class="center big">--- CUISINE ---</div>' : `<div class="mono">${articlesHeader}</div>`}
+      <div class="mono">${articlesHeader}</div>
       ${articlesRows}
       <hr/>
-      ${kitchen ? '' : `
-        <div class="row"><span>Montant TTC</span><span>${fmt(v.total + (v.remise_globale || 0))} CFA</span></div>
-        <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
-        <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
-        <div class="row"><span>${modeLabel}</span><span>${fmt(v.montant_recu)} CFA</span></div>
-        ${Number(v.rendu) > 0 ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
-        <hr/>
-        <div style="font-size:11px;">serveur : ....   table : ....</div>
-        <div style="font-size:11px;">caissier : ${caissier}</div>
-        <hr/>
-        <div class="footer">Merci de votre visite,<br/>SAADÉ vous souhaite une belle journée !</div>
-      `}
+      <div class="row"><span>Montant TTC</span><span>${fmt(Number(v.total) + Number(v.remise_globale || 0))} CFA</span></div>
+      <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
+      <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
+      <div class="row"><span>${modeLabel}</span><span>${fmt(v.montant_recu)} CFA</span></div>
+      ${Number(v.rendu) > 0 ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
+      <hr/>
+      <div style="font-size:11px;">serveur : ${serveurNom || '....'}   table : ${tableNum || '....'}</div>
+      <div style="font-size:11px;">caissier : ${caissier}</div>
+      <hr/>
+      <div class="footer">Merci de votre visite,<br/>SAADÉ vous souhaite une belle journée !</div>
       <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
       </body></html>`;
     const w = window.open('', '_blank', 'width=340,height=600');
@@ -268,15 +444,47 @@ export default function POS() {
               <p className="text-xs text-muted-foreground">Session ouverte depuis {new Date(session.ouvert_at).toLocaleTimeString('fr-FR')} · Fond {Number(session.fond_initial).toLocaleString()} F</p>
             ) : <p className="text-xs text-destructive">Caisse fermée — ouvrez une session pour encaisser</p>}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {session && (
+              <Button size="sm" variant="outline" onClick={() => setTabsOpen(true)}>
+                <Utensils className="h-4 w-4 mr-1" />Tickets en attente
+                {openTabs.length > 0 && <Badge variant="secondary" className="ml-2">{openTabs.length}</Badge>}
+              </Button>
+            )}
             {!session && <Button size="sm" onClick={() => setOpenSessionDialog(true)}><Unlock className="h-4 w-4 mr-1" />Ouvrir caisse</Button>}
             {session && <Button size="sm" variant="outline" onClick={() => setCloseSessionDialog(true)}><Lock className="h-4 w-4 mr-1" />Fermer caisse</Button>}
           </div>
         </CardContent>
       </Card>
 
+      {/* Sélecteur Table + Serveur */}
+      {session && (
+        <Card>
+          <CardContent className="p-3 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+              <Label className="text-xs whitespace-nowrap">Table</Label>
+              <Select value={tableId} onValueChange={setTableId}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="comptoir">Comptoir / À emporter</SelectItem>
+                  {tables.map(t => (
+                    <SelectItem key={t.id} value={t.id}>
+                      Table {t.numero}{t.zone ? ` · ${t.zone}` : ''} ({t.places}p)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+              <Label className="text-xs whitespace-nowrap">Serveur</Label>
+              <Input value={serveur} onChange={e => setServeur(e.target.value)} placeholder="Nom du serveur" className="h-9" />
+            </div>
+            {currentTabId && <Badge variant="outline" className="text-xs">Reprise ticket</Badge>}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3">
-        {/* Produits */}
         <div className="space-y-2">
           <div className="flex gap-2 items-center">
             <div className="relative flex-1"><Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} className="pl-8" /></div>
@@ -302,14 +510,14 @@ export default function POS() {
           </div>
         </div>
 
-        {/* Panier desktop uniquement */}
+        {/* Panier desktop */}
         <Card className="hidden lg:block lg:sticky lg:top-16 self-start">
           <CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="font-heading font-semibold">Ticket en cours</h2>
               {cart.length > 0 && <Button size="icon" variant="ghost" onClick={clearCart}><X className="h-4 w-4" /></Button>}
             </div>
-            <ScrollArea className="h-[300px] border rounded">
+            <ScrollArea className="h-[280px] border rounded">
               {cart.length === 0 && <div className="text-center text-muted-foreground py-12 text-sm">Cliquez sur des produits</div>}
               {cart.map(l => (
                 <div key={l.produit.id} className="flex items-center gap-2 p-2 border-b">
@@ -333,13 +541,18 @@ export default function POS() {
             <div className="flex justify-between text-lg font-bold">
               <span>Total</span><span className="text-primary">{totalTicket.toLocaleString()} F</span>
             </div>
-            <Button className="w-full" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" disabled={!session || cart.length === 0 || holdTab.isPending} onClick={() => holdTab.mutate()}>
+                <PauseCircle className="h-4 w-4 mr-1" />En attente
+              </Button>
+              <Button disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
+            </div>
             {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer</Button>}
           </CardContent>
         </Card>
       </div>
 
-      {/* FAB mobile + drawer panier */}
+      {/* FAB mobile */}
       {cart.length > 0 && (
         <Button onClick={() => setCartOpen(true)}
           className="lg:hidden fixed bottom-4 right-4 z-40 h-14 px-5 rounded-full shadow-2xl gap-2 text-base">
@@ -382,11 +595,45 @@ export default function POS() {
             <div className="flex justify-between text-2xl font-bold">
               <span>Total</span><span className="text-primary">{totalTicket.toLocaleString()} F</span>
             </div>
-            <Button size="lg" className="w-full text-base" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="lg" disabled={!session || cart.length === 0 || holdTab.isPending} onClick={() => holdTab.mutate()}>
+                <PauseCircle className="h-4 w-4 mr-1" />En attente
+              </Button>
+              <Button size="lg" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
+            </div>
             {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer dernier</Button>}
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Tickets en attente */}
+      <Dialog open={tabsOpen} onOpenChange={setTabsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Tickets en attente ({openTabs.length})</DialogTitle></DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-auto">
+            {openTabs.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Aucun ticket en attente</p>}
+            {openTabs.map((tab: any) => {
+              const t = tables.find(tt => tt.id === tab.table_id);
+              const lignesCount = (tab.vente_lignes || []).length;
+              return (
+                <div key={tab.id} className="border rounded-lg p-3 flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium">Table {t?.numero || 'Comptoir'} · #{tab.numero_ticket}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {lignesCount} article{lignesCount > 1 ? 's' : ''} · {Number(tab.total).toLocaleString()} F
+                      {tab.client_nom && ` · ${tab.client_nom}`}
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={() => resumeTab(tab)}>Reprendre</Button>
+                  <Button size="icon" variant="ghost" onClick={() => cancelTab.mutate(tab.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog paiement */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
@@ -432,7 +679,6 @@ export default function POS() {
           <DialogFooter><Button onClick={() => closeSessionMut.mutate()} variant="destructive">Fermer la caisse</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
