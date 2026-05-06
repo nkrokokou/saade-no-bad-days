@@ -45,6 +45,7 @@ export default function BonsTransfert() {
   const { data: products = [] } = useProducts();
   const [selectedBon, setSelectedBon] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [deleteBonId, setDeleteBonId] = useState<string | null>(null);
 
   const { data: bons = [] } = useQuery({
     queryKey: ['bons_transfert'],
