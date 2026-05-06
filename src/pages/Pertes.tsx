@@ -1,206 +1,141 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SearchFilter } from '@/components/SearchFilter';
-import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
-import { toast } from 'sonner';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { exportToExcel, exportToPDF } from '@/hooks/useExcelImportExport';
+import { format, subDays, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Save, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ChevronLeft, ChevronRight, Lock, TrendingDown, Download, FileText } from 'lucide-react';
 
-const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-const LABS = [
-  { key: 'labo_patisserie', label: 'Pâtisserie' },
-  { key: 'labo_viennoiserie', label: 'Viennoiserie' },
-  { key: 'cuisine_salee', label: 'Cuisine' },
-] as const;
-
+/**
+ * Module Pertes — 100% automatique en lecture seule.
+ * Source de vérité :
+ *   • Pertes Clôture = Ouv + Reçu − Vendu − Invendu − Dégustation − Stock Fin Compté
+ *   • Pertes Production = qte_perte saisie en Production Labo (référence du jour)
+ * Personne ne saisit ici (CEO comprise) — supprime la fraude/erreurs humaines.
+ */
 export default function Pertes() {
-  const { profile, user } = useAuth();
-  const qc = useQueryClient();
   const { data: products = [] } = useProducts();
   const [search, setSearch] = useState('');
-  const [weekOffset, setWeekOffset] = useState(0);
-  const weekStart = useMemo(() => addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), weekOffset * 7), [weekOffset]);
-  const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-  const defaultTab = profile?.role === 'cuisine_salee' ? 'cuisine_salee' : profile?.role === 'labo_viennoiserie' ? 'labo_viennoiserie' : 'labo_patisserie';
-  const [activeTab, setActiveTab] = useState(defaultTab);
-  const [deletePid, setDeletePid] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
-  const { data: pertes = [] } = useQuery({
-    queryKey: ['pertes', weekStartStr, activeTab],
+  const { data: clotures = [] } = useQuery({
+    queryKey: ['pertes-cloture', selectedDate],
     queryFn: async () => {
-      const { data } = await supabase.from('pertes').select('*, produits(nom)').eq('semaine_debut', weekStartStr).eq('type_labo', activeTab);
+      const { data } = await supabase.from('cloture_journaliere').select('*').eq('date_cloture', selectedDate);
       return data || [];
     },
   });
 
-  const [localData, setLocalData] = useState<Record<string, Record<string, number>>>({});
-  const getVal = (pid: string, day: string) => { if (localData[pid]?.[day] !== undefined) return localData[pid][day]; return pertes.find((p: any) => p.produit_id === pid && p.jour === day)?.quantite ?? 0; };
-  const setVal = (pid: string, day: string, val: number) => setLocalData(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), [day]: val } }));
-  const getTotal = (pid: string) => DAYS.reduce((s, d) => s + getVal(pid, d), 0);
-
-  const filteredProducts = useMemo(() => {
-    if (!search) return products;
-    const s = search.toLowerCase();
-    return products.filter(p => p.nom.toLowerCase().includes(s));
-  }, [products, search]);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      for (const pid of Object.keys(localData)) {
-        for (const [day, qty] of Object.entries(localData[pid])) {
-          const existing = pertes.find((p: any) => p.produit_id === pid && p.jour === day);
-          if (existing) await supabase.from('pertes').update({ quantite: qty }).eq('id', existing.id);
-          else await supabase.from('pertes').insert({ produit_id: pid, jour: day, quantite: qty, semaine_debut: weekStartStr, type_labo: activeTab, created_by: user?.id });
-        }
-      }
+  const { data: productions = [] } = useQuery({
+    queryKey: ['pertes-production', selectedDate],
+    queryFn: async () => {
+      const { data } = await supabase.from('production_labo').select('*').eq('date_production', selectedDate);
+      return data || [];
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pertes'] }); setLocalData({}); toast.success('Pertes sauvegardées'); },
   });
 
-  const deleteRow = useMutation({
-    mutationFn: async (pid: string) => {
-      const ids = pertes.filter((p: any) => p.produit_id === pid).map((p: any) => p.id);
-      if (ids.length) { const { error } = await supabase.from('pertes').delete().in('id', ids); if (error) throw error; }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['pertes'] });
-      if (deletePid) setLocalData(prev => { const c = { ...prev }; delete c[deletePid]; return c; });
-      setDeletePid(null);
-      toast.success('Ligne effacée pour la semaine');
-    },
-    onError: () => toast.error('Erreur'),
-  });
+  const computePerteCloture = (pid: string) => {
+    const c: any = clotures.find((x: any) => x.produit_id === pid);
+    if (!c) return null;
+    const fin = Number(c.stock_fin_compte ?? NaN);
+    if (Number.isNaN(fin)) return null;
+    const calc = Number(c.stock_ouverture || 0) + Number(c.qte_recue || 0)
+      - Number(c.qte_vendue || 0) - Number(c.qte_invendu || 0) - Number(c.qte_degustation || 0) - fin;
+    return Math.max(0, calc);
+  };
 
-  const hasData = (pid: string) => pertes.some((p: any) => p.produit_id === pid) || !!localData[pid];
+  const computePerteProduction = (pid: string) => {
+    const p: any = productions.find((x: any) => x.produit_id === pid);
+    return p ? Number(p.qte_perte || 0) : 0;
+  };
 
-  const allowedTabs = profile?.role === 'ceo' ? LABS : LABS.filter(l => l.key === profile?.role);
+  const rows = useMemo(() => {
+    return products
+      .map(p => {
+        const c = computePerteCloture(p.id);
+        const prod = computePerteProduction(p.id);
+        return { p, c, prod, total: (c || 0) + prod };
+      })
+      .filter(r => r.total > 0 || r.c !== null)
+      .filter(r => !search || r.p.nom.toLowerCase().includes(search.toLowerCase()));
+  }, [products, clotures, productions, search]);
+
+  const grandTotal = rows.reduce((s, r) => s + r.total, 0);
 
   const handleExport = () => {
-    const data = products.map(p => {
-      const row: Record<string, any> = { Produit: p.nom };
-      DAYS.forEach(d => { row[d.charAt(0).toUpperCase() + d.slice(1)] = getVal(p.id, d); });
-      row['Total'] = getTotal(p.id);
-      return row;
-    });
-    exportToExcel(data, `pertes_${activeTab}_${weekStartStr}`);
+    exportToExcel(rows.map(r => ({
+      Produit: r.p.nom, Catégorie: r.p.categorie,
+      'Perte Clôture': r.c ?? '—', 'Perte Production': r.prod, Total: r.total,
+    })), `pertes_${selectedDate}`);
   };
-
   const handleExportPDF = () => {
-    exportToPDF(`Pertes ${LABS.find(l => l.key === activeTab)?.label} — ${format(weekStart, 'dd/MM/yyyy')}`,
-      ['Produit', ...DAYS.map(d => d.slice(0, 3).toUpperCase()), 'Total'],
-      products.map(p => [p.nom, ...DAYS.map(d => getVal(p.id, d)), getTotal(p.id)]));
-  };
-
-  const handleImport = async (file: File) => {
-    try {
-      const rows = await parseExcelFile(file);
-      let imported = 0;
-      for (const row of rows) {
-        const name = String(row['Produit'] || row['PRODUITS'] || Object.values(row)[0] || '');
-        const pid = findProductByName(name, products);
-        if (pid) {
-          const updates: Record<string, number> = {};
-          for (const day of DAYS) {
-            const val = Number(row[day] || row[day.charAt(0).toUpperCase() + day.slice(1)] || row[day.slice(0, 3).toUpperCase()] || 0);
-            if (val > 0) updates[day] = val;
-          }
-          if (Object.keys(updates).length > 0) { setLocalData(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), ...updates } })); imported++; }
-        }
-      }
-      toast.success(`${imported} produits importés — pensez à sauvegarder`);
-    } catch { toast.error('Erreur de lecture du fichier'); }
+    exportToPDF(`Pertes — ${selectedDate}`, ['Produit', 'Cat.', 'Clôture', 'Production', 'Total'],
+      rows.map(r => [r.p.nom, r.p.categorie, r.c ?? '—', r.prod, r.total]));
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-heading font-bold">Pertes Hebdomadaires</h1>
+        <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
+          <TrendingDown className="h-6 w-6 text-destructive" /> Pertes
+          <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground border rounded-full px-2 py-0.5"><Lock className="h-3 w-3" /> Auto · Lecture seule</span>
+        </h1>
         <div className="flex gap-2 flex-wrap">
           <SearchFilter value={search} onChange={setSearch} className="w-48" />
-          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
-          <Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="h-4 w-4 mr-1" /> Sauvegarder</Button>
+          <Button variant="outline" size="sm" onClick={handleExport}><Download className="h-4 w-4 mr-1" />Excel</Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF}><FileText className="h-4 w-4 mr-1" />PDF</Button>
         </div>
       </div>
 
+      <Alert>
+        <AlertDescription className="text-xs">
+          Les pertes sont <strong>calculées automatiquement</strong> à partir de la Clôture Journalière (stock physique compté) et de la Production Labo. Aucune saisie manuelle possible — pour modifier une perte, corrige les chiffres dans Clôture ou Production.
+          <br />Formule Clôture : <em>Ouverture + Reçu − Vendu − Invendu − Dégustation − Stock Fin Compté</em>
+        </AlertDescription>
+      </Alert>
+
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w - 1)}><ChevronLeft className="h-4 w-4" /></Button>
-        <span className="text-sm font-medium">{format(weekStart, 'dd MMM', { locale: fr })} — {format(addDays(weekStart, 6), 'dd MMM yyyy', { locale: fr })}</span>
-        <Button variant="ghost" size="icon" onClick={() => setWeekOffset(w => w + 1)}><ChevronRight className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronLeft className="h-4 w-4" /></Button>
+        <span className="text-sm font-medium">{format(new Date(selectedDate), 'EEEE dd MMM yyyy', { locale: fr })}</span>
+        <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronRight className="h-4 w-4" /></Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>{allowedTabs.map(l => <TabsTrigger key={l.key} value={l.key}>{l.label}</TabsTrigger>)}</TabsList>
-        {allowedTabs.map(lab => (
-          <TabsContent key={lab.key} value={lab.key}>
-            <Card>
-              <CardContent className="overflow-x-auto pt-4">
-                {/* Mobile: card view */}
-                <div className="block md:hidden space-y-3">
-                  {filteredProducts.map(p => {
-                    const total = getTotal(p.id);
-                    if (!search && total === 0 && !Object.keys(localData[p.id] || {}).length) return null;
-                    return (
-                      <div key={p.id} className="border rounded-lg p-3 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <p className="font-medium text-sm">{p.nom} <span className="text-primary font-bold ml-2">Total: {total}</span></p>
-                          {hasData(p.id) && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeletePid(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
-                        </div>
-                        <div className="grid grid-cols-4 gap-1">
-                          {DAYS.map(d => (
-                            <div key={d} className="text-center">
-                              <p className="text-[10px] text-muted-foreground uppercase">{d.slice(0, 3)}</p>
-                              <Input type="number" className="h-8 text-xs text-center px-1" value={getVal(p.id, d) || ''}
-                                onChange={e => setVal(p.id, d, parseFloat(e.target.value) || 0)} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {search && filteredProducts.length === 0 && <p className="text-center text-muted-foreground py-4">Aucun résultat</p>}
-                </div>
-                {/* Desktop: table */}
-                <Table className="hidden md:table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[180px] sticky left-0 bg-card">Produit</TableHead>
-                      {DAYS.map(d => <TableHead key={d} className="text-center capitalize min-w-[70px]">{d.slice(0, 3)}</TableHead>)}
-                      <TableHead className="text-center font-bold">Total</TableHead>
-                      <TableHead className="w-12"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map(p => (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium sticky left-0 bg-card">{p.nom}</TableCell>
-                        {DAYS.map(d => (
-                          <TableCell key={d}>
-                            <Input type="number" className="w-16 text-center" value={getVal(p.id, d) || ''} onChange={e => setVal(p.id, d, parseFloat(e.target.value) || 0)} />
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-center font-bold">{getTotal(p.id)}</TableCell>
-                        <TableCell>{hasData(p.id) && <Button size="icon" variant="ghost" onClick={() => setDeletePid(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        ))}
-      </Tabs>
-      <ConfirmDialog open={!!deletePid} onOpenChange={() => setDeletePid(null)} title="Effacer les pertes de cette ligne ?" description="Toutes les saisies de la semaine pour ce produit seront supprimées." destructive onConfirm={() => deletePid && deleteRow.mutate(deletePid)} />
+      <Card>
+        <CardHeader className="pb-2 flex-row justify-between items-center">
+          <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground">Pertes du jour</CardTitle>
+          <span className="text-lg font-bold text-destructive">Total : {grandTotal}</span>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {rows.length === 0 && <p className="text-center text-muted-foreground py-8 text-sm">Aucune perte enregistrée pour cette date. Saisis le stock physique compté en Clôture Journalière pour calculer.</p>}
+          {rows.length > 0 && (
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Produit</TableHead><TableHead>Catégorie</TableHead>
+                <TableHead className="text-center">Perte Clôture</TableHead>
+                <TableHead className="text-center">Perte Production</TableHead>
+                <TableHead className="text-center font-bold">Total</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {rows.map(r => (
+                  <TableRow key={r.p.id}>
+                    <TableCell className="font-medium">{r.p.nom}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{r.p.categorie}</TableCell>
+                    <TableCell className="text-center">{r.c === null ? <span className="text-xs text-muted-foreground">non compté</span> : r.c}</TableCell>
+                    <TableCell className="text-center">{r.prod}</TableCell>
+                    <TableCell className="text-center font-bold text-destructive">{r.total}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
