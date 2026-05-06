@@ -4,7 +4,7 @@ import { useAuth, UserRole } from '@/contexts/AuthContext';
 
 export type ModuleKey =
   | 'dashboard' | 'insights' | 'admin' | 'catalogue'
-  | 'pos' | 'ventes'
+  | 'pos' | 'ventes' | 'clients'
   | 'achats_mp' | 'fiches_techniques' | 'bons_transfert'
   | 'stock_tampon' | 'pertes' | 'production'
   | 'inventaire' | 'cloture' | 'degustations';
