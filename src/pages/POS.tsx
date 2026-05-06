@@ -156,6 +156,16 @@ export default function POS() {
       }));
       const { error: e2 } = await supabase.from('vente_lignes').insert(lignes);
       if (e2) throw e2;
+      if (paymentMode === 'credit' && clientNom) {
+        await supabase.from('credits_clients').insert({
+          client_nom: clientNom,
+          vente_id: vente.id,
+          montant_initial: totalTicket,
+          montant_restant: totalTicket,
+          notes: notes || null,
+          created_by: user?.id,
+        });
+      }
       return { vente, lignes };
     },
     onSuccess: ({ vente, lignes }) => {
