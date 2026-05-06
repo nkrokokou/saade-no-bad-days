@@ -18,6 +18,7 @@ import AchatsMP from "./pages/AchatsMP";
 import InsightsBot from "./pages/InsightsBot";
 import FichesTechniques from "./pages/FichesTechniques";
 import Admin from "./pages/Admin";
+import Catalogue from "./pages/Catalogue";
 import AuditLog from "./pages/AuditLog";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
