@@ -19,6 +19,7 @@ import InsightsBot from "./pages/InsightsBot";
 import FichesTechniques from "./pages/FichesTechniques";
 import Admin from "./pages/Admin";
 import Catalogue from "./pages/Catalogue";
+import Categories from "./pages/Categories";
 import POS from "./pages/POS";
 import Ventes from "./pages/Ventes";
 import Clients from "./pages/Clients";
@@ -54,6 +55,7 @@ const App = () => (
             </Route>
             <Route element={<AppLayout module="catalogue" />}>
               <Route path="/catalogue" element={<Catalogue />} />
+              <Route path="/categories" element={<Categories />} />
             </Route>
             <Route element={<AppLayout module="pos" />}>
               <Route path="/pos" element={<POS />} />
