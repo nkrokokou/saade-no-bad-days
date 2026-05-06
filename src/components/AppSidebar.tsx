@@ -37,6 +37,7 @@ export function AppSidebar() {
   const navItems: NavItem[] = [
     { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
     { title: t('nav.insights'), url: '/insights', icon: Bot, module: 'insights' },
+    { title: 'Catalogue produits', url: '/catalogue', icon: Package2, module: 'catalogue' },
     { title: t('nav.achats'), url: '/achats-mp', icon: ShoppingCart, module: 'achats_mp' },
     { title: t('nav.fiches'), url: '/fiches-techniques', icon: BookOpen, module: 'fiches_techniques' },
     { title: t('nav.bons'), url: '/bons-transfert', icon: FileText, module: 'bons_transfert' },
