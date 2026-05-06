@@ -98,9 +98,9 @@ export default function AchatsMP() {
               <div className="space-y-3">
                 <div>
                   <Label>Matière première (référentiel)</Label>
-                  <Select value="" onValueChange={v => {
+                  <Select value={form.matiere_premiere_id || ''} onValueChange={v => {
                     const mp = mps.find((m: any) => m.id === v);
-                    if (mp) setForm(p => ({ ...p, produit: mp.nom, unite: mp.unite, prix_unitaire: mp.prix_unitaire || p.prix_unitaire, fournisseur: mp.fournisseur || p.fournisseur }));
+                    if (mp) setForm(p => ({ ...p, matiere_premiere_id: mp.id, produit: mp.nom, unite: mp.unite, prix_unitaire: mp.prix_unitaire || p.prix_unitaire, fournisseur: mp.fournisseur || p.fournisseur }));
                   }}>
                     <SelectTrigger><SelectValue placeholder="Choisir une MP du référentiel…" /></SelectTrigger>
                     <SelectContent className="max-h-72">
