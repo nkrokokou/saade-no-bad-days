@@ -20,8 +20,16 @@ import { useCategories } from '@/hooks/useCategories';
 
 const empty = (): Partial<Produit> => ({
   nom: '', categorie: 'DIVERS', sous_categorie: '', unite: 'pièce',
-  prix_vente: 0, prix_cout: 0, photo_url: '', actif: true,
+  prix_vente: 0, prix_cout: 0, photo_url: '', actif: true, poste_preparation: 'salle',
 });
+
+const POSTES: Array<{ value: NonNullable<Produit['poste_preparation']>; label: string }> = [
+  { value: 'salle', label: 'Salle (pas de ticket préparation)' },
+  { value: 'cuisine', label: 'Cuisine' },
+  { value: 'bar', label: 'Bar / Boissons' },
+  { value: 'labo_patisserie', label: 'Labo Pâtisserie' },
+  { value: 'labo_viennoiserie', label: 'Labo Viennoiserie' },
+];
 
 export default function Catalogue() {
   const qc = useQueryClient();
@@ -61,7 +69,8 @@ export default function Catalogue() {
         unite: p.unite || 'pièce', prix_vente: Number(p.prix_vente) || 0,
         prix_cout: Number(p.prix_cout) || 0, photo_url: p.photo_url || null,
         actif: p.actif !== false,
-      };
+        poste_preparation: p.poste_preparation || 'salle',
+      } as any;
       if (p.id) {
         const { error } = await supabase.from('produits').update(payload).eq('id', p.id);
         if (error) throw error;
@@ -224,6 +233,14 @@ export default function Catalogue() {
                 <div><Label>Prix coût (F)</Label><Input type="number" value={editing.prix_cout ?? 0} onChange={e => setEditing({ ...editing, prix_cout: Number(e.target.value) })} /></div>
               </div>
               <div><Label>Photo (URL)</Label><Input value={editing.photo_url || ''} onChange={e => setEditing({ ...editing, photo_url: e.target.value })} placeholder="https://…" /></div>
+              <div>
+                <Label>Poste de préparation</Label>
+                <Select value={editing.poste_preparation || 'salle'} onValueChange={v => setEditing({ ...editing, poste_preparation: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{POSTES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Détermine où le bon de préparation sera imprimé.</p>
+              </div>
               <div className="flex items-center gap-2"><Switch checked={editing.actif !== false} onCheckedChange={v => setEditing({ ...editing, actif: v })} /><Label>Produit actif</Label></div>
             </div>
             <DialogFooter>

@@ -680,6 +680,7 @@ export type Database = {
           id: string
           nom: string
           photo_url: string | null
+          poste_preparation: string
           prix_cout: number
           prix_vente: number
           sous_categorie: string | null
@@ -693,6 +694,7 @@ export type Database = {
           id?: string
           nom: string
           photo_url?: string | null
+          poste_preparation?: string
           prix_cout?: number
           prix_vente?: number
           sous_categorie?: string | null
@@ -706,6 +708,7 @@ export type Database = {
           id?: string
           nom?: string
           photo_url?: string | null
+          poste_preparation?: string
           prix_cout?: number
           prix_vente?: number
           sous_categorie?: string | null
@@ -812,6 +815,36 @@ export type Database = {
           },
         ]
       }
+      tables_restaurant: {
+        Row: {
+          actif: boolean
+          created_at: string
+          id: string
+          numero: string
+          places: number
+          updated_at: string
+          zone: string | null
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          numero: string
+          places?: number
+          updated_at?: string
+          zone?: string | null
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          numero?: string
+          places?: number
+          updated_at?: string
+          zone?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -891,8 +924,10 @@ export type Database = {
           numero_ticket: number
           remise_globale: number
           rendu: number | null
+          serveur_id: string | null
           session_id: string | null
           statut: string
+          table_id: string | null
           total: number
         }
         Insert: {
@@ -908,8 +943,10 @@ export type Database = {
           numero_ticket?: number
           remise_globale?: number
           rendu?: number | null
+          serveur_id?: string | null
           session_id?: string | null
           statut?: string
+          table_id?: string | null
           total?: number
         }
         Update: {
@@ -925,8 +962,10 @@ export type Database = {
           numero_ticket?: number
           remise_globale?: number
           rendu?: number | null
+          serveur_id?: string | null
           session_id?: string | null
           statut?: string
+          table_id?: string | null
           total?: number
         }
         Relationships: [
@@ -935,6 +974,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions_caisse"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventes_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables_restaurant"
             referencedColumns: ["id"]
           },
         ]

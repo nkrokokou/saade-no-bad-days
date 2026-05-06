@@ -11,6 +11,7 @@ export interface Produit {
   prix_cout?: number;
   photo_url?: string | null;
   actif?: boolean;
+  poste_preparation?: 'salle' | 'cuisine' | 'bar' | 'labo_patisserie' | 'labo_viennoiserie';
 }
 
 export function useProducts(categorie?: string, includeInactive = false) {
