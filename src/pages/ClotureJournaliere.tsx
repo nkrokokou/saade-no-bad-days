@@ -32,12 +32,13 @@ export default function ClotureJournaliere() {
   });
 
   const [local, setLocal] = useState<Record<string, Record<string, number>>>({});
-  const fields = ['stock_ouverture', 'qte_recue', 'qte_vendue', 'qte_invendu', 'prix_invendu_50', 'qte_perte', 'qte_degustation'] as const;
-  const fieldLabels: Record<string, string> = { stock_ouverture: 'Ouv.', qte_recue: 'Reçu', qte_vendue: 'Vendu', qte_invendu: 'Inv.', prix_invendu_50: '-50%', qte_perte: 'Perte', qte_degustation: 'Dég.' };
+  const fields = ['stock_ouverture', 'qte_recue', 'qte_vendue', 'qte_invendu', 'prix_invendu_50', 'qte_degustation', 'stock_fin_compte'] as const;
+  const fieldLabels: Record<string, string> = { stock_ouverture: 'Ouv.', qte_recue: 'Reçu', qte_vendue: 'Vendu', qte_invendu: 'Inv.', prix_invendu_50: '-50%', qte_degustation: 'Dég.', stock_fin_compte: 'Compté' };
 
-  const getVal = (pid: string, field: string) => { if (local[pid]?.[field] !== undefined) return local[pid][field]; return entries.find((x: any) => x.produit_id === pid)?.[field] ?? 0; };
+  const getVal = (pid: string, field: string) => { if (local[pid]?.[field] !== undefined) return local[pid][field]; const v = entries.find((x: any) => x.produit_id === pid)?.[field]; return v ?? 0; };
   const setVal = (pid: string, field: string, val: number) => setLocal(prev => ({ ...prev, [pid]: { ...prev[pid], [field]: val } }));
-  const getStockFin = (pid: string) => getVal(pid, 'stock_ouverture') + getVal(pid, 'qte_recue') - getVal(pid, 'qte_vendue') - getVal(pid, 'qte_invendu') - getVal(pid, 'qte_perte') - getVal(pid, 'qte_degustation');
+  const getPerteAuto = (pid: string) => Math.max(0, getVal(pid, 'stock_ouverture') + getVal(pid, 'qte_recue') - getVal(pid, 'qte_vendue') - getVal(pid, 'qte_invendu') - getVal(pid, 'qte_degustation') - getVal(pid, 'stock_fin_compte'));
+  const getStockFin = (pid: string) => getVal(pid, 'stock_fin_compte');
 
   const filteredProducts = useMemo(() => {
     if (!search) return products;
