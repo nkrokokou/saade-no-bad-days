@@ -24,7 +24,7 @@ export default function AchatsMP() {
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0 });
+  const [form, setForm] = useState<{ fournisseur: string; produit: string; quantite: number; unite: string; prix_unitaire: number; matiere_premiere_id: string | null }>({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0, matiere_premiere_id: null });
 
   const { data: achats = [] } = useQuery({
     queryKey: ['achats_mp', selectedDate],
@@ -44,16 +44,16 @@ export default function AchatsMP() {
 
   const addAchat = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur: form.fournisseur, produit: form.produit, quantite: form.quantite, unite: form.unite, prix_unitaire: form.prix_unitaire, prix_total: form.quantite * form.prix_unitaire, created_by: user?.id });
+      const { error } = await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur: form.fournisseur, produit: form.produit, quantite: form.quantite, unite: form.unite, prix_unitaire: form.prix_unitaire, prix_total: form.quantite * form.prix_unitaire, matiere_premiere_id: form.matiere_premiere_id, created_by: user?.id } as any);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0 }); toast.success('Achat ajouté'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0, matiere_premiere_id: null }); toast.success('Achat ajouté — stock MP mis à jour'); },
     onError: () => toast.error('Erreur'),
   });
 
   const deleteAchat = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('achats_mp').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); setDeleteId(null); toast.success('Achat supprimé'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setDeleteId(null); toast.success('Achat supprimé'); },
   });
 
   const totalJour = achats.reduce((s: number, a: any) => s + (a.prix_total || 0), 0);
@@ -98,9 +98,9 @@ export default function AchatsMP() {
               <div className="space-y-3">
                 <div>
                   <Label>Matière première (référentiel)</Label>
-                  <Select value="" onValueChange={v => {
+                  <Select value={form.matiere_premiere_id || ''} onValueChange={v => {
                     const mp = mps.find((m: any) => m.id === v);
-                    if (mp) setForm(p => ({ ...p, produit: mp.nom, unite: mp.unite, prix_unitaire: mp.prix_unitaire || p.prix_unitaire, fournisseur: mp.fournisseur || p.fournisseur }));
+                    if (mp) setForm(p => ({ ...p, matiere_premiere_id: mp.id, produit: mp.nom, unite: mp.unite, prix_unitaire: mp.prix_unitaire || p.prix_unitaire, fournisseur: mp.fournisseur || p.fournisseur }));
                   }}>
                     <SelectTrigger><SelectValue placeholder="Choisir une MP du référentiel…" /></SelectTrigger>
                     <SelectContent className="max-h-72">
