@@ -58,6 +58,12 @@ export default function ClotureJournaliere() {
         const existing = entries.find((e: any) => e.produit_id === pid);
         const fullVals: any = {};
         for (const f of fields) fullVals[f] = vals[f] ?? getVal(pid, f);
+        // Auto: perte = ouv + reçu - vendu - invendu - dég - stockFinCompté
+        fullVals.qte_perte = Math.max(0,
+          (fullVals.stock_ouverture || 0) + (fullVals.qte_recue || 0)
+          - (fullVals.qte_vendue || 0) - (fullVals.qte_invendu || 0)
+          - (fullVals.qte_degustation || 0) - (fullVals.stock_fin_compte || 0)
+        );
         if (existing) await supabase.from('cloture_journaliere').update(fullVals).eq('id', existing.id);
         else await supabase.from('cloture_journaliere').insert({ produit_id: pid, date_cloture: selectedDate, ...fullVals, created_by: user?.id });
       }
