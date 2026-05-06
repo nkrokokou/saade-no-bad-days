@@ -280,6 +280,11 @@ export default function BonsTransfert() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Badge className={statusColors[bon.statut]}>{statusLabels[bon.statut]}</Badge>
+                {bon.statut === 'brouillon' && can('bons_transfert', 'delete') && (
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeleteBonId(bon.id); }}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
                 <Eye className="h-4 w-4 text-muted-foreground" />
               </div>
             </CardContent>
