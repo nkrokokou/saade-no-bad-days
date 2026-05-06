@@ -162,11 +162,15 @@ export default function ProductionLabo() {
                 return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.nom}</TableCell>
-                  {fields.map(f => (
-                    <TableCell key={f.key}>
-                      <Input type="number" className="w-24" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
-                    </TableCell>
-                  ))}
+                  {fields.map(f => {
+                    const isPerte = f.key === 'qte_perte';
+                    const val = isPerte ? computePerte(p.id) : getVal(p.id, f.key);
+                    return (
+                      <TableCell key={f.key}>
+                        <Input type="number" readOnly={isPerte} className={`w-24 ${isPerte ? 'bg-muted text-destructive font-semibold' : ''}`} value={val || ''} onChange={e => !isPerte && setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
+                      </TableCell>
+                    );
+                  })}
                   <TableCell><Button size="icon" variant="ghost" disabled={!hasData} onClick={() => setDeleteId(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>
                 );
