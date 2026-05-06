@@ -182,6 +182,33 @@ export type Database = {
         }
         Relationships: []
       }
+      categories_produits: {
+        Row: {
+          actif: boolean
+          created_at: string
+          id: string
+          nom: string
+          ordre: number
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          nom: string
+          ordre?: number
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          nom?: string
+          ordre?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           actif: boolean
@@ -237,6 +264,7 @@ export type Database = {
           qte_perte: number
           qte_recue: number
           qte_vendue: number
+          stock_fin_compte: number | null
           stock_ouverture: number
         }
         Insert: {
@@ -251,6 +279,7 @@ export type Database = {
           qte_perte?: number
           qte_recue?: number
           qte_vendue?: number
+          stock_fin_compte?: number | null
           stock_ouverture?: number
         }
         Update: {
@@ -265,6 +294,7 @@ export type Database = {
           qte_perte?: number
           qte_recue?: number
           qte_vendue?: number
+          stock_fin_compte?: number | null
           stock_ouverture?: number
         }
         Relationships: [

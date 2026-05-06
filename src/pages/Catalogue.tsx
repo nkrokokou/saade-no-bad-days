@@ -16,13 +16,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExcelImportWizard, FieldDef } from '@/components/ExcelImportWizard';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { Produit } from '@/hooks/useProducts';
-
-const CATEGORIES = [
-  'PATISSERIE', 'VIENNOISERIE', 'PTIT_DEJ', 'PANCAKE_CREPE', 'PANINI',
-  'HOT_DOG', 'BURGER', 'DOGEL', 'PIZZA', 'POKE_BOWL', 'SALADE',
-  'BOISSON_CHAUDE', 'SIGNATURE', 'BOISSON_FRAICHE', 'ENFANT',
-  'FORMULE', 'ACCOMPAGNEMENT', 'DIVERS',
-];
+import { useCategories } from '@/hooks/useCategories';
 
 const empty = (): Partial<Produit> => ({
   nom: '', categorie: 'DIVERS', sous_categorie: '', unite: 'pièce',
@@ -31,6 +25,8 @@ const empty = (): Partial<Produit> => ({
 
 export default function Catalogue() {
   const qc = useQueryClient();
+  const { data: categoriesList = [] } = useCategories();
+  const CATEGORIES = useMemo(() => categoriesList.map(c => c.nom), [categoriesList]);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState<string>('all');
   const [statutFilter, setStatutFilter] = useState<string>('actifs');

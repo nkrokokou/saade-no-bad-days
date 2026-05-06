@@ -12,7 +12,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X, ShoppingCart } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit } from '@/hooks/useProducts';
 
@@ -49,6 +50,7 @@ export default function POS() {
   const [fondInitial, setFondInitial] = useState(0);
   const [fondCompte, setFondCompte] = useState(0);
   const [lastTicket, setLastTicket] = useState<any>(null);
+  const [cartOpen, setCartOpen] = useState(false);
 
   // Produits
   const { data: produits = [] } = useQuery({
@@ -174,29 +176,49 @@ export default function POS() {
       setPayOpen(false);
       clearCart();
       qc.invalidateQueries({ queryKey: ['ventes'] });
-      setTimeout(() => printTicket({ vente, lignes }), 100);
+      setTimeout(() => { printTicket({ vente, lignes }); printTicket({ vente, lignes }, true); }, 100);
+      setCartOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  const printTicket = (data: any) => {
+  const printTicket = (data: any, kitchen = false) => {
     if (!data) return;
     const html = `<html><head><title>Ticket ${data.vente.numero_ticket}</title>
-      <style>body{font-family:monospace;padding:8px;width:280px}h2{text-align:center;margin:4px 0;font-family:serif}
-      hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}
-      .total{font-size:14px;font-weight:bold}small{color:#555}</style></head><body>
-      <h2>SAADÉ</h2><div style="text-align:center"><small>Lomé, Togo</small></div><hr/>
-      <div class="row"><span>Ticket #${data.vente.numero_ticket}</span><span>${new Date(data.vente.date_vente).toLocaleString('fr-FR')}</span></div>
-      ${data.vente.client_nom ? `<div>Client: ${data.vente.client_nom}</div>` : ''}<hr/>
-      ${data.lignes.map((l: any) => `<div class="row"><span>${l.quantite}× ${l.produit_nom}</span><span>${Number(l.total_ligne).toLocaleString()} F</span></div>`).join('')}
-      <hr/>${data.vente.remise_globale > 0 ? `<div class="row"><span>Remise</span><span>-${Number(data.vente.remise_globale).toLocaleString()} F</span></div>` : ''}
-      <div class="row total"><span>TOTAL</span><span>${Number(data.vente.total).toLocaleString()} F</span></div>
-      <div class="row"><span>${PAYMENT_LABELS[data.vente.mode_paiement as PaymentMode]}</span><span>${Number(data.vente.montant_recu).toLocaleString()} F</span></div>
-      ${data.vente.rendu > 0 ? `<div class="row"><span>Rendu</span><span>${Number(data.vente.rendu).toLocaleString()} F</span></div>` : ''}
-      <hr/><div style="text-align:center"><small>Merci de votre visite ❤</small></div>
+      <style>
+        @page { size: 72mm auto; margin: 2mm; }
+        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: 72mm; font-size: 12px; line-height: 1.35; color: #000; }
+        h2 { text-align: center; margin: 2px 0; font-family: serif; font-size: 18px; letter-spacing: 2px; }
+        hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+        .row { display: flex; justify-content: space-between; gap: 4px; }
+        .total { font-size: 15px; font-weight: bold; }
+        .center { text-align: center; }
+        .big { font-size: 14px; font-weight: bold; }
+        small { font-size: 10px; }
+      </style></head><body>
+      <h2>SAADÉ</h2>
+      <div class="center"><small>Lomé · Togo</small></div>
+      <hr/>
+      <div class="row"><span>#${data.vente.numero_ticket}</span><span>${new Date(data.vente.date_vente).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span></div>
+      ${data.vente.client_nom ? `<div>Client: ${data.vente.client_nom}</div>` : ''}
+      ${kitchen ? '<div class="center big">--- CUISINE ---</div>' : ''}
+      <hr/>
+      ${data.lignes.map((l: any) => kitchen
+        ? `<div class="big">${l.quantite}× ${l.produit_nom}</div>`
+        : `<div class="row"><span>${l.quantite}× ${l.produit_nom}</span><span>${Number(l.total_ligne).toLocaleString()} F</span></div>`).join('')}
+      <hr/>
+      ${kitchen ? '' : `
+        ${data.vente.remise_globale > 0 ? `<div class="row"><span>Remise</span><span>-${Number(data.vente.remise_globale).toLocaleString()} F</span></div>` : ''}
+        <div class="row total"><span>TOTAL</span><span>${Number(data.vente.total).toLocaleString()} F</span></div>
+        <div class="row"><span>${PAYMENT_LABELS[data.vente.mode_paiement as PaymentMode]}</span><span>${Number(data.vente.montant_recu).toLocaleString()} F</span></div>
+        ${data.vente.rendu > 0 ? `<div class="row"><span>Rendu</span><span>${Number(data.vente.rendu).toLocaleString()} F</span></div>` : ''}
+        <hr/>
+        <div class="center"><small>Merci de votre visite ❤</small></div>
+      `}
+      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
       </body></html>`;
     const w = window.open('', '_blank', 'width=320,height=600');
-    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
+    if (w) { w.document.write(html); w.document.close(); }
   };
 
   return (
@@ -244,8 +266,8 @@ export default function POS() {
           </div>
         </div>
 
-        {/* Panier */}
-        <Card className="lg:sticky lg:top-16 self-start">
+        {/* Panier desktop uniquement */}
+        <Card className="hidden lg:block lg:sticky lg:top-16 self-start">
           <CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="font-heading font-semibold">Ticket en cours</h2>
@@ -276,10 +298,59 @@ export default function POS() {
               <span>Total</span><span className="text-primary">{totalTicket.toLocaleString()} F</span>
             </div>
             <Button className="w-full" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
-            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer dernier ticket</Button>}
+            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer</Button>}
           </CardContent>
         </Card>
       </div>
+
+      {/* FAB mobile + drawer panier */}
+      {cart.length > 0 && (
+        <Button onClick={() => setCartOpen(true)}
+          className="lg:hidden fixed bottom-4 right-4 z-40 h-14 px-5 rounded-full shadow-2xl gap-2 text-base">
+          <ShoppingCart className="h-5 w-5" />
+          <span className="font-bold">{totalTicket.toLocaleString()} F</span>
+          <span className="bg-primary-foreground/20 px-2 py-0.5 rounded-full text-xs">{cart.reduce((s, l) => s + l.quantite, 0)}</span>
+        </Button>
+      )}
+
+      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-4 lg:hidden">
+          <SheetHeader>
+            <SheetTitle className="flex items-center justify-between">
+              <span>Ticket en cours</span>
+              {cart.length > 0 && <Button size="sm" variant="ghost" onClick={clearCart}>Vider</Button>}
+            </SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="flex-1 -mx-4 px-4 my-2">
+            {cart.length === 0 && <div className="text-center text-muted-foreground py-12 text-sm">Cliquez sur des produits</div>}
+            {cart.map(l => (
+              <div key={l.produit.id} className="flex items-center gap-2 py-3 border-b">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{l.produit.nom}</div>
+                  <div className="text-xs text-muted-foreground">{(l.produit.prix_vente || 0).toLocaleString()} F × {l.quantite}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, -1)}><Minus className="h-4 w-4" /></Button>
+                  <span className="w-7 text-center font-medium">{l.quantite}</span>
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, 1)}><Plus className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeLine(l.produit.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+            ))}
+          </ScrollArea>
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Remise</Label>
+              <Input type="number" inputMode="decimal" value={remiseGlobale || ''} placeholder="0" onChange={e => setRemiseGlobale(Number(e.target.value) || 0)} />
+            </div>
+            <div className="flex justify-between text-2xl font-bold">
+              <span>Total</span><span className="text-primary">{totalTicket.toLocaleString()} F</span>
+            </div>
+            <Button size="lg" className="w-full text-base" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
+            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer dernier</Button>}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Dialog paiement */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
