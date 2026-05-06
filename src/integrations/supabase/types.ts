@@ -475,6 +475,51 @@ export type Database = {
         }
         Relationships: []
       }
+      matieres_premieres: {
+        Row: {
+          actif: boolean
+          colisage: number
+          created_at: string
+          fournisseur: string | null
+          id: string
+          marque: string | null
+          nom: string
+          notes: string | null
+          prix_achat: number
+          prix_unitaire: number
+          unite: string
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          colisage?: number
+          created_at?: string
+          fournisseur?: string | null
+          id?: string
+          marque?: string | null
+          nom: string
+          notes?: string | null
+          prix_achat?: number
+          prix_unitaire?: number
+          unite?: string
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          colisage?: number
+          created_at?: string
+          fournisseur?: string | null
+          id?: string
+          marque?: string | null
+          nom?: string
+          notes?: string | null
+          prix_achat?: number
+          prix_unitaire?: number
+          unite?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       module_permissions: {
         Row: {
           can_create: boolean
