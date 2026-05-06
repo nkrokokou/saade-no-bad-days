@@ -138,10 +138,13 @@ export default function ProductionLabo() {
               <TableRow>
                 <TableHead className="min-w-[200px]">Produit</TableHead>
                 {fields.map(f => <TableHead key={f.key}>{f.label}</TableHead>)}
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map(p => (
+              {filteredProducts.map(p => {
+                const eid = getEntryId(p.id);
+                return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.nom}</TableCell>
                   {fields.map(f => (
@@ -149,12 +152,15 @@ export default function ProductionLabo() {
                       <Input type="number" className="w-24" value={getVal(p.id, f.key) || ''} onChange={e => setVal(p.id, f.key, parseFloat(e.target.value) || 0)} />
                     </TableCell>
                   ))}
+                  <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+      <ConfirmDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)} title="Supprimer cette entrée ?" description="L'enregistrement de production sera supprimé." destructive onConfirm={() => deleteId && deleteEntry.mutate(deleteId)} />
     </div>
   );
 }
