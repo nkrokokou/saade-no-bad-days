@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags, Boxes, Armchair,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -42,8 +42,10 @@ export function AppSidebar() {
     { title: 'Clients & Crédits', url: '/clients', icon: Users, module: 'clients' },
     { title: 'Catalogue produits', url: '/catalogue', icon: Package2, module: 'catalogue' },
     { title: 'Catégories', url: '/categories', icon: Tags, module: 'catalogue' },
+    { title: 'Matières Premières', url: '/matieres-premieres', icon: Boxes, module: 'matieres_premieres' },
     { title: t('nav.achats'), url: '/achats-mp', icon: ShoppingCart, module: 'achats_mp' },
     { title: t('nav.fiches'), url: '/fiches-techniques', icon: BookOpen, module: 'fiches_techniques' },
+    { title: 'Tables Restaurant', url: '/tables-restaurant', icon: Armchair, module: 'tables_restaurant' },
     { title: t('nav.bons'), url: '/bons-transfert', icon: FileText, module: 'bons_transfert' },
     { title: t('nav.stock'), url: '/stock-tampon', icon: Package, module: 'stock_tampon' },
     { title: t('nav.pertes'), url: '/pertes', icon: TrendingDown, module: 'pertes' },

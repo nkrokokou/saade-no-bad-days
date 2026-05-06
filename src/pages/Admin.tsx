@@ -28,6 +28,12 @@ const MODULES: { key: string; label: string }[] = [
   { key: 'inventaire', label: 'Inventaire' },
   { key: 'cloture', label: 'Clôture' },
   { key: 'degustations', label: 'Dégustations' },
+  { key: 'catalogue', label: 'Catalogue produits' },
+  { key: 'pos', label: 'Caisse / POS' },
+  { key: 'ventes', label: 'Ventes & Rapports' },
+  { key: 'clients', label: 'Clients & Crédits' },
+  { key: 'matieres_premieres', label: 'Matières Premières' },
+  { key: 'tables_restaurant', label: 'Tables Restaurant' },
 ];
 const ACTIONS: { key: 'can_read' | 'can_create' | 'can_update' | 'can_delete'; label: string }[] = [
   { key: 'can_read', label: 'Lire' },
