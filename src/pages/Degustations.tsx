@@ -195,10 +195,13 @@ export default function Degustations() {
                   <TableHead className="w-24">Quantité</TableHead>
                   <TableHead>Motif</TableHead>
                   <TableHead className="w-32">Photo</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {prods.map(p => (
+                {prods.map(p => {
+                  const eid = getEntryId(p.id);
+                  return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.nom}</TableCell>
                     <TableCell>
@@ -212,13 +215,16 @@ export default function Degustations() {
                     <TableCell>
                       <PhotoUpload size="sm" value={getPhoto(p.id)} onChange={url => setPhoto(p.id, url)} />
                     </TableCell>
+                    <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       ))}
+      <ConfirmDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)} title="Supprimer cette dégustation ?" description="L'enregistrement sera définitivement supprimé." destructive onConfirm={() => deleteId && deleteEntry.mutate(deleteId)} />
     </div>
   );
 }
