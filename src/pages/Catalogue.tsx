@@ -25,6 +25,8 @@ const empty = (): Partial<Produit> => ({
 
 export default function Catalogue() {
   const qc = useQueryClient();
+  const { data: categoriesList = [] } = useCategories();
+  const CATEGORIES = useMemo(() => categoriesList.map(c => c.nom), [categoriesList]);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState<string>('all');
   const [statutFilter, setStatutFilter] = useState<string>('actifs');
