@@ -37,19 +37,34 @@ export function exportToPDF(title: string, headers: string[], rows: (string | nu
   }
 }
 
+export interface ParsedSheet {
+  name: string;
+  rows: Record<string, any>[];
+  columns: string[];
+}
+
 export function parseExcelFile(file: File): Promise<Record<string, any>[]> {
+  return parseExcelAllSheets(file).then(s => s[0]?.rows || []);
+}
+
+export function parseExcelAllSheets(file: File): Promise<ParsedSheet[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: 'array' });
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet, { defval: 0 });
-        resolve(json as Record<string, any>[]);
-      } catch (err) {
-        reject(err);
-      }
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
+        const sheets: ParsedSheet[] = wb.SheetNames.map(name => {
+          const sheet = wb.Sheets[name];
+          // defval: '' => empty cells stay empty (not 0), allows required-string detection
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false }) as Record<string, any>[];
+          // Drop fully-empty rows
+          const filtered = rows.filter(r => Object.values(r).some(v => v !== '' && v !== null && v !== undefined));
+          const columns = filtered.length ? Object.keys(filtered[0]) : [];
+          return { name, rows: filtered, columns };
+        }).filter(s => s.rows.length > 0);
+        resolve(sheets);
+      } catch (err) { reject(err); }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
