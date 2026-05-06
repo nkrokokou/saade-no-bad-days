@@ -107,10 +107,15 @@ export default function ProductionLabo() {
 
       {/* Mobile cards */}
       <div className="block md:hidden space-y-3">
-        {filteredProducts.map(p => (
+        {filteredProducts.map(p => {
+          const eid = getEntryId(p.id);
+          return (
           <Card key={p.id}>
             <CardContent className="py-3 px-4">
-              <p className="font-medium text-sm mb-2">{p.nom}</p>
+              <div className="flex justify-between items-center mb-2">
+                <p className="font-medium text-sm">{p.nom}</p>
+                {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 {fields.map(f => (
                   <div key={f.key}>
@@ -121,7 +126,8 @@ export default function ProductionLabo() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Desktop table */}
