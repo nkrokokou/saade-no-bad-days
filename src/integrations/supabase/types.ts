@@ -21,6 +21,7 @@ export type Database = {
           date_achat: string
           fournisseur: string
           id: string
+          matiere_premiere_id: string | null
           prix_total: number
           prix_unitaire: number
           produit: string
@@ -33,6 +34,7 @@ export type Database = {
           date_achat: string
           fournisseur?: string
           id?: string
+          matiere_premiere_id?: string | null
           prix_total?: number
           prix_unitaire?: number
           produit: string
@@ -45,13 +47,29 @@ export type Database = {
           date_achat?: string
           fournisseur?: string
           id?: string
+          matiere_premiere_id?: string | null
           prix_total?: number
           prix_unitaire?: number
           produit?: string
           quantite?: number
           unite?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "achats_mp_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
+            referencedRelation: "matieres_premieres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "achats_mp_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_matieres_premieres"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_logs: {
         Row: {
@@ -444,6 +462,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fiches_techniques_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_matieres_premieres"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fiches_techniques_produit_id_fkey"
             columns: ["produit_id"]
             isOneToOne: false
@@ -497,6 +522,7 @@ export type Database = {
           notes: string | null
           prix_achat: number
           prix_unitaire: number
+          stock_min: number
           unite: string
           updated_at: string
         }
@@ -511,6 +537,7 @@ export type Database = {
           notes?: string | null
           prix_achat?: number
           prix_unitaire?: number
+          stock_min?: number
           unite?: string
           updated_at?: string
         }
@@ -525,6 +552,7 @@ export type Database = {
           notes?: string | null
           prix_achat?: number
           prix_unitaire?: number
+          stock_min?: number
           unite?: string
           updated_at?: string
         }
@@ -1042,7 +1070,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_stock_matieres_premieres: {
+        Row: {
+          alerte_stock: boolean | null
+          fournisseur: string | null
+          id: string | null
+          nom: string | null
+          prix_unitaire: number | null
+          stock_actuel: number | null
+          stock_min: number | null
+          total_achete: number | null
+          total_consomme: number | null
+          unite: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_perform: {
