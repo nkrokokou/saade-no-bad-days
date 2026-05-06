@@ -246,6 +246,7 @@ export default function BonsTransfert() {
             </TableBody>
           </Table>
         </div>
+        <ConfirmDialog open={!!deleteBonId} onOpenChange={() => setDeleteBonId(null)} title="Supprimer ce bon ?" description="Toutes les lignes du bon seront supprimées définitivement." destructive onConfirm={() => deleteBonId && deleteBon.mutate(deleteBonId)} />
       </div>
     );
   }
