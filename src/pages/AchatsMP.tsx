@@ -24,7 +24,7 @@ export default function AchatsMP() {
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0 });
+  const [form, setForm] = useState<{ fournisseur: string; produit: string; quantite: number; unite: string; prix_unitaire: number; matiere_premiere_id: string | null }>({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0, matiere_premiere_id: null });
 
   const { data: achats = [] } = useQuery({
     queryKey: ['achats_mp', selectedDate],
