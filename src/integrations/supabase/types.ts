@@ -569,6 +569,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sessions_caisse: {
+        Row: {
+          ecart: number | null
+          ferme_at: string | null
+          ferme_par: string | null
+          fond_final_attendu: number | null
+          fond_final_compte: number | null
+          fond_initial: number
+          id: string
+          notes: string | null
+          ouvert_at: string
+          ouvert_par: string | null
+          statut: string
+        }
+        Insert: {
+          ecart?: number | null
+          ferme_at?: string | null
+          ferme_par?: string | null
+          fond_final_attendu?: number | null
+          fond_final_compte?: number | null
+          fond_initial?: number
+          id?: string
+          notes?: string | null
+          ouvert_at?: string
+          ouvert_par?: string | null
+          statut?: string
+        }
+        Update: {
+          ecart?: number | null
+          ferme_at?: string | null
+          ferme_par?: string | null
+          fond_final_attendu?: number | null
+          fond_final_compte?: number | null
+          fond_initial?: number
+          id?: string
+          notes?: string | null
+          ouvert_at?: string
+          ouvert_par?: string | null
+          statut?: string
+        }
+        Relationships: []
+      }
       stock_tampon: {
         Row: {
           created_at: string
@@ -624,6 +666,109 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vente_lignes: {
+        Row: {
+          created_at: string
+          id: string
+          prix_unitaire: number
+          produit_id: string
+          produit_nom: string
+          quantite: number
+          remise: number
+          total_ligne: number
+          vente_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prix_unitaire?: number
+          produit_id: string
+          produit_nom: string
+          quantite?: number
+          remise?: number
+          total_ligne?: number
+          vente_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prix_unitaire?: number
+          produit_id?: string
+          produit_nom?: string
+          quantite?: number
+          remise?: number
+          total_ligne?: number
+          vente_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vente_lignes_vente_id_fkey"
+            columns: ["vente_id"]
+            isOneToOne: false
+            referencedRelation: "ventes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ventes: {
+        Row: {
+          client_nom: string | null
+          created_at: string
+          date_vente: string
+          encaisse_par: string | null
+          id: string
+          mode_paiement: string
+          montant_recu: number | null
+          notes: string | null
+          numero_ticket: number
+          remise_globale: number
+          rendu: number | null
+          session_id: string | null
+          statut: string
+          total: number
+        }
+        Insert: {
+          client_nom?: string | null
+          created_at?: string
+          date_vente?: string
+          encaisse_par?: string | null
+          id?: string
+          mode_paiement?: string
+          montant_recu?: number | null
+          notes?: string | null
+          numero_ticket?: number
+          remise_globale?: number
+          rendu?: number | null
+          session_id?: string | null
+          statut?: string
+          total?: number
+        }
+        Update: {
+          client_nom?: string | null
+          created_at?: string
+          date_vente?: string
+          encaisse_par?: string | null
+          id?: string
+          mode_paiement?: string
+          montant_recu?: number | null
+          notes?: string | null
+          numero_ticket?: number
+          remise_globale?: number
+          rendu?: number | null
+          session_id?: string | null
+          statut?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions_caisse"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
