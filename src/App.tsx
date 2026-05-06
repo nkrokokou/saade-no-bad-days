@@ -19,6 +19,8 @@ import InsightsBot from "./pages/InsightsBot";
 import FichesTechniques from "./pages/FichesTechniques";
 import Admin from "./pages/Admin";
 import Catalogue from "./pages/Catalogue";
+import POS from "./pages/POS";
+import Ventes from "./pages/Ventes";
 import AuditLog from "./pages/AuditLog";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
