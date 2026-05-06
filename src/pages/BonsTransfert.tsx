@@ -12,11 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Eye, Send, CheckCircle, ShieldCheck, Download, FileText, FileEdit, Search } from 'lucide-react';
+import { Plus, Eye, Send, CheckCircle, ShieldCheck, Download, FileText, FileEdit, Search, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { exportToExcel, exportToPDF } from '@/hooks/useExcelImportExport';
 import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 const STATUSES = ['brouillon', 'envoye', 'recu', 'valide'] as const;
 type Status = typeof STATUSES[number];
