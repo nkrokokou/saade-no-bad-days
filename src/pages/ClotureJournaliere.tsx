@@ -161,23 +161,29 @@ export default function ClotureJournaliere() {
                   <TableHead className="min-w-[140px] sticky left-0 bg-card z-10">Produit</TableHead>
                   {fields.map(f => <TableHead key={f} className="text-center">{fieldLabels[f]}</TableHead>)}
                   <TableHead className="text-center font-bold">Stock Fin</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {prods.map(p => (
+                {prods.map(p => {
+                  const eid = getEntryId(p.id);
+                  return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10">{p.nom}</TableCell>
                     {fields.map(f => (
                       <TableCell key={f}><Input type="number" className="w-16 text-center" value={getVal(p.id, f) || ''} onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} /></TableCell>
                     ))}
                     <TableCell className={`text-center font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>{getStockFin(p.id)}</TableCell>
+                    <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       ))}
+      <ConfirmDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)} title="Supprimer cette ligne ?" description="L'entrée de clôture pour ce produit sera supprimée." destructive onConfirm={() => deleteId && deleteEntry.mutate(deleteId)} />
     </div>
   );
 }
