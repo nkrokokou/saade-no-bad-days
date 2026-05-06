@@ -52,8 +52,12 @@ export default function ProductionLabo() {
   });
 
   const deleteEntry = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('production_labo').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setDeleteId(null); toast.success('Entrée supprimée'); },
+    mutationFn: async (pid: string) => {
+      const eid = entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
+      if (eid) { const { error } = await supabase.from('production_labo').delete().eq('id', eid); if (error) throw error; }
+      setLocal(prev => { const c = { ...prev }; delete c[pid]; return c; });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setDeleteId(null); toast.success('Ligne effacée'); },
     onError: () => toast.error('Erreur'),
   });
 
