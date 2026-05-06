@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -41,6 +41,7 @@ export function AppSidebar() {
     { title: 'Ventes & Rapports', url: '/ventes', icon: BarChart3, module: 'ventes' },
     { title: 'Clients & Crédits', url: '/clients', icon: Users, module: 'clients' },
     { title: 'Catalogue produits', url: '/catalogue', icon: Package2, module: 'catalogue' },
+    { title: 'Catégories', url: '/categories', icon: Tags, module: 'catalogue' },
     { title: t('nav.achats'), url: '/achats-mp', icon: ShoppingCart, module: 'achats_mp' },
     { title: t('nav.fiches'), url: '/fiches-techniques', icon: BookOpen, module: 'fiches_techniques' },
     { title: t('nav.bons'), url: '/bons-transfert', icon: FileText, module: 'bons_transfert' },
