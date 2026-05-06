@@ -88,6 +88,14 @@ export default function Degustations() {
     onError: () => toast.error('Erreur lors de la sauvegarde'),
   });
 
+  const deleteEntry = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('degustations').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['degustations'] }); setDeleteId(null); toast.success('Dégustation supprimée'); },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
+
   const grouped = products.reduce((acc, p) => {
     const cat = p.categorie || 'DIVERS';
     if (!acc[cat]) acc[cat] = [];
