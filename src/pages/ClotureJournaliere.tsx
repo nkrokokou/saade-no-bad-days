@@ -12,7 +12,8 @@ import { SearchFilter } from '@/components/SearchFilter';
 import { exportToExcel, exportToPDF, parseExcelFile, findProductByName } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { format, subDays, addDays } from 'date-fns';
-import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export default function ClotureJournaliere() {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ export default function ClotureJournaliere() {
   const { data: products = [] } = useProducts();
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: entries = [] } = useQuery({
     queryKey: ['cloture_journaliere', selectedDate],
@@ -62,6 +64,14 @@ export default function ClotureJournaliere() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cloture_journaliere'] }); setLocal({}); toast.success('Clôture sauvegardée'); },
     onError: () => toast.error('Erreur'),
   });
+
+  const deleteEntry = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('cloture_journaliere').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cloture_journaliere'] }); setDeleteId(null); toast.success('Entrée supprimée'); },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
 
   const handleExport = () => {
     exportToExcel(products.map(p => ({
@@ -121,11 +131,16 @@ export default function ClotureJournaliere() {
           <CardContent className="overflow-x-auto">
             {/* Mobile cards */}
             <div className="block md:hidden space-y-3">
-              {prods.map(p => (
+              {prods.map(p => {
+                const eid = getEntryId(p.id);
+                return (
                 <div key={p.id} className="border rounded-lg p-3 space-y-2">
                   <div className="flex justify-between items-center">
                     <p className="font-medium text-sm">{p.nom}</p>
-                    <span className={`text-sm font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>Fin: {getStockFin(p.id)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>Fin: {getStockFin(p.id)}</span>
+                      {eid && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeleteId(eid)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {fields.map(f => (
@@ -136,7 +151,8 @@ export default function ClotureJournaliere() {
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             {/* Desktop table */}
             <Table className="hidden md:table">
@@ -145,23 +161,29 @@ export default function ClotureJournaliere() {
                   <TableHead className="min-w-[140px] sticky left-0 bg-card z-10">Produit</TableHead>
                   {fields.map(f => <TableHead key={f} className="text-center">{fieldLabels[f]}</TableHead>)}
                   <TableHead className="text-center font-bold">Stock Fin</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {prods.map(p => (
+                {prods.map(p => {
+                  const eid = getEntryId(p.id);
+                  return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10">{p.nom}</TableCell>
                     {fields.map(f => (
                       <TableCell key={f}><Input type="number" className="w-16 text-center" value={getVal(p.id, f) || ''} onChange={e => setVal(p.id, f, parseFloat(e.target.value) || 0)} /></TableCell>
                     ))}
                     <TableCell className={`text-center font-bold ${getStockFin(p.id) < 0 ? 'text-destructive' : 'text-primary'}`}>{getStockFin(p.id)}</TableCell>
+                    <TableCell>{eid && <Button size="icon" variant="ghost" onClick={() => setDeleteId(eid)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}</TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       ))}
+      <ConfirmDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)} title="Supprimer cette ligne ?" description="L'entrée de clôture pour ce produit sera supprimée." destructive onConfirm={() => deleteId && deleteEntry.mutate(deleteId)} />
     </div>
   );
 }
