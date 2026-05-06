@@ -12,7 +12,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X, ShoppingCart } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit } from '@/hooks/useProducts';
 
