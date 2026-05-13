@@ -95,6 +95,32 @@ export default function POS() {
     },
   });
 
+  // Stock disponible du jour (production envoyée en salle - ventes - dégustations)
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: stockMap = {} } = useQuery({
+    queryKey: ['pos-stock-jour', today],
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const [prod, vl, deg] = await Promise.all([
+        supabase.from('production_labo').select('produit_id, qte_sortie_en_salle').eq('date_production', today),
+        supabase.from('vente_lignes').select('produit_id, quantite, ventes!inner(date_vente, statut)').gte('ventes.date_vente', today + 'T00:00:00').in('ventes.statut', ['validee', 'en_cours']),
+        supabase.from('degustations').select('produit_id, quantite').eq('date_degustation', today),
+      ]);
+      const m: Record<string, number> = {};
+      (prod.data || []).forEach((r: any) => { m[r.produit_id] = (m[r.produit_id] || 0) + Number(r.qte_sortie_en_salle || 0); });
+      (vl.data || []).forEach((r: any) => { if (m[r.produit_id] !== undefined) m[r.produit_id] -= Number(r.quantite || 0); });
+      (deg.data || []).forEach((r: any) => { if (m[r.produit_id] !== undefined) m[r.produit_id] -= Number(r.quantite || 0); });
+      return m;
+    },
+  });
+
+  const getStockDispo = (pid: string) => {
+    const base = stockMap[pid];
+    if (base === undefined) return null; // produit non suivi (boisson, etc.)
+    const inCart = cart.find(l => l.produit.id === pid)?.quantite || 0;
+    return base - inCart;
+  };
+
   // Tickets en attente (tabs ouverts)
   const { data: openTabs = [], refetch: refetchTabs } = useQuery({
     queryKey: ['open-tabs', session?.id],
@@ -132,6 +158,11 @@ export default function POS() {
   useEffect(() => { if (payOpen) setMontantRecu(totalTicket); }, [payOpen, totalTicket]);
 
   const addToCart = (p: Produit) => {
+    const dispo = getStockDispo(p.id);
+    if (dispo !== null && dispo <= 0) {
+      toast.error(`Rupture de stock : ${p.nom}`);
+      return;
+    }
     setCart(c => {
       const i = c.findIndex(l => l.produit.id === p.id);
       if (i >= 0) { const n = [...c]; n[i] = { ...n[i], quantite: n[i].quantite + 1 }; return n; }
@@ -320,6 +351,7 @@ export default function POS() {
       const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
       const serveurSnap = serveur;
       qc.invalidateQueries({ queryKey: ['ventes'] });
+      qc.invalidateQueries({ queryKey: ['pos-stock-jour'] });
       refetchTabs();
       setTimeout(() => {
         printTicket({ vente, lignes });
@@ -529,16 +561,26 @@ export default function POS() {
             </TabsList></ScrollArea>
           </Tabs>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {filtered.map(p => (
-              <button key={p.id} onClick={() => addToCart(p)}
-                className="border rounded-lg p-2 text-left hover:bg-accent hover:border-primary transition-colors flex flex-col gap-1 active:scale-95">
-                {p.photo_url ? (
-                  <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
-                ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
-                <div className="text-xs font-medium line-clamp-2">{p.nom}</div>
-                <div className="text-xs font-bold text-primary">{(p.prix_vente || 0).toLocaleString()} F</div>
-              </button>
-            ))}
+            {filtered.map(p => {
+              const dispo = getStockDispo(p.id);
+              const rupture = dispo !== null && dispo <= 0;
+              const bas = dispo !== null && dispo > 0 && dispo <= 5;
+              return (
+                <button key={p.id} onClick={() => addToCart(p)} disabled={rupture}
+                  className={`relative border rounded-lg p-2 text-left transition-colors flex flex-col gap-1 active:scale-95 ${rupture ? 'opacity-50 cursor-not-allowed bg-muted' : 'hover:bg-accent hover:border-primary'}`}>
+                  {dispo !== null && (
+                    <span className={`absolute top-1 right-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${rupture ? 'bg-destructive text-destructive-foreground' : bas ? 'bg-orange-500 text-white' : 'bg-green-600 text-white'}`}>
+                      {rupture ? 'Rupture' : `${dispo}`}
+                    </span>
+                  )}
+                  {p.photo_url ? (
+                    <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
+                  ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
+                  <div className="text-xs font-medium line-clamp-2">{p.nom}</div>
+                  <div className="text-xs font-bold text-primary">{(p.prix_vente || 0).toLocaleString()} F</div>
+                </button>
+              );
+            })}
             {filtered.length === 0 && <div className="col-span-full text-center text-muted-foreground py-6 text-sm">Aucun produit</div>}
           </div>
         </div>
