@@ -561,16 +561,26 @@ export default function POS() {
             </TabsList></ScrollArea>
           </Tabs>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {filtered.map(p => (
-              <button key={p.id} onClick={() => addToCart(p)}
-                className="border rounded-lg p-2 text-left hover:bg-accent hover:border-primary transition-colors flex flex-col gap-1 active:scale-95">
-                {p.photo_url ? (
-                  <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
-                ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
-                <div className="text-xs font-medium line-clamp-2">{p.nom}</div>
-                <div className="text-xs font-bold text-primary">{(p.prix_vente || 0).toLocaleString()} F</div>
-              </button>
-            ))}
+            {filtered.map(p => {
+              const dispo = getStockDispo(p.id);
+              const rupture = dispo !== null && dispo <= 0;
+              const bas = dispo !== null && dispo > 0 && dispo <= 5;
+              return (
+                <button key={p.id} onClick={() => addToCart(p)} disabled={rupture}
+                  className={`relative border rounded-lg p-2 text-left transition-colors flex flex-col gap-1 active:scale-95 ${rupture ? 'opacity-50 cursor-not-allowed bg-muted' : 'hover:bg-accent hover:border-primary'}`}>
+                  {dispo !== null && (
+                    <span className={`absolute top-1 right-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${rupture ? 'bg-destructive text-destructive-foreground' : bas ? 'bg-orange-500 text-white' : 'bg-green-600 text-white'}`}>
+                      {rupture ? 'Rupture' : `${dispo}`}
+                    </span>
+                  )}
+                  {p.photo_url ? (
+                    <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
+                  ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
+                  <div className="text-xs font-medium line-clamp-2">{p.nom}</div>
+                  <div className="text-xs font-bold text-primary">{(p.prix_vente || 0).toLocaleString()} F</div>
+                </button>
+              );
+            })}
             {filtered.length === 0 && <div className="col-span-full text-center text-muted-foreground py-6 text-sm">Aucun produit</div>}
           </div>
         </div>
