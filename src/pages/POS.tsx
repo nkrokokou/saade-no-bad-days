@@ -158,6 +158,11 @@ export default function POS() {
   useEffect(() => { if (payOpen) setMontantRecu(totalTicket); }, [payOpen, totalTicket]);
 
   const addToCart = (p: Produit) => {
+    const dispo = getStockDispo(p.id);
+    if (dispo !== null && dispo <= 0) {
+      toast.error(`Rupture de stock : ${p.nom}`);
+      return;
+    }
     setCart(c => {
       const i = c.findIndex(l => l.produit.id === p.id);
       if (i >= 0) { const n = [...c]; n[i] = { ...n[i], quantite: n[i].quantite + 1 }; return n; }
