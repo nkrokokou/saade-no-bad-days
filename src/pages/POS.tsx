@@ -568,11 +568,14 @@ export default function POS() {
               return (
                 <button key={p.id} onClick={() => addToCart(p)} disabled={rupture}
                   className={`relative border rounded-lg p-2 text-left transition-colors flex flex-col gap-1 active:scale-95 ${rupture ? 'opacity-50 cursor-not-allowed bg-muted' : 'hover:bg-accent hover:border-primary'}`}>
-                  {dispo !== null && (
-                    <span className={`absolute top-1 right-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${rupture ? 'bg-destructive text-destructive-foreground' : bas ? 'bg-orange-500 text-white' : 'bg-green-600 text-white'}`}>
-                      {rupture ? 'Rupture' : `${dispo}`}
-                    </span>
-                  )}
+                  <span className={`absolute top-1 right-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    dispo === null ? 'bg-muted-foreground/70 text-background'
+                      : rupture ? 'bg-destructive text-destructive-foreground'
+                      : bas ? 'bg-orange-500 text-white'
+                      : 'bg-green-600 text-white'
+                  }`}>
+                    {dispo === null ? 'Dispo' : rupture ? 'Rupture' : `${dispo}`}
+                  </span>
                   {p.photo_url ? (
                     <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
                   ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
