@@ -351,6 +351,7 @@ export default function POS() {
       const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
       const serveurSnap = serveur;
       qc.invalidateQueries({ queryKey: ['ventes'] });
+      qc.invalidateQueries({ queryKey: ['pos-stock-jour'] });
       refetchTabs();
       setTimeout(() => {
         printTicket({ vente, lignes });
