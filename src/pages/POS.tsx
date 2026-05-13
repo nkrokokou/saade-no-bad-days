@@ -95,6 +95,32 @@ export default function POS() {
     },
   });
 
+  // Stock disponible du jour (production envoyée en salle - ventes - dégustations)
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: stockMap = {} } = useQuery({
+    queryKey: ['pos-stock-jour', today],
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const [prod, vl, deg] = await Promise.all([
+        supabase.from('production_labo').select('produit_id, qte_sortie_en_salle').eq('date_production', today),
+        supabase.from('vente_lignes').select('produit_id, quantite, ventes!inner(date_vente, statut)').gte('ventes.date_vente', today + 'T00:00:00').in('ventes.statut', ['validee', 'en_cours']),
+        supabase.from('degustations').select('produit_id, quantite').eq('date_degustation', today),
+      ]);
+      const m: Record<string, number> = {};
+      (prod.data || []).forEach((r: any) => { m[r.produit_id] = (m[r.produit_id] || 0) + Number(r.qte_sortie_en_salle || 0); });
+      (vl.data || []).forEach((r: any) => { if (m[r.produit_id] !== undefined) m[r.produit_id] -= Number(r.quantite || 0); });
+      (deg.data || []).forEach((r: any) => { if (m[r.produit_id] !== undefined) m[r.produit_id] -= Number(r.quantite || 0); });
+      return m;
+    },
+  });
+
+  const getStockDispo = (pid: string) => {
+    const base = stockMap[pid];
+    if (base === undefined) return null; // produit non suivi (boisson, etc.)
+    const inCart = cart.find(l => l.produit.id === pid)?.quantite || 0;
+    return base - inCart;
+  };
+
   // Tickets en attente (tabs ouverts)
   const { data: openTabs = [], refetch: refetchTabs } = useQuery({
     queryKey: ['open-tabs', session?.id],
