@@ -376,6 +376,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credits_vente_id_fkey"
+            columns: ["vente_id"]
+            isOneToOne: false
+            referencedRelation: "ventes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       degustations: {
@@ -985,6 +992,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "vente_lignes_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vente_lignes_vente_id_fkey"
             columns: ["vente_id"]
             isOneToOne: false
@@ -1052,6 +1066,13 @@ export type Database = {
           total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "ventes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ventes_session_id_fkey"
             columns: ["session_id"]
