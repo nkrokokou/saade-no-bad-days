@@ -1,39 +1,87 @@
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from 'sonner';
+
+function safeFilename(name: string) {
+  return name.replace(/[^a-z0-9_\-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+}
+
+/** Trigger a real file download from a Blob (works inside iframes & on mobile). */
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
 
 export function exportToExcel(data: Record<string, any>[], fileName: string, sheetName = 'Données') {
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, `${fileName}.xlsx`);
+  try {
+    if (!data || data.length === 0) {
+      toast.warning('Aucune donnée à exporter');
+      return;
+    }
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    downloadBlob(new Blob([wbout], { type: 'application/octet-stream' }), `${safeFilename(fileName)}.xlsx`);
+    toast.success('Export Excel téléchargé');
+  } catch (e) {
+    console.error('exportToExcel', e);
+    toast.error('Erreur export Excel');
+  }
 }
 
 export function exportToPDF(title: string, headers: string[], rows: (string | number)[][]) {
-  // Simple PDF via printable HTML
-  const html = `
-    <html><head><title>${title}</title>
-    <style>
-      body { font-family: 'DM Sans', sans-serif; padding: 20px; }
-      h1 { font-family: 'Playfair Display', serif; color: #2C1A0E; margin-bottom: 5px; }
-      .subtitle { color: #666; margin-bottom: 20px; font-size: 12px; }
-      table { border-collapse: collapse; width: 100%; font-size: 11px; }
-      th { background: #C49A5A; color: white; padding: 8px; text-align: left; }
-      td { border: 1px solid #ddd; padding: 6px 8px; }
-      tr:nth-child(even) { background: #FAF6F0; }
-      .footer { margin-top: 20px; font-size: 10px; color: #999; }
-    </style></head><body>
-    <h1>SAADÉ — ${title}</h1>
-    <div class="subtitle">Exporté le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</div>
-    <table>
-      <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>
-    </table>
-    <div class="footer">SAADÉ — Laboratoire & Boutique de Pâtisserie Libanaise — Lomé, Togo</div>
-    </body></html>`;
-  const w = window.open('', '_blank');
-  if (w) {
-    w.document.write(html);
-    w.document.close();
-    setTimeout(() => w.print(), 500);
+  try {
+    if (!rows || rows.length === 0) {
+      toast.warning('Aucune donnée à exporter');
+      return;
+    }
+    const doc = new jsPDF({ orientation: headers.length > 6 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    // Header band
+    doc.setFillColor(196, 154, 90); // caramel
+    doc.rect(0, 0, pageW, 60, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.text('SAADÉ', 40, 28);
+    doc.setFontSize(11);
+    doc.text(title, 40, 46);
+
+    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(9);
+    doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, 40, 76);
+
+    autoTable(doc, {
+      head: [headers],
+      body: rows.map(r => r.map(c => (c ?? '').toString())),
+      startY: 90,
+      styles: { fontSize: 9, cellPadding: 5 },
+      headStyles: { fillColor: [196, 154, 90], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 246, 240] },
+      margin: { left: 30, right: 30 },
+      didDrawPage: (data) => {
+        const pageH = doc.internal.pageSize.getHeight();
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text('SAADÉ — Laboratoire & Boutique de Pâtisserie Libanaise — Lomé, Togo',
+          pageW / 2, pageH - 15, { align: 'center' });
+      },
+    });
+
+    const blob = doc.output('blob');
+    downloadBlob(blob, `${safeFilename(title)}.pdf`);
+    toast.success('Export PDF téléchargé');
+  } catch (e) {
+    console.error('exportToPDF', e);
+    toast.error('Erreur export PDF');
   }
 }
 
