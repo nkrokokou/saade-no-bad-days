@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X, ShoppingCart, PauseCircle, Utensils } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { Produit } from '@/hooks/useProducts';
+import { Produit, useProducts } from '@/hooks/useProducts';
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
 
@@ -67,17 +66,8 @@ export default function POS() {
   const [currentTabId, setCurrentTabId] = useState<string | null>(null);
 
   // Produits
-  useSupabaseRealtime('ventes', ['ventes']);
-  useSupabaseRealtime('pertes', ['pertes']);
-  useSupabaseRealtime('production_labo', ['production_labo']);
-  useSupabaseRealtime('cloture_journaliere', ['cloture_journaliere']);
-  useSupabaseRealtime('bons_transfert', ['bons_transfert']);
-  useSupabaseRealtime('stock_tampon', ['stock_tampon', selectedDate]);
-  useSupabaseRealtime('mouvements_stock', ['mouvements_stock', selectedDate]);
+  const { data: produits = [] } = useProducts();
 
-  // Tables
-  useSupabaseRealtime('stock_tampon', ['stock_tampon', selectedDate]);
-  useSupabaseRealtime('mouvements_stock', ['mouvements_stock', selectedDate]);
   const { data: tables = [] } = useQuery({
     queryKey: ['tables-resto'],
     queryFn: async () => {
@@ -162,7 +152,7 @@ export default function POS() {
   const addToCart = (p: Produit) => {
     const dispo = getStockDispo(p.id);
     if (dispo !== null && dispo <= 0) {
-      toast.error(t('pos.stock_out', { product: p.nom }));
+      toast.error(`Stock épuisé : ${p.nom}`);
       return;
     }
     setCart(c => {
@@ -260,7 +250,7 @@ export default function POS() {
         remise: l.remise,
         total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
       }));
-      const { error: e2 } = await supabase.from('vente_lignes').insert(lignes);
+      const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
       if (e2) throw e2;
       // Imprime tickets de préparation immédiatement
       printPrepTickets(cart, { tableNum: tables.find(t => t.id === tableId)?.numero || 'Comptoir', serveur, numero: 'EN ATTENTE' });
@@ -506,7 +496,7 @@ export default function POS() {
       <Card>
         <CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-heading font-bold flex items-center gap-2">{t('pos.title')}</h1>
+            <h1 className="text-xl font-heading font-bold flex items-center gap-2">Caisse</h1>
             {session ? (
               <p className="text-xs text-muted-foreground">Session ouverte depuis {new Date(session.ouvert_at).toLocaleTimeString('fr-FR')} · Fond {Number(session.fond_initial).toLocaleString()} F</p>
             ) : <p className="text-xs text-destructive">Caisse fermée — ouvrez une session pour encaisser</p>}

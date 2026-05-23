@@ -1,14 +1,12 @@
-import { useTranslation } from 'react-i18next';
 import useSupabaseRealtime from '@/hooks/useSupabaseRealtime';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingDown, Package, ChefHat, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, Minus, DollarSign, Receipt, Users, Target } from 'lucide-react';
+import { FileText, TrendingDown, ChefHat, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, Minus, DollarSign, Receipt, Target } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart, CartesianGrid, Legend } from 'recharts';
 import { format, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 
 import { useState } from 'react';

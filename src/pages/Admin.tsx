@@ -426,7 +426,7 @@ function PermissionsMatrix() {
 
   const getPerm = (role: string, module: string, action: string): boolean => {
     const p = perms.find((x: any) => x.role === role && x.module === module);
-    return p ? !!p[action] : false;
+    return p ? !!(p as any)[action] : false;
   };
 
   const ROLES_NO_CEO = ROLES.filter(r => r.value !== 'ceo');
