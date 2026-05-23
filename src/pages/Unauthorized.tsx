@@ -7,12 +7,13 @@ import { usePermissions } from '@/hooks/usePermissions';
 export default function Unauthorized() {
   const navigate = useNavigate();
   const { session, profile, signOut, loading } = useAuth();
-  const { roles, loading: permLoading } = usePermissions();
+  const { roles, isCeo, loading: permLoading } = usePermissions();
 
   if (loading || permLoading) return null;
 
   // Pas de session → renvoyer directement à la page de connexion
   if (!session) return <Navigate to="/login" replace />;
+  if (isCeo) return <Navigate to="/dashboard" replace />;
 
   const primaryRole = roles[0] || profile?.role || 'salle';
 
