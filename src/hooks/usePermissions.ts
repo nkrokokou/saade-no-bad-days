@@ -28,7 +28,7 @@ interface State {
 }
 
 export function usePermissions() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [state, setState] = useState<State>({ roles: [], permissions: [], loading: true });
 
   const load = useCallback(async () => {
@@ -40,10 +40,11 @@ export function usePermissions() {
       supabase.from('user_roles').select('role').eq('user_id', user.id),
       supabase.from('module_permissions').select('*'),
     ]);
-    const roles = (rolesRes.data || []).map((r: any) => r.role as UserRole);
+    const rolesFromTable = (rolesRes.data || []).map((r: any) => r.role as UserRole);
+    const roles = rolesFromTable.length > 0 ? rolesFromTable : profile?.role ? [profile.role] : [];
     const permissions = (permsRes.data || []) as ModulePermission[];
     setState({ roles, permissions, loading: false });
-  }, [user]);
+  }, [user, profile?.role]);
 
   useEffect(() => { load(); }, [load]);
 
