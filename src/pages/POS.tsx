@@ -250,7 +250,7 @@ export default function POS() {
         remise: l.remise,
         total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
       }));
-      const { error: e2 } = await supabase.from('vente_lignes').insert(lignes);
+      const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
       if (e2) throw e2;
       // Imprime tickets de préparation immédiatement
       printPrepTickets(cart, { tableNum: tables.find(t => t.id === tableId)?.numero || 'Comptoir', serveur, numero: 'EN ATTENTE' });
