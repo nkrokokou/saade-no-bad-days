@@ -62,7 +62,7 @@ export default function BonsTransfert() {
     enabled: !!selectedBon,
     queryFn: async () => {
       const { data } = await supabase.from('bon_transfert_lignes')
-        .select('*, produits(nom)').eq('bon_transfert_id', selectedBon);
+        .select('*, produits(nom)').eq('bon_transfert_id', selectedBon!);
       return data || [];
     },
   });

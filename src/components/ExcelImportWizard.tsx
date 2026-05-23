@@ -279,7 +279,7 @@ export function ExcelImportWizard({
                     {validatedRows.slice(0, 200).map(r => (
                       <tr key={r._index} className={r._errors.length ? 'bg-destructive/10' : ''}>
                         <td className="p-2">{r._index}</td>
-                        {fields.map(f => <td key={f.key} className="p-2 max-w-[150px] truncate">{String(r[f.key] ?? '')}</td>)}
+                        {fields.map(f => <td key={f.key} className="p-2 max-w-[150px] truncate">{String((r as any)[f.key] ?? '')}</td>)}
                         <td className="p-2 text-destructive">{r._errors.join(', ') || '✓'}</td>
                       </tr>
                     ))}

@@ -41,7 +41,7 @@ export default function FichesTechniques() {
     queryFn: async () => {
       const { data } = await supabase.from('fiches_techniques')
         .select('*')
-        .eq('produit_id', selectedProduct)
+        .eq('produit_id', selectedProduct!)
         .order('created_at');
       return data || [];
     },
