@@ -152,7 +152,7 @@ export default function POS() {
   const addToCart = (p: Produit) => {
     const dispo = getStockDispo(p.id);
     if (dispo !== null && dispo <= 0) {
-      toast.error(t('pos.stock_out', { product: p.nom }));
+      toast.error(`Stock épuisé : ${p.nom}`);
       return;
     }
     setCart(c => {
