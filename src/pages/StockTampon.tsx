@@ -149,7 +149,7 @@ export default function StockTampon() {
 
       {mouvements.length > 0 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">{t('stock_tampon.movements_of_day')}</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Mouvements du jour</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
               {mouvements.map((m: any) => (
