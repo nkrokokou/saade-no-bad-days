@@ -14,7 +14,7 @@ vi.mock('sonner', () => ({
 
 describe('useSupabaseRealtime', () => {
   let queryClient: QueryClient;
-  let invalidateSpy: jest.SpyInstance;
+  let invalidateSpy: any;
   let callback: ((payload: any) => void) | undefined;
 
   beforeEach(() => {

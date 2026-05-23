@@ -24,8 +24,8 @@ export function useSupabaseRealtime(
   useEffect(() => {
     try {
       const channel = supabase.channel(`realtime-${table}`);
-      const subscription = channel
-        .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+      channel
+        .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
           // Debounce invalidation to avoid flooding the network
           if (debounceRef.current) clearTimeout(debounceRef.current);
           debounceRef.current = setTimeout(() => {

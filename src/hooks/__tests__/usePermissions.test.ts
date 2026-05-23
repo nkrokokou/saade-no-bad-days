@@ -68,7 +68,7 @@ describe('usePermissions', () => {
 
   it('should allow access for CEO to any module', async () => {
     const mockRoles = [{ role: 'ceo' }];
-    const mockPermissions = [];
+    const mockPermissions: any[] = [];
 
     (supabase.from as any)
       .mockReturnValueOnce({
