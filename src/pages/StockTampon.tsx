@@ -91,7 +91,7 @@ export default function StockTampon() {
         <div className="flex gap-2 flex-wrap">
           <SearchFilter value={search} onChange={setSearch} className="w-48" />
           <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
-          <Button onClick={() => saveStock.mutate()} disabled={saveStock.isPending}><Save className="h-4 w-4 mr-1" />{t('stock_tampon.save')}</Button>
+          <Button onClick={() => saveStock.mutate()} disabled={saveStock.isPending}><Save className="h-4 w-4 mr-1" />Enregistrer</Button>
         </div>
       </div>
 
