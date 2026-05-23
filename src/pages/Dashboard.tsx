@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import useSupabaseRealtime from '@/hooks/useSupabaseRealtime';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, TrendingDown, Package, ChefHat, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, Minus, DollarSign, Receipt, Users, Target } from 'lucide-react';
@@ -8,11 +9,18 @@ import { fr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useQuery } from '@tanstack/react-query';
+
 import { useState } from 'react';
 
 const COLORS = ['hsl(33, 45%, 56%)', 'hsl(142, 50%, 45%)', 'hsl(0, 60%, 50%)', 'hsl(38, 92%, 50%)', 'hsl(220, 50%, 50%)', 'hsl(280, 50%, 55%)'];
 
 export default function Dashboard() {
+  useSupabaseRealtime('ventes', ['ventes']);
+  useSupabaseRealtime('pertes', ['pertes']);
+  useSupabaseRealtime('production_labo', ['production_labo']);
+  useSupabaseRealtime('cloture_journaliere', ['cloture_journaliere']);
+  useSupabaseRealtime('bons_transfert', ['transfers-today']);
   const { profile } = useAuth();
   const isCeo = profile?.role === 'ceo';
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('7d');

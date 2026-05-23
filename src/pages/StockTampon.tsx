@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -87,11 +87,11 @@ export default function StockTampon() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-heading font-bold flex items-center gap-2"><Package className="h-6 w-6 text-primary" /> Stock Tampon</h1>
+        <h1 className="text-2xl font-heading font-bold flex items-center gap-2"><Package className="h-6 w-6 text-primary" />{t('stock_tampon.title')}</h1>
         <div className="flex gap-2 flex-wrap">
           <SearchFilter value={search} onChange={setSearch} className="w-48" />
           <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
-          <Button onClick={() => saveStock.mutate()} disabled={saveStock.isPending}><Save className="h-4 w-4 mr-1" /> Sauvegarder</Button>
+          <Button onClick={() => saveStock.mutate()} disabled={saveStock.isPending}><Save className="h-4 w-4 mr-1" />{t('stock_tampon.save')}</Button>
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export default function StockTampon() {
 
       {mouvements.length > 0 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Mouvements du jour</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">{t('stock_tampon.movements_of_day')}</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
               {mouvements.map((m: any) => (
