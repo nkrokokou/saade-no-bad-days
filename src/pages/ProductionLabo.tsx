@@ -35,7 +35,8 @@ export default function ProductionLabo() {
   const getVal = (pid: string, field: string): number => { const lp = local[pid] as any; if (lp && lp[field] !== undefined) return lp[field]; return (entries.find((x: any) => x.produit_id === pid) as any)?.[field] ?? 0; };
   const computePerte = (pid: string) => Math.max(0, Number(getVal(pid, 'qte_produite') || 0) - Number(getVal(pid, 'qte_sortie_en_salle') || 0));
   const setVal = (pid: string, field: string, val: number) => setLocal(prev => {
-    const base: any = { qte_produite: getVal(pid, 'qte_produite'), qte_sortie_en_salle: getVal(pid, 'qte_sortie_en_salle'), qte_perte: getVal(pid, 'qte_perte'), ...(prev[pid] || {}), [field]: val };
+    const defaults: any = { qte_produite: getVal(pid, 'qte_produite'), qte_sortie_en_salle: getVal(pid, 'qte_sortie_en_salle'), qte_perte: getVal(pid, 'qte_perte') };
+    const base: any = { ...defaults, ...(prev[pid] || {}), [field]: val };
     base.qte_perte = Math.max(0, Number(base.qte_produite || 0) - Number(base.qte_sortie_en_salle || 0));
     return { ...prev, [pid]: base };
   });
