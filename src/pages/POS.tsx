@@ -496,7 +496,7 @@ export default function POS() {
       <Card>
         <CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-heading font-bold flex items-center gap-2">{t('pos.title')}</h1>
+            <h1 className="text-xl font-heading font-bold flex items-center gap-2">Caisse</h1>
             {session ? (
               <p className="text-xs text-muted-foreground">Session ouverte depuis {new Date(session.ouvert_at).toLocaleTimeString('fr-FR')} · Fond {Number(session.fond_initial).toLocaleString()} F</p>
             ) : <p className="text-xs text-destructive">Caisse fermée — ouvrez une session pour encaisser</p>}
