@@ -66,17 +66,8 @@ export default function POS() {
   const [currentTabId, setCurrentTabId] = useState<string | null>(null);
 
   // Produits
-  useSupabaseRealtime('ventes', ['ventes']);
-  useSupabaseRealtime('pertes', ['pertes']);
-  useSupabaseRealtime('production_labo', ['production_labo']);
-  useSupabaseRealtime('cloture_journaliere', ['cloture_journaliere']);
-  useSupabaseRealtime('bons_transfert', ['bons_transfert']);
-  useSupabaseRealtime('stock_tampon', ['stock_tampon', selectedDate]);
-  useSupabaseRealtime('mouvements_stock', ['mouvements_stock', selectedDate]);
+  const { data: produits = [] } = useProducts();
 
-  // Tables
-  useSupabaseRealtime('stock_tampon', ['stock_tampon', selectedDate]);
-  useSupabaseRealtime('mouvements_stock', ['mouvements_stock', selectedDate]);
   const { data: tables = [] } = useQuery({
     queryKey: ['tables-resto'],
     queryFn: async () => {
