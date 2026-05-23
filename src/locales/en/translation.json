@@ -1,0 +1,30 @@
+{
+  "stock_tampon": {
+    "title": "Stock Tampon",
+    "save": "Save",
+    "movements_of_day": "Movements of the day"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "transfers_today": "Transfers today",
+    "losses_week": "Losses (week)",
+    "sales_week": "Sales (week)",
+    "purchases_month": "MP Purchases (month)",
+    "ca": "Revenue",
+    "tickets": "Tickets",
+    "average_ticket": "Average Ticket",
+    "gross_margin": "Gross Margin"
+  },
+  "pos": {
+    "title": "Point of Sale",
+    "open_session": "Open cash register",
+    "close_session": "Close cash register",
+    "payment": "Payment",
+    "save": "Save",
+    "total": "Total",
+    "table": "Table",
+    "server": "Server",
+    "client": "Client name",
+    "notes": "Notes"
+  }
+}

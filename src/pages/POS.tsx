@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,16 +67,17 @@ export default function POS() {
   const [currentTabId, setCurrentTabId] = useState<string | null>(null);
 
   // Produits
-  const { data: produits = [] } = useQuery({
-    queryKey: ['pos-produits'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('produits').select('*').eq('actif', true).order('nom');
-      if (error) throw error;
-      return data as Produit[];
-    },
-  });
+  useSupabaseRealtime('ventes', ['ventes']);
+  useSupabaseRealtime('pertes', ['pertes']);
+  useSupabaseRealtime('production_labo', ['production_labo']);
+  useSupabaseRealtime('cloture_journaliere', ['cloture_journaliere']);
+  useSupabaseRealtime('bons_transfert', ['bons_transfert']);
+  useSupabaseRealtime('stock_tampon', ['stock_tampon', selectedDate]);
+  useSupabaseRealtime('mouvements_stock', ['mouvements_stock', selectedDate]);
 
   // Tables
+  useSupabaseRealtime('stock_tampon', ['stock_tampon', selectedDate]);
+  useSupabaseRealtime('mouvements_stock', ['mouvements_stock', selectedDate]);
   const { data: tables = [] } = useQuery({
     queryKey: ['tables-resto'],
     queryFn: async () => {
@@ -160,7 +162,7 @@ export default function POS() {
   const addToCart = (p: Produit) => {
     const dispo = getStockDispo(p.id);
     if (dispo !== null && dispo <= 0) {
-      toast.error(`Rupture de stock : ${p.nom}`);
+      toast.error(t('pos.stock_out', { product: p.nom }));
       return;
     }
     setCart(c => {
@@ -504,7 +506,7 @@ export default function POS() {
       <Card>
         <CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-heading font-bold">Caisse / POS</h1>
+            <h1 className="text-xl font-heading font-bold flex items-center gap-2">{t('pos.title')}</h1>
             {session ? (
               <p className="text-xs text-muted-foreground">Session ouverte depuis {new Date(session.ouvert_at).toLocaleTimeString('fr-FR')} · Fond {Number(session.fond_initial).toLocaleString()} F</p>
             ) : <p className="text-xs text-destructive">Caisse fermée — ouvrez une session pour encaisser</p>}

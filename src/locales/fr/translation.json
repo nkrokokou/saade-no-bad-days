@@ -1,0 +1,30 @@
+{
+  "stock_tampon": {
+    "title": "Stock Tampon",
+    "save": "Sauvegarder",
+    "movements_of_day": "Mouvements du jour"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "transfers_today": "Transferts aujourd'hui",
+    "losses_week": "Pertes (sem.)",
+    "sales_week": "Ventes (sem.)",
+    "purchases_month": "Achats MP (mois)",
+    "ca": "CA",
+    "tickets": "Tickets",
+    "average_ticket": "Panier moyen",
+    "gross_margin": "Marge brute"
+  },
+  "pos": {
+    "title": "Point de Vente",
+    "open_session": "Ouvrir caisse",
+    "close_session": "Fermer caisse",
+    "payment": "Encaissement",
+    "save": "Enregistrer",
+    "total": "Total",
+    "table": "Table",
+    "server": "Serveur",
+    "client": "Nom du client",
+    "notes": "Notes"
+  }
+}

@@ -20,6 +20,34 @@ const resources = {
         audit: "Journal d'activité", logout: 'Déconnexion', subtitle: 'Laboratoire & Boutique',
       },
       lang: { fr: 'Français', en: 'English', ar: 'العربية', label: 'Langue' },
+      stock_tampon: {
+        title: 'Stock Tampon',
+        save: 'Sauvegarder',
+        movements_of_day: 'Mouvements du jour'
+      },
+      dashboard: {
+        title: 'Tableau de bord',
+        transfers_today: 'Transferts aujourd\'hui',
+        losses_week: 'Pertes (sem.)',
+        sales_week: 'Ventes (sem.)',
+        purchases_month: 'Achats MP (mois)',
+        ca: 'CA',
+        tickets: 'Tickets',
+        average_ticket: 'Panier moyen',
+        gross_margin: 'Marge brute'
+      },
+      pos: {
+        title: 'Point de Vente',
+        open_session: 'Ouvrir caisse',
+        close_session: 'Fermer caisse',
+        payment: 'Encaissement',
+        save: 'Enregistrer',
+        total: 'Total',
+        table: 'Table',
+        server: 'Serveur',
+        client: 'Nom du client',
+        notes: 'Notes'
+      }
     },
   },
   en: {
@@ -39,6 +67,34 @@ const resources = {
         audit: 'Activity Log', logout: 'Logout', subtitle: 'Laboratory & Boutique',
       },
       lang: { fr: 'Français', en: 'English', ar: 'العربية', label: 'Language' },
+      stock_tampon: {
+        title: 'Stock Tampon',
+        save: 'Save',
+        movements_of_day: 'Movements of the day'
+      },
+      dashboard: {
+        title: 'Dashboard',
+        transfers_today: 'Transfers today',
+        losses_week: 'Losses (week)',
+        sales_week: 'Sales (week)',
+        purchases_month: 'MP Purchases (month)',
+        ca: 'Revenue',
+        tickets: 'Tickets',
+        average_ticket: 'Average Ticket',
+        gross_margin: 'Gross Margin'
+      },
+      pos: {
+        title: 'Point of Sale',
+        open_session: 'Open cash register',
+        close_session: 'Close cash register',
+        payment: 'Payment',
+        save: 'Save',
+        total: 'Total',
+        table: 'Table',
+        server: 'Server',
+        client: 'Client name',
+        notes: 'Notes'
+      }
     },
   },
   ar: {
@@ -58,6 +114,34 @@ const resources = {
         audit: 'سجل النشاط', logout: 'تسجيل الخروج', subtitle: 'المختبر والمحل',
       },
       lang: { fr: 'Français', en: 'English', ar: 'العربية', label: 'اللغة' },
+      stock_tampon: {
+        title: 'المخزون الاحتياطي',
+        save: 'حفظ',
+        movements_of_day: 'حركات اليوم'
+      },
+      dashboard: {
+        title: 'لوحة القيادة',
+        transfers_today: 'التحويلات اليوم',
+        losses_week: 'الخسائر (أسبوع)',
+        sales_week: 'المبيعات (أسبوع)',
+        purchases_month: 'شراء المواد الخام (شهر)',
+        ca: 'الإيرادات',
+        tickets: 'التذاكر',
+        average_ticket: 'متوسط التذكرة',
+        gross_margin: 'هامش الربح الإجمالي'
+      },
+      pos: {
+        title: 'نقطة البيع',
+        open_session: 'فتح الصندوق',
+        close_session: 'إغلاق الصندوق',
+        payment: 'الدفع',
+        save: 'حفظ',
+        total: 'المجموع',
+        table: 'الطاولة',
+        server: 'الخادم',
+        client: 'اسم العميل',
+        notes: 'ملاحظات'
+      }
     },
   },
 };

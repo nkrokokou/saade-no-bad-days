@@ -1,0 +1,30 @@
+{
+  "stock_tampon": {
+    "title": "المخزون الاحتياطي",
+    "save": "حفظ",
+    "movements_of_day": "حركات اليوم"
+  },
+  "dashboard": {
+    "title": "لوحة القيادة",
+    "transfers_today": "التحويلات اليوم",
+    "losses_week": "الخسائر (أسبوع)",
+    "sales_week": "المبيعات (أسبوع)",
+    "purchases_month": "شراء المواد الخام (شهر)",
+    "ca": "الإيرادات",
+    "tickets": "التذاكر",
+    "average_ticket": "متوسط التذكرة",
+    "gross_margin": "هامش الربح الإجمالي"
+  },
+  "pos": {
+    "title": "نقطة البيع",
+    "open_session": "فتح الصندوق",
+    "close_session": "إغلاق الصندوق",
+    "payment": "الدفع",
+    "save": "حفظ",
+    "total": "المجموع",
+    "table": "الطاولة",
+    "server": "الخادم",
+    "client": "اسم العميل",
+    "notes": "ملاحظات"
+  }
+}
