@@ -25,7 +25,7 @@ interface Props {
   fields: FieldDef[];
   /** Insert one row at a time. Throw to mark the row as failed. */
   onImportRow?: (row: Record<string, any>) => Promise<void>;
-  /** Bulk import — receives all valid rows, returns inserted count. */
+  /** Bulk import · receives all valid rows, returns inserted count. */
   onImport?: (rows: Record<string, any>[]) => Promise<{ inserted: number; failed?: number }>;
   templateName?: string;
   /** Number of rows per insert batch when using onImportRow (default 50) */
@@ -190,7 +190,7 @@ export function ExcelImportWizard({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Importer Excel — {title}</DialogTitle>
+          <DialogTitle>Importer Excel · {title}</DialogTitle>
           <div className="flex gap-1 mt-2">
             {[1, 2, 3, 4].map(s => (
               <div key={s} className={`h-1 flex-1 rounded ${step >= s ? 'bg-primary' : 'bg-muted'}`} />
@@ -243,9 +243,9 @@ export function ExcelImportWizard({
                       {f.type && <span className="text-xs text-muted-foreground ml-1">({f.type})</span>}
                     </div>
                     <Select value={mapping[f.key] || '__none__'} onValueChange={v => setMapping(m => ({ ...m, [f.key]: v === '__none__' ? '' : v }))}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="— Ignorer —" /></SelectTrigger>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="· Ignorer ·" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">— Ignorer —</SelectItem>
+                        <SelectItem value="__none__">· Ignorer ·</SelectItem>
                         {columns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>

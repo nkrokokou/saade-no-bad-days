@@ -88,7 +88,7 @@ export default function ClotureJournaliere() {
     })), `cloture_${selectedDate}`);
   };
   const handleExportPDF = () => {
-    exportToPDF(`Clôture — ${selectedDate}`, ['Produit', ...Object.values(fieldLabels), 'Fin'],
+    exportToPDF(`Clôture · ${selectedDate}`, ['Produit', ...Object.values(fieldLabels), 'Fin'],
       products.map(p => [p.nom, ...fields.map(f => getVal(p.id, f)), getStockFin(p.id)]));
   };
   const handleImport = async (file: File) => {
@@ -107,7 +107,7 @@ export default function ClotureJournaliere() {
           imported++;
         }
       }
-      toast.success(`${imported} importés — sauvegardez`);
+      toast.success(`${imported} importés · sauvegardez`);
     } catch { toast.error('Erreur de lecture'); }
   };
 
@@ -129,7 +129,7 @@ export default function ClotureJournaliere() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Saisis le <strong>Stock physique compté</strong> en fin de journée — la <strong>Perte est calculée automatiquement</strong> :
+        Saisis le <strong>Stock physique compté</strong> en fin de journée · la <strong>Perte est calculée automatiquement</strong> :
         Perte = Ouverture + Reçu − Vendu − Invendu − Dégustation − Compté.
       </p>
 

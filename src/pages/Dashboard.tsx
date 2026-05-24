@@ -102,7 +102,7 @@ function CeoDashboard() {
     },
   });
 
-  // === Sales (POS) data — strategic KPIs ===
+  // === Sales (POS) data · strategic KPIs ===
   const { data: ventesPeriode = [] } = useQuery({
     queryKey: ['ventes-periode', period],
     queryFn: async () => {
@@ -197,7 +197,7 @@ function CeoDashboard() {
   ventesPeriode.forEach((v: any) => {
     (v.vente_lignes || []).forEach((l: any) => {
       const key = l.produit_id;
-      if (!produitStats[key]) produitStats[key] = { nom: l.produits?.nom || '—', qte: 0, ca: 0 };
+      if (!produitStats[key]) produitStats[key] = { nom: l.produits?.nom || '·', qte: 0, ca: 0 };
       produitStats[key].qte += Number(l.quantite || 0);
       produitStats[key].ca += Number(l.total_ligne || 0);
     });

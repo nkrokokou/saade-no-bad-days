@@ -47,7 +47,7 @@ export default function AchatsMP() {
       const { error } = await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur: form.fournisseur, produit: form.produit, quantite: form.quantite, unite: form.unite, prix_unitaire: form.prix_unitaire, prix_total: form.quantite * form.prix_unitaire, matiere_premiere_id: form.matiere_premiere_id, created_by: user?.id } as any);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0, matiere_premiere_id: null }); toast.success('Achat ajouté — stock MP mis à jour'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0, matiere_premiere_id: null }); toast.success('Achat ajouté · stock MP mis à jour'); },
     onError: () => toast.error('Erreur'),
   });
 
@@ -62,7 +62,7 @@ export default function AchatsMP() {
     exportToExcel(achats.map((a: any) => ({ Fournisseur: a.fournisseur, Produit: a.produit, Quantité: a.quantite, Unité: a.unite, 'Prix Unit.': a.prix_unitaire, 'Prix Total': a.prix_total })), `achats_mp_${selectedDate}`);
   };
   const handleExportPDF = () => {
-    exportToPDF(`Achats MP — ${selectedDate}`, ['Fournisseur', 'Produit', 'Qté', 'Unité', 'P.U.', 'Total'],
+    exportToPDF(`Achats MP · ${selectedDate}`, ['Fournisseur', 'Produit', 'Qté', 'Unité', 'P.U.', 'Total'],
       achats.map((a: any) => [a.fournisseur, a.produit, a.quantite, a.unite, a.prix_unitaire, a.prix_total]));
   };
   const handleImport = async (file: File) => {
