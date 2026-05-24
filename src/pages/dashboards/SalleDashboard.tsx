@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import useSupabaseRealtime from '@/hooks/useSupabaseRealtime';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScanLine, Receipt, DollarSign, Users, TrendingDown, ArrowRight, AlertTriangle } from 'lucide-react';
+import { ScanLine, Receipt, DollarSign, Users, ArrowRight, AlertTriangle } from 'lucide-react';
 
 const fmt = (n: number) => n.toLocaleString('fr-FR');
 
