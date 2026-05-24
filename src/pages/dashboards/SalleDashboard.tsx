@@ -49,7 +49,7 @@ export default function SalleDashboard() {
   const stats: Record<string, { nom: string; qte: number }> = {};
   ventesJour.forEach((v: any) => {
     (v.vente_lignes || []).forEach((l: any) => {
-      const key = l.produits?.nom || '—';
+      const key = l.produits?.nom || '·';
       if (!stats[key]) stats[key] = { nom: key, qte: 0 };
       stats[key].qte += Number(l.quantite || 0);
     });
@@ -61,7 +61,7 @@ export default function SalleDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-heading font-bold">Bonjour 👋</h1>
-          <p className="text-sm text-muted-foreground">Vue d'ensemble de la salle — {format(new Date(), 'dd/MM/yyyy')}</p>
+          <p className="text-sm text-muted-foreground">Vue d'ensemble de la salle · {format(new Date(), 'dd/MM/yyyy')}</p>
         </div>
         <Button asChild size="lg" className="gradient-primary">
           <Link to="/pos"><ScanLine className="h-4 w-4 mr-2" />Ouvrir la caisse</Link>

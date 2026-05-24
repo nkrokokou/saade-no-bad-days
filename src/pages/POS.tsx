@@ -367,7 +367,7 @@ export default function POS() {
     Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
   };
 
-  // Impression via iframe cachée — évite le blocage des popups
+  // Impression via iframe cachée · évite le blocage des popups
   const printViaIframe = (html: string, label: string) => {
     try {
       const iframe = document.createElement('iframe');
@@ -499,7 +499,7 @@ export default function POS() {
             <h1 className="text-xl font-heading font-bold flex items-center gap-2">Caisse</h1>
             {session ? (
               <p className="text-xs text-muted-foreground">Session ouverte depuis {new Date(session.ouvert_at).toLocaleTimeString('fr-FR')} · Fond {Number(session.fond_initial).toLocaleString()} F</p>
-            ) : <p className="text-xs text-destructive">Caisse fermée — ouvrez une session pour encaisser</p>}
+            ) : <p className="text-xs text-destructive">Caisse fermée · ouvrez une session pour encaisser</p>}
           </div>
           <div className="flex gap-2 flex-wrap">
             {session && (
@@ -708,7 +708,7 @@ export default function POS() {
       {/* Dialog paiement */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Encaissement — {totalTicket.toLocaleString()} F</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Encaissement · {totalTicket.toLocaleString()} F</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               {(Object.keys(PAYMENT_LABELS) as PaymentMode[]).map(m => (
