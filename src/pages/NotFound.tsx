@@ -8,7 +8,7 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error('404 — route inconnue :', location.pathname);
+    console.error('404 · route inconnue :', location.pathname);
   }, [location.pathname]);
 
   return (

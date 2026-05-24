@@ -71,7 +71,7 @@ export function exportToPDF(title: string, headers: string[], rows: (string | nu
         const pageH = doc.internal.pageSize.getHeight();
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text('SAADÉ — Laboratoire & Boutique de Pâtisserie Libanaise — Lomé, Togo',
+        doc.text('SAADÉ · Laboratoire & Boutique de Pâtisserie Libanaise · Lomé, Togo',
           pageW / 2, pageH - 15, { align: 'center' });
       },
     });

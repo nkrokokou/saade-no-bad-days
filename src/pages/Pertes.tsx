@@ -13,11 +13,11 @@ import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Lock, TrendingDown, Download, FileText } from 'lucide-react';
 
 /**
- * Module Pertes — 100% automatique en lecture seule.
+ * Module Pertes · 100% automatique en lecture seule.
  * Source de vérité :
  *   • Pertes Clôture = Ouv + Reçu − Vendu − Invendu − Dégustation − Stock Fin Compté
  *   • Pertes Production = qte_perte saisie en Production Labo (référence du jour)
- * Personne ne saisit ici (CEO comprise) — supprime la fraude/erreurs humaines.
+ * Personne ne saisit ici (CEO comprise) · supprime la fraude/erreurs humaines.
  */
 export default function Pertes() {
   const { data: products = [] } = useProducts();
@@ -71,12 +71,12 @@ export default function Pertes() {
   const handleExport = () => {
     exportToExcel(rows.map(r => ({
       Produit: r.p.nom, Catégorie: r.p.categorie,
-      'Perte Clôture': r.c ?? '—', 'Perte Production': r.prod, Total: r.total,
+      'Perte Clôture': r.c ?? '·', 'Perte Production': r.prod, Total: r.total,
     })), `pertes_${selectedDate}`);
   };
   const handleExportPDF = () => {
-    exportToPDF(`Pertes — ${selectedDate}`, ['Produit', 'Cat.', 'Clôture', 'Production', 'Total'],
-      rows.map(r => [r.p.nom, r.p.categorie, r.c ?? '—', r.prod, r.total]));
+    exportToPDF(`Pertes · ${selectedDate}`, ['Produit', 'Cat.', 'Clôture', 'Production', 'Total'],
+      rows.map(r => [r.p.nom, r.p.categorie, r.c ?? '·', r.prod, r.total]));
   };
 
   return (
@@ -95,7 +95,7 @@ export default function Pertes() {
 
       <Alert>
         <AlertDescription className="text-xs">
-          Les pertes sont <strong>calculées automatiquement</strong> à partir de la Clôture Journalière (stock physique compté) et de la Production Labo. Aucune saisie manuelle possible — pour modifier une perte, corrige les chiffres dans Clôture ou Production.
+          Les pertes sont <strong>calculées automatiquement</strong> à partir de la Clôture Journalière (stock physique compté) et de la Production Labo. Aucune saisie manuelle possible · pour modifier une perte, corrige les chiffres dans Clôture ou Production.
           <br />Formule Clôture : <em>Ouverture + Reçu − Vendu − Invendu − Dégustation − Stock Fin Compté</em>
         </AlertDescription>
       </Alert>

@@ -54,7 +54,7 @@ export default function ProductionLabo() {
         else await supabase.from('production_labo').insert({ produit_id: pid, date_production: selectedDate, ...vals, created_by: user?.id });
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setLocal({}); toast.success('Production sauvegardée — stock MP recalculé'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setLocal({}); toast.success('Production sauvegardée · stock MP recalculé'); },
   });
 
   const deleteEntry = useMutation({
@@ -73,7 +73,7 @@ export default function ProductionLabo() {
     exportToExcel(products.map(p => ({ Produit: p.nom, 'Qté Produite': getVal(p.id, 'qte_produite'), 'Sortie en Salle': getVal(p.id, 'qte_sortie_en_salle'), Perte: getVal(p.id, 'qte_perte') })), `production_${selectedDate}`);
   };
   const handleExportPDF = () => {
-    exportToPDF(`Production Labo — ${selectedDate}`, ['Produit', 'Produite', 'Sortie Salle', 'Perte'],
+    exportToPDF(`Production Labo · ${selectedDate}`, ['Produit', 'Produite', 'Sortie Salle', 'Perte'],
       products.map(p => [p.nom, getVal(p.id, 'qte_produite'), getVal(p.id, 'qte_sortie_en_salle'), getVal(p.id, 'qte_perte')]));
   };
   const handleImport = async (file: File) => {
@@ -88,7 +88,7 @@ export default function ProductionLabo() {
           imported++;
         }
       }
-      toast.success(`${imported} importés — pensez à sauvegarder`);
+      toast.success(`${imported} importés · pensez à sauvegarder`);
     } catch { toast.error('Erreur de lecture'); }
   };
 

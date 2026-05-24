@@ -138,7 +138,7 @@ export default function Clients() {
                   <div key={c.id} className="flex items-center justify-between p-3 hover:bg-muted/40">
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">{c.nom} {!c.actif && <Badge variant="outline" className="ml-1">inactif</Badge>}</div>
-                      <div className="text-xs text-muted-foreground truncate">{c.telephone || '—'} {c.email && `· ${c.email}`}</div>
+                      <div className="text-xs text-muted-foreground truncate">{c.telephone || '·'} {c.email && `· ${c.email}`}</div>
                     </div>
                     <div className="flex gap-1">
                       {can('clients', 'update') && <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>}
@@ -221,7 +221,7 @@ export default function Clients() {
       {/* Encaisser crédit */}
       <Dialog open={!!payOpen} onOpenChange={o => !o && setPayOpen(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Encaisser ardoise — {payOpen?.client_nom}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Encaisser ardoise · {payOpen?.client_nom}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="text-sm">Restant dû : <span className="font-bold text-destructive">{Number(payOpen?.montant_restant || 0).toLocaleString()} F</span></div>
             <div><Label>Montant reçu (F)</Label><Input type="number" value={payMontant} onChange={e => setPayMontant(Number(e.target.value) || 0)} /></div>

@@ -195,7 +195,7 @@ export default function FichesTechniques() {
                   </TableRow>
                 ))}
                 {fiches.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucun ingrédient — ajoutez les matières premières</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucun ingrédient · ajoutez les matières premières</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

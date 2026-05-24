@@ -165,7 +165,7 @@ export default function BonsTransfert() {
               exportToExcel(data, `bon_${currentBon.id.slice(0, 8)}`);
             }}><Download className="h-3.5 w-3.5 mr-1" /> Excel</Button>
             <Button size="sm" variant="outline" onClick={() => {
-              exportToPDF(`Bon de Transfert #${currentBon.id.slice(0, 8)} — ${currentBon.date_transfert}`,
+              exportToPDF(`Bon de Transfert #${currentBon.id.slice(0, 8)} · ${currentBon.date_transfert}`,
                 ['Produit', 'Qté Prévue', 'Solde Ouv.', 'Qté Reçue', 'Perte', 'Solde Fin'],
                 lignes.map((l: any) => [l.produits?.nom || '', l.qte_prevue, l.solde_ouverture, l.qte_recue, l.perte, l.solde_fin]));
             }}><FileText className="h-3.5 w-3.5 mr-1" /> PDF</Button>
@@ -233,7 +233,7 @@ export default function BonsTransfert() {
             <TableBody>
               {lignes.map((l: any) => (
                 <TableRow key={l.id}>
-                  <TableCell className="font-medium">{l.produits?.nom || '—'}</TableCell>
+                  <TableCell className="font-medium">{l.produits?.nom || '·'}</TableCell>
                   {['qte_prevue', 'solde_ouverture', 'qte_recue', 'perte'].map(f => (
                     <TableCell key={f}>
                       <Input type="number" className="w-20" value={l[f] || 0} disabled={!canEdit && !(f === 'qte_recue' && canReceive)}
