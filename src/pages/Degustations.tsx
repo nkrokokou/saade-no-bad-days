@@ -111,7 +111,7 @@ export default function Degustations() {
   };
 
   const handleExportPDF = () => {
-    exportToPDF(`Dégustations — ${selectedDate}`,
+    exportToPDF(`Dégustations · ${selectedDate}`,
       ['Produit', 'Quantité', 'Motif'],
       products.map(p => [p.nom, getQty(p.id), getMotif(p.id)]));
   };
@@ -131,7 +131,7 @@ export default function Degustations() {
           imported++;
         }
       }
-      toast.success(`${imported} produits importés — pensez à sauvegarder`);
+      toast.success(`${imported} produits importés · pensez à sauvegarder`);
     } catch { toast.error('Erreur de lecture du fichier'); }
   };
 

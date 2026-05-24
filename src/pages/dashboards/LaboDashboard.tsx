@@ -74,7 +74,7 @@ export default function LaboDashboard({ laboType, title }: LaboDashboardProps) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-heading font-bold">{title}</h1>
-          <p className="text-sm text-muted-foreground">{laboLabel[laboType]} — {format(new Date(), 'dd/MM/yyyy')}</p>
+          <p className="text-sm text-muted-foreground">{laboLabel[laboType]} · {format(new Date(), 'dd/MM/yyyy')}</p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm"><Link to="/fiches-techniques"><BookOpen className="h-4 w-4 mr-1" />Fiches</Link></Button>
@@ -171,7 +171,7 @@ export default function LaboDashboard({ laboType, title }: LaboDashboardProps) {
               {pertesSemaine.slice(0, 6).map((p: any, i: number) => (
                 <div key={i} className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0">
                   <div>
-                    <span className="truncate">{p.produits?.nom || '—'}</span>
+                    <span className="truncate">{p.produits?.nom || '·'}</span>
                     <span className="text-xs text-muted-foreground ml-2">{p.jour}</span>
                   </div>
                   <span className="font-medium text-destructive">{p.quantite}</span>

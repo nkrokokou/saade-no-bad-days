@@ -107,7 +107,7 @@ export default function InsightsBot() {
             {messages.length === 0 && (
               <div className="text-center py-12 space-y-4">
                 <Bot className="h-16 w-16 mx-auto text-muted-foreground/30" />
-                <p className="text-muted-foreground">Posez une question sur vos données — ventes, pertes, achats, production…</p>
+                <p className="text-muted-foreground">Posez une question sur vos données · ventes, pertes, achats, production…</p>
                 <div className="flex flex-wrap gap-2 justify-center max-w-md mx-auto">
                   {SUGGESTIONS.map(s => (
                     <Button key={s} variant="outline" size="sm" className="text-xs" onClick={() => send(s)}>{s}</Button>

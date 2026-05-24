@@ -65,7 +65,7 @@ export default function StockTampon() {
     exportToExcel(products.map(p => { const { entrees, sorties } = getMouvementsSummary(p.id); return { Produit: p.nom, Catégorie: p.categorie, Stock: getQty(p.id), Entrées: entrees, Sorties: sorties }; }), `stock_tampon_${selectedDate}`);
   };
   const handleExportPDF = () => {
-    exportToPDF(`Stock Tampon — ${selectedDate}`, ['Produit', 'Cat.', 'Stock', 'Entrées', 'Sorties'],
+    exportToPDF(`Stock Tampon · ${selectedDate}`, ['Produit', 'Cat.', 'Stock', 'Entrées', 'Sorties'],
       products.map(p => { const { entrees, sorties } = getMouvementsSummary(p.id); return [p.nom, p.categorie, getQty(p.id), entrees, sorties]; }));
   };
   const handleImport = async (file: File) => {
@@ -80,7 +80,7 @@ export default function StockTampon() {
         if (pid && qty > 0) { updates[pid] = qty; imported++; }
       }
       setLocalQty(prev => ({ ...prev, ...updates }));
-      toast.success(`${imported} importés — sauvegardez`);
+      toast.success(`${imported} importés · sauvegardez`);
     } catch { toast.error('Erreur de lecture'); }
   };
 
@@ -135,7 +135,7 @@ export default function StockTampon() {
                         <div className="flex items-center gap-2 justify-center">
                           {entrees > 0 && <Badge variant="outline" className="text-xs gap-1"><ArrowDown className="h-3 w-3 text-green-600" />{entrees}</Badge>}
                           {sorties > 0 && <Badge variant="outline" className="text-xs gap-1"><ArrowUp className="h-3 w-3 text-red-500" />{sorties}</Badge>}
-                          {entrees === 0 && sorties === 0 && <span className="text-xs text-muted-foreground">—</span>}
+                          {entrees === 0 && sorties === 0 && <span className="text-xs text-muted-foreground">·</span>}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -157,7 +157,7 @@ export default function StockTampon() {
                   {m.type === 'entree' ? <ArrowDown className="h-4 w-4 text-green-600 shrink-0" /> : <ArrowUp className="h-4 w-4 text-red-500 shrink-0" />}
                   <span className="font-medium">{m.produits?.nom}</span>
                   <span className="text-muted-foreground">×{m.quantite}</span>
-                  {m.motif && <span className="text-xs text-muted-foreground">— {m.motif}</span>}
+                  {m.motif && <span className="text-xs text-muted-foreground">· {m.motif}</span>}
                 </div>
               ))}
             </div>
