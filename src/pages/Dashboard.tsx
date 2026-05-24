@@ -6,14 +6,32 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { format, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
+import SalleDashboard from './dashboards/SalleDashboard';
+import LaboDashboard from './dashboards/LaboDashboard';
 
 import { useState } from 'react';
 
 const COLORS = ['hsl(33, 45%, 56%)', 'hsl(142, 50%, 45%)', 'hsl(0, 60%, 50%)', 'hsl(38, 92%, 50%)', 'hsl(220, 50%, 50%)', 'hsl(280, 50%, 55%)'];
 
 export default function Dashboard() {
+  const { profile } = useAuth();
+  const { roles, isCeo: isCeoFromRoles, loading: permLoading } = usePermissions();
+  const primaryRole = roles[0] || profile?.role;
+
+  if (!permLoading && !isCeoFromRoles) {
+    if (primaryRole === 'salle') return <SalleDashboard />;
+    if (primaryRole === 'labo_patisserie') return <LaboDashboard laboType="labo_patisserie" title="Tableau de bord" />;
+    if (primaryRole === 'labo_viennoiserie') return <LaboDashboard laboType="labo_viennoiserie" title="Tableau de bord" />;
+    if (primaryRole === 'cuisine_salee') return <LaboDashboard laboType="cuisine_salee" title="Tableau de bord" />;
+  }
+
+  return <CeoDashboard />;
+}
+
+function CeoDashboard() {
   useSupabaseRealtime('ventes', ['ventes']);
   useSupabaseRealtime('pertes', ['pertes']);
   useSupabaseRealtime('production_labo', ['production_labo']);
