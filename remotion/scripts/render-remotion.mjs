@@ -26,6 +26,7 @@ await renderMedia({
   composition,
   serveUrl: bundled,
   codec: "h264",
+  audioCodec: "aac",
   outputLocation: "/mnt/documents/saade-presentation.mp4",
   puppeteerInstance: browser,
   concurrency: 1,
