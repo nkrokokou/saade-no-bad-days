@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Save, Trash2, Calendar, Star, Plus } from "lucide-react";
+import { ClipboardCheck, Save, Trash2, Calendar, Star, Plus, FileDown, Send, Loader2 } from "lucide-react";
+import { buildAuditPdf } from "@/lib/auditPdf";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -113,6 +114,36 @@ export default function AuditsCeo() {
     },
     onError: (e: any) => toast.error(e.message || "Erreur"),
   });
+
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  const downloadPdf = (a: any) => {
+    const doc = buildAuditPdf({
+      date_audit: a.date_audit,
+      rubriques: a.rubriques || {},
+      defauts: a.defauts,
+      ameliorations: a.ameliorations,
+      commentaires: a.commentaires,
+    });
+    doc.save(`audit-ceo-${a.date_audit}.pdf`);
+  };
+
+  const sendByEmail = async (a: any) => {
+    setSendingId(a.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-audit-ceo", {
+        body: { audit_id: a.id },
+      });
+      if (error) throw error;
+      if (!(data as any)?.ok) throw new Error((data as any)?.error?.message || "Échec d'envoi");
+      toast.success(`Audit envoyé à ${(data as any).to}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Erreur d'envoi");
+    } finally {
+      setSendingId(null);
+    }
+  };
+
 
   const loadAudit = (a: any) => {
     setEditingId(a.id);
@@ -225,17 +256,34 @@ export default function AuditsCeo() {
               />
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-wrap gap-2 pt-2">
               <Button onClick={() => save.mutate()} disabled={save.isPending}>
                 <Save className="h-4 w-4 mr-2" />
                 {editingId ? "Mettre à jour" : "Enregistrer l'audit"}
               </Button>
               {editingId && (
-                <Button variant="outline" onClick={reset}>
-                  Annuler
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadPdf(audits?.find((x: any) => x.id === editingId))}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" /> Télécharger PDF
+                  </Button>
+                  <Button
+                    variant="default"
+                    onClick={() => sendByEmail(audits?.find((x: any) => x.id === editingId))}
+                    disabled={sendingId === editingId}
+                  >
+                    {sendingId === editingId
+                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      : <Send className="h-4 w-4 mr-2" />}
+                    Envoyer par email
+                  </Button>
+                  <Button variant="ghost" onClick={reset}>Annuler</Button>
+                </>
               )}
             </div>
+
           </CardContent>
         </Card>
 
@@ -275,7 +323,22 @@ export default function AuditsCeo() {
                       </div>
                     )}
                   </button>
-                  <div className="flex justify-end mt-2">
+                  <div className="flex justify-end gap-1 mt-2 flex-wrap">
+                    <Button variant="ghost" size="sm" className="h-7" onClick={() => downloadPdf(a)}>
+                      <FileDown className="h-3 w-3 mr-1" /> PDF
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7"
+                      onClick={() => sendByEmail(a)}
+                      disabled={sendingId === a.id}
+                    >
+                      {sendingId === a.id
+                        ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        : <Send className="h-3 w-3 mr-1" />}
+                      Envoyer
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive">
@@ -298,6 +361,7 @@ export default function AuditsCeo() {
                       </AlertDialogContent>
                     </AlertDialog>
                   </div>
+
                 </div>
               );
             })}
