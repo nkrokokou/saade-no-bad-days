@@ -104,6 +104,42 @@ export type Database = {
         }
         Relationships: []
       }
+      audits_ceo: {
+        Row: {
+          ameliorations: string | null
+          commentaires: string | null
+          created_at: string
+          created_by: string | null
+          date_audit: string
+          defauts: string | null
+          id: string
+          rubriques: Json
+          updated_at: string
+        }
+        Insert: {
+          ameliorations?: string | null
+          commentaires?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_audit?: string
+          defauts?: string | null
+          id?: string
+          rubriques?: Json
+          updated_at?: string
+        }
+        Update: {
+          ameliorations?: string | null
+          commentaires?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_audit?: string
+          defauts?: string | null
+          id?: string
+          rubriques?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bon_transfert_lignes: {
         Row: {
           bon_transfert_id: string
