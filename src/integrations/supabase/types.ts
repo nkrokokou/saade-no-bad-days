@@ -828,6 +828,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rapports_journaliers: {
+        Row: {
+          created_at: string
+          date_rapport: string
+          email_destinataire: string
+          error_message: string | null
+          id: string
+          payload: Json
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_rapport: string
+          email_destinataire: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_rapport?: string
+          email_destinataire?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sessions_caisse: {
         Row: {
           ecart: number | null

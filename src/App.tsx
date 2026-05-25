@@ -30,6 +30,7 @@ const POS = lazy(() => import("./pages/POS").then(m => ({ default: m.default }))
 const Ventes = lazy(() => import("./pages/Ventes").then(m => ({ default: m.default })));
 const Clients = lazy(() => import("./pages/Clients").then(m => ({ default: m.default })));
 const AuditLog = lazy(() => import("./pages/AuditLog").then(m => ({ default: m.default })));
+const RapportsCeo = lazy(() => import("./pages/RapportsCeo").then(m => ({ default: m.default })));
 const Unauthorized = lazy(() => import("./pages/Unauthorized").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
 
@@ -69,6 +70,7 @@ const App = () => (
               <Route element={<AppLayout module="admin" />}>
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/audit" element={<AuditLog />} />
+                <Route path="/rapports-ceo" element={<RapportsCeo />} />
               </Route>
               <Route element={<AppLayout module="catalogue" />}>
                 <Route path="/catalogue" element={<Catalogue />} />

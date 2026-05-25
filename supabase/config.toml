@@ -1,1 +1,4 @@
 project_id = "ybbrjwywpeurimiisjwm"
+
+[functions.rapport-journalier-ceo]
+verify_jwt = false
