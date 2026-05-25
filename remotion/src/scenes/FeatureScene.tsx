@@ -8,15 +8,16 @@ interface Props {
   subtitle: string;
   bullets: string[];
   accentColor?: string;
+  duration?: number;
 }
 
-export const FeatureScene: React.FC<Props> = ({ number, title, subtitle, bullets, accentColor = theme.caramel }) => {
+export const FeatureScene: React.FC<Props> = ({ number, title, subtitle, bullets, accentColor = theme.caramel, duration = 120 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const numIn = spring({ frame: frame - 5, fps, config: { damping: 200 } });
   const titleIn = spring({ frame: frame - 18, fps, config: { damping: 18, stiffness: 90 } });
   const subIn = interpolate(frame, [30, 55], [0, 1], { extrapolateRight: "clamp" });
-  const fadeOut = interpolate(frame, [100, 120], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const fadeOut = interpolate(frame, [duration - 20, duration], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const titleY = interpolate(titleIn, [0, 1], [40, 0]);
 
   return (
