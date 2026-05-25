@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -221,7 +221,7 @@ export default function ClotureJournaliere() {
         <h1 className="text-2xl font-heading font-bold">Clôture Journalière</h1>
         <div className="flex gap-2 flex-wrap">
           <SearchFilter value={search} onChange={setSearch} className="w-48" />
-          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} />
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={async () => toast.info("Import désactivé : les valeurs sont auto-calculées")} />
           <Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="h-4 w-4 mr-1" /> Sauvegarder</Button>
         </div>
       </div>
