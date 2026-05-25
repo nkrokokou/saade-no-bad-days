@@ -55,6 +55,7 @@ export function AppSidebar() {
     { title: t('nav.degustations'), url: '/degustations', icon: Wine, module: 'degustations' },
     { title: t('nav.admin'), url: '/admin', icon: Settings, module: 'admin' },
     { title: t('nav.audit'), url: '/audit', icon: History, module: 'admin' },
+    { title: 'Rapports CEO', url: '/rapports-ceo', icon: Mail, module: 'admin' },
   ];
 
   if (!profile || loading) return null;
