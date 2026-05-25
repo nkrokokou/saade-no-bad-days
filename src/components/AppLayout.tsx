@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/degustations': 'Dégustations',
   '/admin': 'Administration',
   '/audit': "Journal d'audit",
+  '/rapports-ceo': 'Rapports CEO',
 };
 
 export function AppLayout({ module }: { module?: ModuleKey }) {
