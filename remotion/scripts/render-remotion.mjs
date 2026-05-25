@@ -28,7 +28,6 @@ await renderMedia({
   codec: "h264",
   outputLocation: "/mnt/documents/saade-presentation.mp4",
   puppeteerInstance: browser,
-  muted: true,
   concurrency: 1,
 });
 
