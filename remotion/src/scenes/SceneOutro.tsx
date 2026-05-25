@@ -16,7 +16,7 @@ export const SceneOutro: React.FC = () => {
   const { fps } = useVideoConfig();
   const titleIn = spring({ frame: frame - 5, fps, config: { damping: 18, stiffness: 80 } });
   const titleY = interpolate(titleIn, [0, 1], [50, 0]);
-  const fadeOut = interpolate(frame, [180, 210], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const fadeOut = interpolate(frame, [130, 150], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill style={{ opacity: fadeOut, alignItems: "center", justifyContent: "center", padding: 80 }}>
