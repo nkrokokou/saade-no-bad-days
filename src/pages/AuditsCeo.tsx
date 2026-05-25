@@ -115,6 +115,36 @@ export default function AuditsCeo() {
     onError: (e: any) => toast.error(e.message || "Erreur"),
   });
 
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  const downloadPdf = (a: any) => {
+    const doc = buildAuditPdf({
+      date_audit: a.date_audit,
+      rubriques: a.rubriques || {},
+      defauts: a.defauts,
+      ameliorations: a.ameliorations,
+      commentaires: a.commentaires,
+    });
+    doc.save(`audit-ceo-${a.date_audit}.pdf`);
+  };
+
+  const sendByEmail = async (a: any) => {
+    setSendingId(a.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-audit-ceo", {
+        body: { audit_id: a.id },
+      });
+      if (error) throw error;
+      if (!(data as any)?.ok) throw new Error((data as any)?.error?.message || "Échec d'envoi");
+      toast.success(`Audit envoyé à ${(data as any).to}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Erreur d'envoi");
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+
   const loadAudit = (a: any) => {
     setEditingId(a.id);
     setDate(a.date_audit);
