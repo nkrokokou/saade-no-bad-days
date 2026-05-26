@@ -166,10 +166,24 @@ export default function FichesTechniques() {
             <Button variant="ghost" onClick={() => setSelectedProduct(null)}>← Retour</Button>
             <h1 className="text-xl font-heading font-bold">{selectedProd.nom}</h1>
           </div>
-          <Dialog open={showAdd} onOpenChange={setShowAdd}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-1" /> Ajouter MP</Button>
-            </DialogTrigger>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleExportExcel}>
+              <FileDown className="h-4 w-4 mr-1" /> Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1" /> Importer
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleImportExcel(f); e.target.value = ''; }}
+            />
+            <Dialog open={showAdd} onOpenChange={setShowAdd}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Ajouter MP</Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Ajouter une matière première</DialogTitle></DialogHeader>
               <div className="space-y-3">
