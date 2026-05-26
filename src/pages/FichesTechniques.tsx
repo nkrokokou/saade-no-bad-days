@@ -14,7 +14,8 @@ import { SearchFilter } from '@/components/SearchFilter';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 import { Plus, Trash2, BookOpen, Calculator, Upload, FileDown } from 'lucide-react';
-import { exportToExcel, parseExcelFile } from '@/hooks/useExcelImportExport';
+import { exportToExcel } from '@/hooks/useExcelImportExport';
+import * as XLSX from 'xlsx';
 
 type MP = { id: string; nom: string; unite: string; prix_unitaire: number };
 
