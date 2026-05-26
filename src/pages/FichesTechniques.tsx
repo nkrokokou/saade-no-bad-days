@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { SearchFilter } from '@/components/SearchFilter';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
-import { Plus, Trash2, BookOpen, Calculator, Download, Upload, FileDown } from 'lucide-react';
+import { Plus, Trash2, BookOpen, Calculator, Upload, FileDown } from 'lucide-react';
 import { exportToExcel, parseExcelFile } from '@/hooks/useExcelImportExport';
 
 type MP = { id: string; nom: string; unite: string; prix_unitaire: number };
