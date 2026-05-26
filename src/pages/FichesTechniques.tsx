@@ -98,8 +98,65 @@ export default function FichesTechniques() {
     },
   });
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const selectedProd = products.find(p => p.id === selectedProduct);
   const coutTotal = fiches.reduce((s: number, f: any) => s + (f.quantite_mp * f.cout_unitaire_mp), 0);
+
+  const handleExportExcel = () => {
+    if (!selectedProd) return;
+    const rows = fiches.map((f: any) => ({
+      'Matière première': f.matiere_premiere,
+      Quantité: f.quantite_mp,
+      Unité: f.unite_mp,
+      'Coût unitaire (FCFA)': f.cout_unitaire_mp,
+      'Coût total (FCFA)': f.quantite_mp * f.cout_unitaire_mp,
+    }));
+    if (rows.length === 0) {
+      rows.push({ 'Matière première': '', Quantité: 0, Unité: 'G', 'Coût unitaire (FCFA)': 0, 'Coût total (FCFA)': 0 });
+    }
+    exportToExcel(rows, `fiche_technique_${selectedProd.nom}`, 'Fiche');
+  };
+
+  const handleImportExcel = async (file: File) => {
+    if (!selectedProduct) return;
+    try {
+      const rows = await parseExcelFile(file);
+      if (rows.length === 0) { toast.warning('Fichier vide'); return; }
+      const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const records = rows.map(r => {
+        const keys = Object.keys(r);
+        const get = (needle: string) => {
+          const k = keys.find(k => norm(k).includes(needle));
+          return k ? r[k] : '';
+        };
+        const nom = String(get('matiere') || get('mp') || get('ingredient') || '').trim();
+        const mp = mps.find(m => norm(m.nom) === norm(nom));
+        const unite = String(get('unite') || mp?.unite || 'G').trim().toUpperCase();
+        const quantite = parseFloat(String(get('quantite') || get('qte') || 0).replace(',', '.')) || 0;
+        const cout = parseFloat(String(get('cout unitaire') || get('cout') || get('prix') || mp?.prix_unitaire || 0).toString().replace(',', '.')) || 0;
+        return nom ? {
+          produit_id: selectedProduct,
+          matiere_premiere_id: mp?.id || null,
+          matiere_premiere: nom,
+          quantite_mp: quantite,
+          unite_mp: unite,
+          cout_unitaire_mp: cout,
+          created_by: user?.id,
+        } : null;
+      }).filter(Boolean) as any[];
+      if (records.length === 0) { toast.warning('Aucune ligne valide trouvée'); return; }
+      const { error } = await supabase.from('fiches_techniques').insert(records);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['catalogue'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
+      toast.success(`${records.length} ingrédient(s) importé(s)`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erreur import : ' + (e.message || 'Format invalide'));
+    }
+  };
 
   if (selectedProduct && selectedProd) {
     return (
