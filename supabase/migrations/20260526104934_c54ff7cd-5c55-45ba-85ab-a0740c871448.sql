@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.can_perform(uuid, text, text) FROM anon;
