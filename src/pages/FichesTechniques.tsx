@@ -212,7 +212,8 @@ export default function FichesTechniques() {
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
