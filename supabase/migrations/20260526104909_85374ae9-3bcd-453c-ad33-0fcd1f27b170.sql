@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.can_perform(uuid, text, text) TO authenticated, anon;
