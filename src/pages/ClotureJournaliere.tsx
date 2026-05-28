@@ -46,6 +46,19 @@ export default function ClotureJournaliere() {
     },
   });
 
+  // Fallback : dernier inventaire avant ce jour (par nom de produit)
+  const { data: lastInv = [] } = useQuery({
+    queryKey: ['cloture_last_inv', selectedDate],
+    queryFn: async () => {
+      const { data } = await supabase.from('inventaire')
+        .select('nom_produit, quantite, date_inventaire')
+        .lt('date_inventaire', selectedDate)
+        .order('date_inventaire', { ascending: false })
+        .limit(500);
+      return data || [];
+    },
+  });
+
   const prevExists = prevCloture.length > 0;
 
   // Quantités reçues via bons de transfert reçus aujourd'hui
@@ -85,8 +98,17 @@ export default function ClotureJournaliere() {
   const autoOuverture = useMemo(() => {
     const m: Record<string, number> = {};
     prevCloture.forEach((e: any) => { m[e.produit_id] = Number(e.stock_fin_compte || 0); });
+    // Fallback : dernier inventaire saisi (par nom produit, le plus récent gagne)
+    const seen = new Set<string>();
+    lastInv.forEach((row: any) => {
+      const key = row.nom_produit?.toLowerCase().trim();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      const prod = products.find(p => p.nom.toLowerCase().trim() === key);
+      if (prod && m[prod.id] === undefined) m[prod.id] = Number(row.quantite || 0);
+    });
     return m;
-  }, [prevCloture]);
+  }, [prevCloture, lastInv, products]);
 
   const autoRecue = useMemo(() => {
     const m: Record<string, number> = {};
