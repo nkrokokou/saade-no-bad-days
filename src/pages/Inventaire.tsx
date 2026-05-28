@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,15 +10,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Save, Trash2 } from 'lucide-react';
+import { Plus, Save, Trash2, FileDown, Upload } from 'lucide-react';
+import { exportToExcel } from '@/hooks/useExcelImportExport';
+import * as XLSX from 'xlsx';
 
-const UNITS = ['g', 'pièce', 'litre', 'tranche', 'kg', 'ml'];
+const UNITS = ['G', 'KG', 'L', 'ML', 'pièce', 'tranche'];
 
 export default function Inventaire() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [activeSection, setActiveSection] = useState('mise_en_place');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: entries = [] } = useQuery({
     queryKey: ['inventaire', selectedDate, activeSection],
@@ -34,7 +37,7 @@ export default function Inventaire() {
 
   const [newItems, setNewItems] = useState<{ nom_produit: string; quantite: number; unite: string }[]>([]);
 
-  const addRow = () => setNewItems(prev => [...prev, { nom_produit: '', quantite: 0, unite: 'g' }]);
+  const addRow = () => setNewItems(prev => [...prev, { nom_produit: '', quantite: 0, unite: 'G' }]);
 
   const saveAll = useMutation({
     mutationFn: async () => {
@@ -58,13 +61,86 @@ export default function Inventaire() {
     qc.invalidateQueries({ queryKey: ['inventaire'] });
   };
 
+  const handleExport = () => {
+    const rows = entries.map((e: any) => ({
+      INGREDIENTS: e.nom_produit,
+      QTE: e.quantite,
+      UNITE: e.unite,
+    }));
+    if (rows.length === 0) rows.push({ INGREDIENTS: '', QTE: 0, UNITE: 'G' });
+    exportToExcel(rows, `inventaire_${activeSection}_${selectedDate}`, 'Inventaire');
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      const norm = (s: any) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const parseNum = (v: any) => {
+        const m = String(v ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : 0;
+      };
+      const collected: any[] = [];
+      for (const sn of wb.SheetNames) {
+        const grid: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+        let headerIdx = -1, colNom = -1, colQte = -1, colUnite = -1;
+        for (let i = 0; i < grid.length; i++) {
+          const row = (grid[i] || []).map(norm);
+          const ing = row.findIndex(c => c.includes('ingredient') || c.includes('produit') || c.includes('matiere'));
+          if (ing >= 0) {
+            const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite'));
+            if (qte >= 0) {
+              headerIdx = i; colNom = ing; colQte = qte;
+              colUnite = row.findIndex(c => c.includes('unite'));
+              break;
+            }
+          }
+        }
+        if (headerIdx < 0) continue;
+        for (let i = headerIdx + 1; i < grid.length; i++) {
+          const row = grid[i] || [];
+          const nom = String(row[colNom] ?? '').trim();
+          if (!nom) continue;
+          if (norm(nom).includes('ingredient') || norm(nom).includes('produit')) break;
+          collected.push({
+            section: activeSection,
+            date_inventaire: selectedDate,
+            nom_produit: nom,
+            quantite: parseNum(row[colQte]),
+            unite: String((colUnite >= 0 ? row[colUnite] : '') || 'G').trim().toUpperCase(),
+            created_by: user?.id,
+          });
+        }
+      }
+      if (collected.length === 0) {
+        toast.warning("Aucune ligne trouvée. Format attendu : INGREDIENTS / QTE / UNITE.");
+        return;
+      }
+      const { error } = await supabase.from('inventaire').insert(collected);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['inventaire'] });
+      toast.success(`${collected.length} ligne(s) importée(s)`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erreur import : ' + (e.message || 'Format invalide'));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold">Inventaire Cuisine</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={addRow}><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
-          <Button onClick={() => saveAll.mutate()} disabled={saveAll.isPending}>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <FileDown className="h-4 w-4 mr-1" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-1" /> Importer
+          </Button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ''; }} />
+          <Button variant="outline" size="sm" onClick={addRow}><Plus className="h-4 w-4 mr-1" /> Ajouter</Button>
+          <Button size="sm" onClick={() => saveAll.mutate()} disabled={saveAll.isPending}>
             <Save className="h-4 w-4 mr-1" /> Sauvegarder
           </Button>
         </div>
