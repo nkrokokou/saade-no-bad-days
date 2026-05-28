@@ -252,8 +252,7 @@ export default function POS() {
       }));
       const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
       if (e2) throw e2;
-      // Imprime tickets de préparation immédiatement
-      printPrepTickets(cart, { tableNum: tables.find(t => t.id === tableId)?.numero || 'Comptoir', serveur, numero: 'EN ATTENTE' });
+      // Plus d'impression auto ici : la cuisine s'imprime via le bouton dédié
       return venteId;
     },
     onSuccess: () => {
@@ -347,8 +346,6 @@ export default function POS() {
       refetchTabs();
       setTimeout(() => {
         printTicket({ vente, lignes });
-        // Si pas déjà imprimé en mode "en attente" → imprime tickets cuisine/bar
-        if (!currentTabId) printPrepTickets(cartSnapshot, { tableNum, serveur: serveurSnap, numero: String(vente.numero_ticket) });
       }, 100);
       clearCart();
       setCartOpen(false);
