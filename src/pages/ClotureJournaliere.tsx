@@ -243,6 +243,18 @@ export default function ClotureJournaliere() {
         <h1 className="text-2xl font-heading font-bold">Clôture Journalière</h1>
         <div className="flex gap-2 flex-wrap">
           <SearchFilter value={search} onChange={setSearch} className="w-48" />
+          <Button variant="outline" size="sm" onClick={() => {
+            const next: typeof local = { ...local };
+            products.forEach(p => {
+              const theo = Math.max(0,
+                getAuto(p.id, 'stock_ouverture') + getAuto(p.id, 'qte_recue')
+                - getAuto(p.id, 'qte_vendue') - getAuto(p.id, 'qte_degustation')
+                - getManual(p.id, 'qte_invendu'));
+              next[p.id] = { ...next[p.id], stock_fin_compte: theo };
+            });
+            setLocal(next);
+            toast.success('Stock théorique pré-rempli — ajustez si nécessaire');
+          }}>🧮 Pré-remplir stock théorique</Button>
           <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={async () => toast.info("Import désactivé : les valeurs sont auto-calculées")} />
           <Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="h-4 w-4 mr-1" /> Sauvegarder</Button>
         </div>
@@ -258,7 +270,7 @@ export default function ClotureJournaliere() {
         <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 text-warning text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
-            <strong>Stock d'ouverture mis à 0 par défaut.</strong> La clôture du {format(subDays(new Date(selectedDate), 1), 'dd/MM/yyyy')} n'a pas été validée — il n'y a donc pas de stock fin reporté pour aujourd'hui.
+            <strong>Stock d'ouverture estimé depuis le dernier inventaire saisi.</strong> La clôture du {format(subDays(new Date(selectedDate), 1), 'dd/MM/yyyy')} n'a pas été validée. Vérifiez les valeurs ou utilisez le bouton « Pré-remplir stock théorique » pour calculer auto le stock fin.
           </div>
         </div>
       )}
