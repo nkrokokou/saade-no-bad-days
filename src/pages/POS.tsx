@@ -625,7 +625,14 @@ export default function POS() {
               </Button>
               <Button disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
             </div>
-            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer</Button>}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" size="sm" disabled={cart.length === 0} onClick={printCuisineFromCart}>
+                <Utensils className="h-4 w-4 mr-1" />Bon Cuisine
+              </Button>
+              {lastTicket
+                ? <Button variant="outline" size="sm" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>
+                : <Button variant="outline" size="sm" disabled><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -679,7 +686,14 @@ export default function POS() {
               </Button>
               <Button size="lg" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
             </div>
-            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer dernier</Button>}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" disabled={cart.length === 0} onClick={printCuisineFromCart}>
+                <Utensils className="h-4 w-4 mr-1" />Bon Cuisine
+              </Button>
+              {lastTicket
+                ? <Button variant="outline" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>
+                : <Button variant="outline" disabled><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
