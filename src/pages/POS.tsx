@@ -252,8 +252,7 @@ export default function POS() {
       }));
       const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
       if (e2) throw e2;
-      // Imprime tickets de préparation immédiatement
-      printPrepTickets(cart, { tableNum: tables.find(t => t.id === tableId)?.numero || 'Comptoir', serveur, numero: 'EN ATTENTE' });
+      // Plus d'impression auto ici : la cuisine s'imprime via le bouton dédié
       return venteId;
     },
     onSuccess: () => {
@@ -334,21 +333,17 @@ export default function POS() {
           notes: notes || null, created_by: user?.id,
         });
       }
-      return { vente, lignes, cartSnapshot: [...cart] };
+      return { vente, lignes };
     },
-    onSuccess: ({ vente, lignes, cartSnapshot }) => {
+    onSuccess: ({ vente, lignes }) => {
       toast.success('Vente enregistrée');
       setLastTicket({ vente, lignes });
       setPayOpen(false);
-      const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
-      const serveurSnap = serveur;
       qc.invalidateQueries({ queryKey: ['ventes'] });
       qc.invalidateQueries({ queryKey: ['pos-stock-jour'] });
       refetchTabs();
       setTimeout(() => {
         printTicket({ vente, lignes });
-        // Si pas déjà imprimé en mode "en attente" → imprime tickets cuisine/bar
-        if (!currentTabId) printPrepTickets(cartSnapshot, { tableNum, serveur: serveurSnap, numero: String(vente.numero_ticket) });
       }, 100);
       clearCart();
       setCartOpen(false);
@@ -356,15 +351,28 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Imprime un ticket par poste de préparation (cuisine, bar, labo…)
+  // Imprime un ticket par poste de préparation (cuisine, labo…) — exclut boissons
   const printPrepTickets = (lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const groups: Record<string, CartLine[]> = {};
     lines.forEach(l => {
       const poste = (l.produit.poste_preparation || 'salle');
-      if (poste === 'salle') return;
+      if (poste === 'salle' || poste === 'bar') return;
+      const cat = (l.produit.categorie || '').toUpperCase();
+      if (cat.includes('BOISSON') || cat.includes('SOFT') || cat.includes('EAU')) return;
       (groups[poste] = groups[poste] || []).push(l);
     });
+    if (Object.keys(groups).length === 0) {
+      toast.info('Aucun article à préparer en cuisine');
+      return;
+    }
     Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
+  };
+
+  // Imprime un bon cuisine à la demande (depuis le panier en cours)
+  const printCuisineFromCart = () => {
+    if (cart.length === 0) { toast.error('Panier vide'); return; }
+    const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
+    printPrepTickets(cart, { tableNum, serveur, numero: currentTabId ? 'EN ATTENTE' : 'BROUILLON' });
   };
 
   // Impression via iframe cachée · évite le blocage des popups
@@ -617,7 +625,14 @@ export default function POS() {
               </Button>
               <Button disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
             </div>
-            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer</Button>}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" size="sm" disabled={cart.length === 0} onClick={printCuisineFromCart}>
+                <Utensils className="h-4 w-4 mr-1" />Bon Cuisine
+              </Button>
+              {lastTicket
+                ? <Button variant="outline" size="sm" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>
+                : <Button variant="outline" size="sm" disabled><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -671,7 +686,14 @@ export default function POS() {
               </Button>
               <Button size="lg" disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
             </div>
-            {lastTicket && <Button variant="outline" className="w-full" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Réimprimer dernier</Button>}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" disabled={cart.length === 0} onClick={printCuisineFromCart}>
+                <Utensils className="h-4 w-4 mr-1" />Bon Cuisine
+              </Button>
+              {lastTicket
+                ? <Button variant="outline" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>
+                : <Button variant="outline" disabled><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
