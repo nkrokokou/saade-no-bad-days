@@ -356,15 +356,28 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Imprime un ticket par poste de préparation (cuisine, bar, labo…)
+  // Imprime un ticket par poste de préparation (cuisine, labo…) — exclut boissons
   const printPrepTickets = (lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const groups: Record<string, CartLine[]> = {};
     lines.forEach(l => {
       const poste = (l.produit.poste_preparation || 'salle');
-      if (poste === 'salle') return;
+      if (poste === 'salle' || poste === 'bar') return;
+      const cat = (l.produit.categorie || '').toUpperCase();
+      if (cat.includes('BOISSON') || cat.includes('SOFT') || cat.includes('EAU')) return;
       (groups[poste] = groups[poste] || []).push(l);
     });
+    if (Object.keys(groups).length === 0) {
+      toast.info('Aucun article à préparer en cuisine');
+      return;
+    }
     Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
+  };
+
+  // Imprime un bon cuisine à la demande (depuis le panier en cours)
+  const printCuisineFromCart = () => {
+    if (cart.length === 0) { toast.error('Panier vide'); return; }
+    const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
+    printPrepTickets(cart, { tableNum, serveur, numero: currentTabId ? 'EN ATTENTE' : 'BROUILLON' });
   };
 
   // Impression via iframe cachée · évite le blocage des popups
