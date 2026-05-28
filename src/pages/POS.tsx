@@ -333,14 +333,12 @@ export default function POS() {
           notes: notes || null, created_by: user?.id,
         });
       }
-      return { vente, lignes, cartSnapshot: [...cart] };
+      return { vente, lignes };
     },
-    onSuccess: ({ vente, lignes, cartSnapshot }) => {
+    onSuccess: ({ vente, lignes }) => {
       toast.success('Vente enregistrée');
       setLastTicket({ vente, lignes });
       setPayOpen(false);
-      const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
-      const serveurSnap = serveur;
       qc.invalidateQueries({ queryKey: ['ventes'] });
       qc.invalidateQueries({ queryKey: ['pos-stock-jour'] });
       refetchTabs();
