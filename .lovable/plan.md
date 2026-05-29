@@ -1,72 +1,59 @@
-# Rapport journalier automatique CEO
+# Plan d'action
 
-## Objectif
-Envoyer chaque soir à 23h00 (heure Lomé / UTC) un email récapitulatif de la journée à `al.fanar@hotmail.fr`.
+## 1. Comment ça marche actuellement (réponse à ta question)
 
-## Architecture
+L'app **n'envoie pas directement à 2 imprimantes différentes** — elle ouvre la boîte de dialogue native Chrome (`window.print()`).  
+Le tri "Cuisine vs Caisse" se fait **dans l'app** : on prépare 2 contenus HTML distincts (bon cuisine sans prix/sans boissons, ticket caisse complet). Quand tu cliques sur **"Bon Cuisine"** → la boîte Chrome s'ouvre avec le contenu cuisine, tu choisis l'imprimante cuisine. Quand tu cliques sur **"Ticket Caisse"** → idem avec le contenu caisse, tu choisis l'imprimante caisse.
 
-```text
-pg_cron (23h00)
-   └─► appelle edge function: rapport-journalier-ceo
-          ├─► agrège données du jour (ventes, caisse, clôture, pertes, top produits)
-          ├─► génère HTML email (charté SAADÉ : crème/caramel/espresso)
-          ├─► insère dans table rapports_journaliers (historique + visible dans l'app)
-          └─► envoie via Resend → al.fanar@hotmail.fr
-```
+Sur la tablette installée comme PWA, Chrome mémorise la dernière imprimante par défaut, ce qui rend le flux rapide.
 
-## Contenu du rapport
+## 2. Refonte UI POS (mobile + tablette)
 
-**En-tête** : Date, jour de semaine
+- Layout 2 colonnes sur tablette (≥ md) / 1 colonne sur mobile
+- Catalogue à gauche avec tabs catégories sticky, recherche, vignettes plus tactiles
+- Panier à droite (drawer plein écran sur mobile) avec totaux toujours visibles
+- Boutons d'action proéminents : **Bon Cuisine** / **Ticket Caisse** / **Encaisser**
+- Quick-quantities (+1 / +5) au tap, swipe-to-remove
+- Indicateur visuel du destinataire (badge "Cuisine" / "Bar") par article selon catégorie
 
-**Bloc 1 — Chiffre d'affaires**
-- CA total du jour
-- Nombre de tickets
-- Panier moyen
-- Répartition par mode de paiement (espèces / mobile money / carte / crédit)
+## 3. Nouvelle plateforme Admin → "Modèles de tickets"
 
-**Bloc 2 — Caisse**
-- Sessions de caisse ouvertes/fermées
-- Fond de caisse théorique vs compté
-- Écart caisse (si > 0)
+Page dédiée dans Administration permettant à la CEO de gérer :
+- En-tête (nom commerce, sous-titre, adresse, téléphone, logo)
+- Pied de page (message remerciement, mentions légales, slogan)
+- Affichage : afficher/masquer numéro de ticket, date/heure, serveur, table, caissier
+- Spécifique cuisine : afficher prix oui/non, regrouper par catégorie, exclure boissons (toggle)
+- Spécifique caisse : afficher TVA, mode de paiement, monnaie rendue
+- Aperçu live du ticket à droite
+- Stockage : nouvelle table `ticket_templates` (clé = `cuisine` / `caisse`) avec JSON config, RLS CEO uniquement
 
-**Bloc 3 — Top 5 produits vendus**
-- Nom + quantité + CA
+## 4. Fiche technique — diagnostic
 
-**Bloc 4 — Clôture journalière**
-- Nombre de produits avec perte
-- Valeur totale invendus (-50%)
-- Alertes : produits sans clôture saisie
+Les boutons **Excel / PDF / Importer** sont déjà dans le code (`FichesTechniques.tsx` lignes ~190-210) mais visibles **uniquement après avoir cliqué sur un produit**. Sur ta capture, tu es resté sur la liste des produits. Je vais :
+- Ajouter aussi les boutons Export/Import **au niveau de la liste** (export global toutes fiches, import multi-produits)
+- Rendre la barre d'actions plus visible quand on ouvre un produit
 
-**Bloc 5 — Crédits clients**
-- Nouveaux crédits accordés
-- Paiements reçus
-- Total encours
+## 5. Journal d'activité vide — diagnostic + correction
 
-**Pied** : Lien vers le dashboard
+À vérifier :
+- Le hook `useAuditLog` est-il appelé sur login / création utilisateur / CRUD ?
+- La table `audit_log` reçoit-elle les insertions ? (requête SQL de contrôle)
+- RLS lecture pour le CEO
 
-## Étapes d'implémentation
+Action : brancher les hooks manquants (login, logout, création user, CRUD produits/MP/ventes) + vérifier policy SELECT pour CEO.
 
-1. **Connecter Resend** via le connector (vous créez un compte gratuit avec `al.fanar@hotmail.fr`)
-2. **Migration DB** : créer table `rapports_journaliers` (date, payload JSON, sent_at, status)
-3. **Edge function `rapport-journalier-ceo`** :
-   - Agrège toutes les données du jour
-   - Render HTML brandé SAADÉ
-   - Sauvegarde + envoie via Resend
-   - Idempotent (ne renvoie pas 2× le même jour)
-4. **CRON pg_cron** : déclenche la fonction tous les jours à 23h00
-5. **Page `/rapports-ceo`** (accès CEO uniquement) : historique des rapports, bouton "Envoyer maintenant" pour tester
-6. **Mise à jour guide utilisateur v4** : nouveau module rapport CEO
+## 6. Compte rendu final
 
-## Détails techniques
+À la fin je fournis un récap "état de l'app" : ce qui marche, ce qui manque, priorités suggérées (impression directe sans dialogue via QZ Tray ? notifications cuisine temps réel ? mode offline ? etc.).
 
-- **Sender Resend** : `SAADÉ <onboarding@resend.dev>` au début, basculera vers `notify@votredomaine` quand domaine ajouté
-- **Idempotence** : contrainte UNIQUE sur `date` dans `rapports_journaliers`
-- **Fuseau horaire** : Lomé = UTC, donc CRON `0 23 * * *` UTC
-- **Gestion erreur** : si Resend échoue, on log l'erreur dans `status='failed'` + visible dans la page rapports
-- **Permissions** : page `/rapports-ceo` réservée au rôle `ceo`
+---
 
-## Migration vers domaine plus tard
-Quand vous achetez un domaine, il suffit de :
-1. Vérifier le domaine dans Resend (ajout DNS)
-2. Changer le sender dans 1 ligne de code
-3. Plus aucune limite d'envoi
+## Ordre d'exécution proposé
+1. Diagnostic SQL audit_log + correction
+2. Boutons Excel sur liste fiches techniques (visibilité)
+3. Table + page Admin "Modèles de tickets"
+4. Refonte UI POS
+5. Branchement templates dans l'impression POS
+6. Compte rendu
+
+Je commence dès que tu valides — ou dis-moi si tu veux qu'on retire/réordonne des points.
