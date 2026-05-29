@@ -1007,6 +1007,84 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_templates: {
+        Row: {
+          exclude_boissons: boolean
+          extra_css: string | null
+          font_size_px: number
+          footer_legal: string | null
+          footer_message: string | null
+          group_by_category: boolean
+          header_address: string | null
+          header_phone: string | null
+          header_subtitle: string | null
+          header_title: string
+          id: string
+          paper_width_mm: number
+          show_caissier: boolean
+          show_change: boolean
+          show_datetime: boolean
+          show_payment_mode: boolean
+          show_prices: boolean
+          show_serveur: boolean
+          show_table: boolean
+          show_ticket_number: boolean
+          type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          exclude_boissons?: boolean
+          extra_css?: string | null
+          font_size_px?: number
+          footer_legal?: string | null
+          footer_message?: string | null
+          group_by_category?: boolean
+          header_address?: string | null
+          header_phone?: string | null
+          header_subtitle?: string | null
+          header_title?: string
+          id?: string
+          paper_width_mm?: number
+          show_caissier?: boolean
+          show_change?: boolean
+          show_datetime?: boolean
+          show_payment_mode?: boolean
+          show_prices?: boolean
+          show_serveur?: boolean
+          show_table?: boolean
+          show_ticket_number?: boolean
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          exclude_boissons?: boolean
+          extra_css?: string | null
+          font_size_px?: number
+          footer_legal?: string | null
+          footer_message?: string | null
+          group_by_category?: boolean
+          header_address?: string | null
+          header_phone?: string | null
+          header_subtitle?: string | null
+          header_title?: string
+          id?: string
+          paper_width_mm?: number
+          show_caissier?: boolean
+          show_change?: boolean
+          show_datetime?: boolean
+          show_payment_mode?: boolean
+          show_prices?: boolean
+          show_serveur?: boolean
+          show_table?: boolean
+          show_ticket_number?: boolean
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
