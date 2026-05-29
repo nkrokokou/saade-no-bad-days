@@ -493,38 +493,53 @@ export default function POS() {
       return `<div class="mono">${c1}${c2}${c3}${c4}</div>`;
     }).join('');
 
+    const t = tplCaisse;
+    const headerTitle = t?.header_title || 'SAADÉ';
+    const subtitle = t?.header_subtitle || 'PÂTISSERIE · SNACK · CONCEPT STORE';
+    const address = t?.header_address || 'Lomé · Togo';
+    const phone = t?.header_phone || '';
+    const footer = t?.footer_message || 'Merci de votre visite';
+    const legal = t?.footer_legal || '';
+    const fontPx = t?.font_size_px || 12;
+    const paperMm = t?.paper_width_mm || 80;
+
     const html = `<html><head><title>Ticket ${v.numero_ticket}</title>
       <style>
-        @page { size: 80mm auto; margin: 2mm; }
-        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: 76mm; font-size: 12px; line-height: 1.35; color: #000; }
+        @page { size: ${paperMm}mm auto; margin: 2mm; }
+        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${paperMm - 4}mm; font-size: ${fontPx}px; line-height: 1.35; color: #000; }
         h2 { text-align: center; margin: 2px 0 0; font-family: Georgia, serif; font-size: 18px; font-weight: bold; }
         .sub { text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
         .addr { text-align: center; font-size: 11px; }
         hr { border: none; border-top: 1px solid #000; margin: 4px 0; }
         .row { display: flex; justify-content: space-between; gap: 4px; }
-        .mono { white-space: pre; font-size: 12px; }
+        .mono { white-space: pre; font-size: ${fontPx}px; }
         .total { font-weight: bold; }
         .footer { text-align: center; margin-top: 8px; font-size: 11px; }
+        ${t?.extra_css || ''}
       </style></head><body>
-      <h2>SAADÉ</h2>
-      <div class="sub">PÂTISSERIE · SNACK · CONCEPT STORE</div>
-      <div class="addr">Lomé · Togo</div>
-      <div class="row" style="font-size:11px;margin-top:2px;"><span>${date}</span><span>Ticket N° ${v.numero_ticket}</span></div>
+      <h2>${headerTitle}</h2>
+      ${subtitle ? `<div class="sub">${subtitle}</div>` : ''}
+      ${address ? `<div class="addr">${address}</div>` : ''}
+      ${phone ? `<div class="addr">${phone}</div>` : ''}
+      ${(t?.show_datetime !== false || t?.show_ticket_number !== false) ? `<div class="row" style="font-size:11px;margin-top:2px;">${t?.show_datetime !== false ? `<span>${date}</span>` : '<span></span>'}${t?.show_ticket_number !== false ? `<span>Ticket N° ${v.numero_ticket}</span>` : ''}</div>` : ''}
       <div style="font-size:11px;">CLIENT : ${(v.client_nom || 'CLIENT CASH').toUpperCase()}</div>
       <hr/>
       <div class="mono">${articlesHeader}</div>
       ${articlesRows}
       <hr/>
-      <div class="row"><span>Montant TTC</span><span>${fmt(Number(v.total) + Number(v.remise_globale || 0))} CFA</span></div>
-      <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
-      <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
-      <div class="row"><span>${modeLabel}</span><span>${fmt(v.montant_recu)} CFA</span></div>
-      ${Number(v.rendu) > 0 ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
+      ${t?.show_prices !== false ? `
+        <div class="row"><span>Montant TTC</span><span>${fmt(Number(v.total) + Number(v.remise_globale || 0))} CFA</span></div>
+        <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
+        <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
+      ` : ''}
+      ${t?.show_payment_mode !== false ? `<div class="row"><span>${modeLabel}</span><span>${fmt(v.montant_recu)} CFA</span></div>` : ''}
+      ${(t?.show_change !== false && Number(v.rendu) > 0) ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
       <hr/>
-      <div style="font-size:11px;">serveur : ${serveurNom || '....'}   table : ${tableNum || '....'}</div>
-      <div style="font-size:11px;">caissier : ${caissier}</div>
+      ${(t?.show_serveur !== false || t?.show_table !== false) ? `<div style="font-size:11px;">${t?.show_serveur !== false ? `serveur : ${serveurNom || '....'}   ` : ''}${t?.show_table !== false ? `table : ${tableNum || '....'}` : ''}</div>` : ''}
+      ${t?.show_caissier !== false ? `<div style="font-size:11px;">caissier : ${caissier}</div>` : ''}
       <hr/>
-      <div class="footer">Merci de votre visite,<br/>SAADÉ vous souhaite une belle journée !</div>
+      <div class="footer">${footer}</div>
+      ${legal ? `<div class="footer" style="font-size:10px;color:#444;">${legal}</div>` : ''}
       </body></html>`;
     printViaIframe(html, `Ticket caisse #${v.numero_ticket}`);
   };
