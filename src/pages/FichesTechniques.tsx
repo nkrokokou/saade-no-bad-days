@@ -318,13 +318,111 @@ export default function FichesTechniques() {
     );
   }
 
+  // ── Export / Import multi-produits depuis la liste ──
+  const listFileRef = useRef<HTMLInputElement>(null);
+
+  const exportAllFiches = async () => {
+    const { data: all } = await supabase.from('fiches_techniques').select('*');
+    const rows = (all || []).map((f: any) => {
+      const p = products.find(pp => pp.id === f.produit_id);
+      return {
+        Produit: p?.nom || '(inconnu)',
+        Catégorie: p?.categorie || '',
+        'Matière première': f.matiere_premiere,
+        Quantité: f.quantite_mp,
+        Unité: f.unite_mp,
+        'Coût unitaire': f.cout_unitaire_mp,
+        'Coût total': f.quantite_mp * f.cout_unitaire_mp,
+      };
+    });
+    exportToExcel(rows, 'fiches_techniques_completes', 'Fiches');
+  };
+
+  const importAllFiches = async (file: File) => {
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      const norm = (s: any) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const parseNum = (v: any) => {
+        const m = String(v ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/);
+        return m ? parseFloat(m[0]) : 0;
+      };
+      const collected: any[] = [];
+
+      for (const sn of wb.SheetNames) {
+        const grid: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+        // Two modes:
+        // (A) Onglet = nom du produit, en-tête INGREDIENTS / QTE / UNITE en haut
+        // (B) Une seule feuille avec colonne PRODUIT en plus
+        let headerIdx = -1, colProduit = -1, colNom = -1, colQte = -1, colUnite = -1, colCout = -1;
+        for (let i = 0; i < Math.min(grid.length, 30); i++) {
+          const row = grid[i].map(norm);
+          const ing = row.findIndex(c => c.includes('ingredient') || c.includes('matiere'));
+          if (ing >= 0) {
+            const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite'));
+            if (qte >= 0) {
+              headerIdx = i; colNom = ing; colQte = qte;
+              colUnite = row.findIndex(c => c.includes('unite'));
+              colCout = row.findIndex(c => c.includes('cout') || c.includes('prix'));
+              colProduit = row.findIndex(c => c.includes('produit') || c.includes('recette') || c.includes('article'));
+              break;
+            }
+          }
+        }
+        if (headerIdx < 0) continue;
+        const productFromSheet = products.find(p => norm(p.nom) === norm(sn));
+        for (let i = headerIdx + 1; i < grid.length; i++) {
+          const row = grid[i];
+          const nom = String(row[colNom] ?? '').trim();
+          if (!nom) continue;
+          const prodName = colProduit >= 0 ? String(row[colProduit] ?? '').trim() : '';
+          const prod = prodName ? products.find(p => norm(p.nom) === norm(prodName)) : productFromSheet;
+          if (!prod) continue;
+          const mp = mps.find(m => norm(m.nom) === norm(nom));
+          collected.push({
+            produit_id: prod.id,
+            matiere_premiere_id: mp?.id || null,
+            matiere_premiere: nom,
+            quantite_mp: parseNum(row[colQte]),
+            unite_mp: String((colUnite >= 0 ? row[colUnite] : '') || mp?.unite || 'G').trim().toUpperCase(),
+            cout_unitaire_mp: colCout >= 0 ? parseNum(row[colCout]) : (mp?.prix_unitaire || 0),
+            created_by: user?.id,
+          });
+        }
+      }
+      if (collected.length === 0) {
+        toast.warning("Aucun ingrédient trouvé. Vérifiez l'en-tête (PRODUIT/INGREDIENTS/QTE/UNITE) ou utilisez un onglet par produit.");
+        return;
+      }
+      const { error } = await supabase.from('fiches_techniques').insert(collected);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['catalogue'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
+      toast.success(`${collected.length} ingrédient(s) importé(s) sur ${new Set(collected.map(c => c.produit_id)).size} produit(s)`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erreur import : ' + (e.message || 'Format invalide'));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
           <BookOpen className="h-6 w-6 text-primary" /> Fiches Techniques
         </h1>
-        <SearchFilter value={search} onChange={setSearch} className="w-64" />
+        <div className="flex gap-2 flex-wrap items-center">
+          <Button variant="outline" size="sm" onClick={exportAllFiches}>
+            <FileDown className="h-4 w-4 mr-1" /> Exporter Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => listFileRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-1" /> Importer Excel
+          </Button>
+          <input ref={listFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) importAllFiches(f); e.target.value = ''; }} />
+          <SearchFilter value={search} onChange={setSearch} className="w-56" />
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground">
