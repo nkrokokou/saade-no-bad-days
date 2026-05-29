@@ -68,6 +68,18 @@ export default function POS() {
   // Produits
   const { data: produits = [] } = useProducts();
 
+  // Templates de tickets (cuisine / caisse) gérés par la CEO
+  const { data: ticketTemplates = [] } = useQuery({
+    queryKey: ['ticket_templates'],
+    queryFn: async () => {
+      const { data } = await supabase.from('ticket_templates' as any).select('*');
+      return (data || []) as any[];
+    },
+    staleTime: 60_000,
+  });
+  const tplCuisine = ticketTemplates.find(t => t.type === 'cuisine') || null;
+  const tplCaisse = ticketTemplates.find(t => t.type === 'caisse') || null;
+
   const { data: tables = [] } = useQuery({
     queryKey: ['tables-resto'],
     queryFn: async () => {
