@@ -363,14 +363,17 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Imprime un ticket par poste de préparation (cuisine, labo…) — exclut boissons
+  // Imprime un ticket par poste de préparation (cuisine, labo…) — applique le template cuisine
   const printPrepTickets = (lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const groups: Record<string, CartLine[]> = {};
+    const excludeBoissons = tplCuisine?.exclude_boissons ?? true;
     lines.forEach(l => {
       const poste = (l.produit.poste_preparation || 'salle');
       if (poste === 'salle' || poste === 'bar') return;
-      const cat = (l.produit.categorie || '').toUpperCase();
-      if (cat.includes('BOISSON') || cat.includes('SOFT') || cat.includes('EAU')) return;
+      if (excludeBoissons) {
+        const cat = (l.produit.categorie || '').toUpperCase();
+        if (cat.includes('BOISSON') || cat.includes('SOFT') || cat.includes('EAU')) return;
+      }
       (groups[poste] = groups[poste] || []).push(l);
     });
     if (Object.keys(groups).length === 0) {
@@ -425,24 +428,40 @@ export default function POS() {
   };
 
   const printPrepTicket = (poste: string, lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
+    const t = tplCuisine;
+    const headerTitle = t?.header_title || 'SAADÉ';
+    const subtitle = t?.header_subtitle || POSTE_LABELS[poste] || poste.toUpperCase();
+    const footer = t?.footer_message || '';
+    const fontPx = t?.font_size_px || 13;
+    const paperMm = t?.paper_width_mm || 80;
     const date = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-    const rows = lines.map(l => `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}</div>`).join('');
+    const showPrices = !!t?.show_prices;
+    const rows = lines.map(l => {
+      const price = showPrices ? ` <span style="float:right;font-weight:normal;">${(l.produit.prix_vente || 0).toLocaleString('fr-FR')} F</span>` : '';
+      return `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}${price}</div>`;
+    }).join('');
+    const metaBits: string[] = [];
+    if (t?.show_datetime !== false) metaBits.push(date);
+    if (t?.show_ticket_number !== false) metaBits.push(`N° ${ctx.numero}`);
     const html = `<html><head><title>BON ${POSTE_LABELS[poste] || poste}</title>
       <style>
-        @page { size: 80mm auto; margin: 2mm; }
-        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: 76mm; font-size: 13px; color:#000; }
+        @page { size: ${paperMm}mm auto; margin: 2mm; }
+        body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${paperMm - 4}mm; font-size: ${fontPx}px; color:#000; }
         .head { text-align:center; font-weight:bold; font-size:16px; border:2px solid #000; padding:4px; margin-bottom:6px; }
+        .sub  { text-align:center; font-size:12px; font-weight:bold; letter-spacing:1px; margin-bottom:4px; }
         .info { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
         .big { font-size: 16px; font-weight: bold; padding: 4px 0; border-bottom: 1px dashed #000; }
         hr { border:none; border-top:2px solid #000; margin:6px 0; }
+        ${t?.extra_css || ''}
       </style></head><body>
-      <div class="head">--- ${POSTE_LABELS[poste] || poste.toUpperCase()} ---</div>
-      <div class="info"><span>${date}</span><span>N° ${ctx.numero}</span></div>
-      <div class="info"><span>Table: <b>${ctx.tableNum}</b></span><span>Serveur: ${ctx.serveur || '-'}</span></div>
+      <div class="head">${headerTitle}</div>
+      <div class="sub">--- ${subtitle} ---</div>
+      ${metaBits.length ? `<div class="info">${metaBits.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
+      ${(t?.show_table !== false || t?.show_serveur !== false) ? `<div class="info">${t?.show_table !== false ? `<span>Table: <b>${ctx.tableNum}</b></span>` : ''}${t?.show_serveur !== false ? `<span>Serveur: ${ctx.serveur || '-'}</span>` : ''}</div>` : ''}
       <hr/>
       ${rows}
       <hr/>
-      <div style="text-align:center;font-size:11px;">À PRÉPARER</div>
+      <div style="text-align:center;font-size:11px;">${footer || 'À PRÉPARER'}</div>
       </body></html>`;
     printViaIframe(html, `Bon ${POSTE_LABELS[poste] || poste}`);
   };
