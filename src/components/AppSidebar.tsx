@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags, Boxes, Armchair, Mail, ClipboardCheck,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags, Boxes, Armchair, Mail, ClipboardCheck, ReceiptText,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -57,6 +57,7 @@ export function AppSidebar() {
     { title: t('nav.audit'), url: '/audit', icon: History, module: 'admin' },
     { title: 'Rapports CEO', url: '/rapports-ceo', icon: Mail, module: 'admin' },
     { title: 'Audits CEO', url: '/audits-ceo', icon: ClipboardCheck, module: 'admin' },
+    { title: 'Modèles de tickets', url: '/ticket-templates', icon: ReceiptText, module: 'admin' },
   ];
 
   if (!profile || loading) return null;
