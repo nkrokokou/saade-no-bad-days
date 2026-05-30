@@ -349,36 +349,42 @@ export default function FichesTechniques() {
       };
       const collected: any[] = [];
 
+      const detectedSheets: string[] = [];
+      const skippedSheets: string[] = [];
+
       for (const sn of wb.SheetNames) {
         const grid: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
-        // Two modes:
-        // (A) Onglet = nom du produit, en-tête INGREDIENTS / QTE / UNITE en haut
-        // (B) Une seule feuille avec colonne PRODUIT en plus
         let headerIdx = -1, colProduit = -1, colNom = -1, colQte = -1, colUnite = -1, colCout = -1;
-        for (let i = 0; i < Math.min(grid.length, 30); i++) {
-          const row = grid[i].map(norm);
-          const ing = row.findIndex(c => c.includes('ingredient') || c.includes('matiere'));
-          if (ing >= 0) {
-            const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite'));
-            if (qte >= 0) {
-              headerIdx = i; colNom = ing; colQte = qte;
-              colUnite = row.findIndex(c => c.includes('unite'));
-              colCout = row.findIndex(c => c.includes('cout') || c.includes('prix'));
-              colProduit = row.findIndex(c => c.includes('produit') || c.includes('recette') || c.includes('article'));
-              break;
-            }
-          }
+        for (let i = 0; i < Math.min(grid.length, 50); i++) {
+          const row = (grid[i] || []).map(norm);
+          const ing = row.findIndex(c => c.includes('ingredient') || c.includes('matiere') || c === 'nom' || c.includes('designation'));
+          if (ing < 0) continue;
+          const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite') || c === 'q');
+          headerIdx = i;
+          colNom = ing;
+          colQte = qte >= 0 ? qte : ing + 1; // fallback : colonne juste après
+          colUnite = row.findIndex(c => c.includes('unite') || c === 'u' || c === 'um');
+          colCout = row.findIndex(c => c.includes('cout') || c.includes('prix') || c.includes('pu'));
+          colProduit = row.findIndex(c => c.includes('produit') || c.includes('recette') || c.includes('article'));
+          break;
         }
-        if (headerIdx < 0) continue;
-        const productFromSheet = products.find(p => norm(p.nom) === norm(sn));
+        if (headerIdx < 0) { skippedSheets.push(sn); continue; }
+        const productFromSheet = products.find(p => norm(p.nom) === norm(sn))
+          || products.find(p => norm(sn).includes(norm(p.nom)) || norm(p.nom).includes(norm(sn)));
+        let sheetCount = 0;
         for (let i = headerIdx + 1; i < grid.length; i++) {
-          const row = grid[i];
+          const row = grid[i] || [];
           const nom = String(row[colNom] ?? '').trim();
           if (!nom) continue;
+          if (norm(nom).includes('ingredient') || norm(nom).includes('total')) continue;
           const prodName = colProduit >= 0 ? String(row[colProduit] ?? '').trim() : '';
-          const prod = prodName ? products.find(p => norm(p.nom) === norm(prodName)) : productFromSheet;
+          const prod = prodName
+            ? (products.find(p => norm(p.nom) === norm(prodName))
+              || products.find(p => norm(p.nom).includes(norm(prodName)) || norm(prodName).includes(norm(p.nom))))
+            : productFromSheet;
           if (!prod) continue;
-          const mp = mps.find(m => norm(m.nom) === norm(nom));
+          const mp = mps.find(m => norm(m.nom) === norm(nom))
+            || mps.find(m => norm(m.nom).includes(norm(nom)) || norm(nom).includes(norm(m.nom)));
           collected.push({
             produit_id: prod.id,
             matiere_premiere_id: mp?.id || null,
@@ -388,10 +394,18 @@ export default function FichesTechniques() {
             cout_unitaire_mp: colCout >= 0 ? parseNum(row[colCout]) : (mp?.prix_unitaire || 0),
             created_by: user?.id,
           });
+          sheetCount++;
         }
+        if (sheetCount > 0) detectedSheets.push(`${sn} (${sheetCount})`);
+        else skippedSheets.push(sn);
       }
       if (collected.length === 0) {
-        toast.warning("Aucun ingrédient trouvé. Vérifiez l'en-tête (PRODUIT/INGREDIENTS/QTE/UNITE) ou utilisez un onglet par produit.");
+        toast.warning(
+          `Aucun ingrédient importé. Onglets ignorés : ${skippedSheets.join(', ') || '(aucun)'}. ` +
+          `Vérifiez : nom d'onglet = nom du produit, ou ajoutez une colonne PRODUIT. ` +
+          `En-têtes acceptés : INGREDIENT / QTE / UNITE.`,
+          { duration: 9000 }
+        );
         return;
       }
       const { error } = await supabase.from('fiches_techniques').insert(collected);
