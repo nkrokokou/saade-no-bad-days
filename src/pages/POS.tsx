@@ -368,16 +368,17 @@ export default function POS() {
     const groups: Record<string, CartLine[]> = {};
     const excludeBoissons = tplCuisine?.exclude_boissons ?? true;
     lines.forEach(l => {
-      const poste = (l.produit.poste_preparation || 'salle');
-      if (poste === 'salle' || poste === 'bar') return;
-      if (excludeBoissons) {
-        const cat = (l.produit.categorie || '').toUpperCase();
-        if (cat.includes('BOISSON') || cat.includes('SOFT') || cat.includes('EAU')) return;
-      }
+      const cat = (l.produit.categorie || '').toUpperCase();
+      const isBoisson = /BOISSON|SOFT|EAU|JUS|COLA|BAR/.test(cat);
+      // Toute boisson va au bar ; tout le reste va en cuisine (par défaut)
+      // sauf si le produit a un poste explicitement défini (labo, etc.)
+      let poste = l.produit.poste_preparation || '';
+      if (!poste || poste === 'salle') poste = isBoisson ? 'bar' : 'cuisine';
+      if (excludeBoissons && (poste === 'bar' || isBoisson)) return;
       (groups[poste] = groups[poste] || []).push(l);
     });
     if (Object.keys(groups).length === 0) {
-      toast.info('Aucun article à préparer en cuisine');
+      toast.info('Aucun article à préparer (uniquement des boissons ?)');
       return;
     }
     Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
