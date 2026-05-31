@@ -16,6 +16,7 @@ import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X, ShoppingCart, Pa
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit, useProducts } from '@/hooks/useProducts';
+import { queueVente, isOffline } from '@/lib/offlineQueue';
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
 
