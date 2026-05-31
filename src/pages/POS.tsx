@@ -312,9 +312,33 @@ export default function POS() {
       if (cart.length === 0) throw new Error('Panier vide');
       const payload = buildVentePayload('validee');
       const noteWithServer = serveur ? `[Serveur: ${serveur}] ${notes || ''}`.trim() : (notes || null);
+
+      const buildLignes = (venteId: string | null) => cart.map(l => ({
+        vente_id: venteId,
+        produit_id: l.produit.id,
+        produit_nom: l.produit.nom,
+        quantite: l.quantite,
+        prix_unitaire: l.produit.prix_vente || 0,
+        remise: l.remise,
+        total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
+      }));
+
+      // Mode hors ligne → mise en file d'attente IndexedDB
+      if (isOffline() && !currentTabId) {
+        const credit = paymentMode === 'credit' && clientNom
+          ? { client_nom: clientNom, montant_initial: totalTicket, montant_restant: totalTicket, notes: notes || null, created_by: user?.id }
+          : null;
+        const pending = await queueVente({
+          vente: { ...payload.vente, notes: noteWithServer },
+          lignes: buildLignes(null),
+          credit,
+        });
+        const fauxVente = { id: pending.id, numero_ticket: '⏳ HORS-LIGNE', total: totalTicket, mode_paiement: paymentMode, date_vente: new Date().toISOString() } as any;
+        return { vente: fauxVente, lignes: buildLignes(pending.id), offline: true };
+      }
+
       let vente: any;
       if (currentTabId) {
-        // Convertit le tab en vente validée
         await supabase.from('vente_lignes').delete().eq('vente_id', currentTabId);
         const { data, error } = await supabase.from('ventes').update({
           ...payload.vente, notes: noteWithServer,
@@ -328,15 +352,7 @@ export default function POS() {
         if (error) throw error;
         vente = data;
       }
-      const lignes = cart.map(l => ({
-        vente_id: vente.id,
-        produit_id: l.produit.id,
-        produit_nom: l.produit.nom,
-        quantite: l.quantite,
-        prix_unitaire: l.produit.prix_vente || 0,
-        remise: l.remise,
-        total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
-      }));
+      const lignes = buildLignes(vente.id);
       const { error: e2 } = await supabase.from('vente_lignes').insert(lignes);
       if (e2) throw e2;
       if (paymentMode === 'credit' && clientNom) {
@@ -346,7 +362,7 @@ export default function POS() {
           notes: notes || null, created_by: user?.id,
         });
       }
-      return { vente, lignes };
+      return { vente, lignes, offline: false };
     },
     onSuccess: ({ vente, lignes }) => {
       toast.success('Vente enregistrée');
