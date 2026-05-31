@@ -48,6 +48,9 @@ const PageLoader = () => (
 
 const queryClient = new QueryClient();
 
+import { startOfflineSync } from "@/lib/offlineQueue";
+startOfflineSync();
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
