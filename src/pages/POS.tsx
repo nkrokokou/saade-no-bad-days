@@ -353,7 +353,7 @@ export default function POS() {
         vente = data;
       }
       const lignes = buildLignes(vente.id);
-      const { error: e2 } = await supabase.from('vente_lignes').insert(lignes);
+      const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
       if (e2) throw e2;
       if (paymentMode === 'credit' && clientNom) {
         await supabase.from('credits_clients').insert({
