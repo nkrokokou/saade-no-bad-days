@@ -86,9 +86,28 @@ export default function Catalogue() {
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('produits').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        // Produit référencé (ventes, bons de transfert, fiches…) → désactivation au lieu de suppression
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('foreign key') || msg.includes('violates') || (error as any).code === '23503') {
+          const { error: e2 } = await supabase.from('produits').update({ actif: false }).eq('id', id);
+          if (e2) throw e2;
+          return 'deactivated' as const;
+        }
+        throw error;
+      }
+      return 'deleted' as const;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['catalogue'] }); qc.invalidateQueries({ queryKey: ['produits'] }); toast.success('Produit supprimé'); setToDelete(null); },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['catalogue'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
+      if (res === 'deactivated') {
+        toast.success('Produit désactivé (utilisé dans l\'historique, suppression impossible)');
+      } else {
+        toast.success('Produit supprimé');
+      }
+      setToDelete(null);
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
