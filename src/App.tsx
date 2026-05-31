@@ -7,6 +7,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { startOfflineSync } from "@/lib/offlineQueue";
+
+// Démarre la synchronisation des ventes hors ligne dès le chargement
+startOfflineSync();
 
 // Lazy loaded pages
 const Login = lazy(() => import("./pages/Login").then(m => ({ default: m.default })));
