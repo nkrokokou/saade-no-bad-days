@@ -364,8 +364,8 @@ export default function POS() {
       }
       return { vente, lignes, offline: false };
     },
-    onSuccess: ({ vente, lignes }) => {
-      toast.success('Vente enregistrée');
+    onSuccess: ({ vente, lignes, offline }) => {
+      toast.success(offline ? 'Vente enregistrée hors ligne — sera synchronisée au retour du réseau' : 'Vente enregistrée');
       setLastTicket({ vente, lignes });
       setPayOpen(false);
       qc.invalidateQueries({ queryKey: ['ventes'] });
