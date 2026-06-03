@@ -98,11 +98,12 @@ export default function Catalogue() {
       }
       return 'deleted' as const;
     },
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ['catalogue'] });
-      qc.invalidateQueries({ queryKey: ['produits'] });
+    onSuccess: async (res) => {
+      await qc.invalidateQueries({ queryKey: ['catalogue'] });
+      await qc.invalidateQueries({ queryKey: ['produits'] });
+      await qc.refetchQueries({ queryKey: ['catalogue'] });
       if (res === 'deactivated') {
-        toast.success('Produit désactivé (utilisé dans l\'historique, suppression impossible)');
+        toast.success("Produit désactivé : il a été utilisé dans des ventes/fiches, il est masqué du catalogue mais l'historique est préservé.", { duration: 7000 });
       } else {
         toast.success('Produit supprimé');
       }

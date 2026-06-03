@@ -355,6 +355,22 @@ export default function FichesTechniques() {
       for (const sn of wb.SheetNames) {
         const grid: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
         let headerIdx = -1, colProduit = -1, colNom = -1, colQte = -1, colUnite = -1, colCout = -1;
+        // 1) Détecte un bloc méta clé/valeur "PRODUIT" | "<nom>" placé au-dessus de l'en-tête
+        let metaProductName = '';
+        for (let i = 0; i < Math.min(grid.length, 50); i++) {
+          const row = grid[i] || [];
+          for (let j = 0; j < row.length; j++) {
+            const key = norm(row[j]);
+            if (key === 'produit' || key === 'recette' || key === 'nom du produit' || key === 'article') {
+              for (let k = j + 1; k < row.length; k++) {
+                const v = String(row[k] ?? '').trim();
+                if (v) { metaProductName = v; break; }
+              }
+              if (metaProductName) break;
+            }
+          }
+          if (metaProductName) break;
+        }
         for (let i = 0; i < Math.min(grid.length, 50); i++) {
           const row = (grid[i] || []).map(norm);
           const ing = row.findIndex(c => c.includes('ingredient') || c.includes('matiere') || c === 'nom' || c.includes('designation'));
@@ -362,15 +378,17 @@ export default function FichesTechniques() {
           const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite') || c === 'q');
           headerIdx = i;
           colNom = ing;
-          colQte = qte >= 0 ? qte : ing + 1; // fallback : colonne juste après
+          colQte = qte >= 0 ? qte : ing + 1;
           colUnite = row.findIndex(c => c.includes('unite') || c === 'u' || c === 'um');
           colCout = row.findIndex(c => c.includes('cout') || c.includes('prix') || c.includes('pu'));
           colProduit = row.findIndex(c => c.includes('produit') || c.includes('recette') || c.includes('article'));
           break;
         }
         if (headerIdx < 0) { skippedSheets.push(sn); continue; }
-        const productFromSheet = products.find(p => norm(p.nom) === norm(sn))
-          || products.find(p => norm(sn).includes(norm(p.nom)) || norm(p.nom).includes(norm(sn)));
+        const matchProduct = (name: string) =>
+          products.find(p => norm(p.nom) === norm(name)) ||
+          products.find(p => norm(name).includes(norm(p.nom)) || norm(p.nom).includes(norm(name)));
+        const productFromSheet = matchProduct(sn) || (metaProductName ? matchProduct(metaProductName) : undefined);
         let sheetCount = 0;
         for (let i = headerIdx + 1; i < grid.length; i++) {
           const row = grid[i] || [];
