@@ -188,18 +188,35 @@ export default function Admin() {
     }
   };
 
+  // Allow-list of restorable tables. user_roles, profiles, module_permissions, audit_logs
+  // sont volontairement exclues pour empêcher l'escalade de privilèges via un fichier piégé.
+  const RESTORABLE_TABLES = new Set<string>([
+    'achats_mp', 'fiches_techniques', 'bons_transfert', 'bon_transfert_lignes',
+    'stock_tampon', 'mouvements_stock', 'pertes', 'production_labo',
+    'inventaire', 'cloture_journaliere', 'degustations',
+    'produits', 'categories_produits', 'matieres_premieres',
+    'clients', 'credits_clients', 'paiements_credits',
+    'ventes', 'vente_lignes', 'sessions_caisse', 'tables_restaurant',
+    'ticket_templates', 'audits_ceo',
+  ]);
+
   const importBackup = async (file: File) => {
     try {
       const text = await file.text();
       const backup = JSON.parse(text);
       const tables = Object.keys(backup);
+      const skipped: string[] = [];
       let count = 0;
       for (const table of tables) {
+        if (!RESTORABLE_TABLES.has(table)) { skipped.push(table); continue; }
         if (!Array.isArray(backup[table]) || backup[table].length === 0) continue;
         for (const row of backup[table]) {
           await supabase.from(table as any).upsert(row as any, { onConflict: 'id' });
           count++;
         }
+      }
+      if (skipped.length) {
+        toast.warning(`${skipped.length} table(s) ignorée(s) (non autorisées) : ${skipped.join(', ')}`);
       }
       toast.success(`${count} enregistrements restaurés`);
       qc.invalidateQueries();
