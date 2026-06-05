@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-const CEO_EMAIL = "al.fanar@hotmail.fr";
+const CEO_EMAIL = "nkro006@gmail.com";
 
 const fmtXOF = (n: number) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(n || 0)) + " F";
