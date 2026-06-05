@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
-const CEO_EMAIL = "al.fanar@hotmail.fr";
+const CEO_EMAIL = "nkro006@gmail.com";
 const FROM = "SAADÉ Rapports <onboarding@resend.dev>";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
