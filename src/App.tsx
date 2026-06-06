@@ -29,6 +29,7 @@ const Admin = lazy(() => import("./pages/Admin").then(m => ({ default: m.default
 const Catalogue = lazy(() => import("./pages/Catalogue").then(m => ({ default: m.default })));
 const Categories = lazy(() => import("./pages/Categories").then(m => ({ default: m.default })));
 const MatieresPremieres = lazy(() => import("./pages/MatieresPremieres").then(m => ({ default: m.default })));
+const Economat = lazy(() => import("./pages/Economat").then(m => ({ default: m.default })));
 const TablesRestaurant = lazy(() => import("./pages/TablesRestaurant").then(m => ({ default: m.default })));
 const POS = lazy(() => import("./pages/POS").then(m => ({ default: m.default })));
 const Ventes = lazy(() => import("./pages/Ventes").then(m => ({ default: m.default })));
@@ -98,6 +99,9 @@ const App = () => (
               </Route>
               <Route element={<AppLayout module="matieres_premieres" />}>
                 <Route path="/matieres-premieres" element={<MatieresPremieres />} />
+              </Route>
+              <Route element={<AppLayout module="economat" />}>
+                <Route path="/economat" element={<Economat />} />
               </Route>
               <Route element={<AppLayout module="tables_restaurant" />}>
                 <Route path="/tables-restaurant" element={<TablesRestaurant />} />

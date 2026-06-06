@@ -462,6 +462,99 @@ export type Database = {
           },
         ]
       }
+      economat_articles: {
+        Row: {
+          actif: boolean
+          categorie: string
+          created_at: string
+          id: string
+          nom: string
+          notes: string | null
+          prix_unitaire: number
+          stock_initial: number
+          stock_min: number
+          unite: string
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          categorie?: string
+          created_at?: string
+          id?: string
+          nom: string
+          notes?: string | null
+          prix_unitaire?: number
+          stock_initial?: number
+          stock_min?: number
+          unite?: string
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          categorie?: string
+          created_at?: string
+          id?: string
+          nom?: string
+          notes?: string | null
+          prix_unitaire?: number
+          stock_initial?: number
+          stock_min?: number
+          unite?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      economat_mouvements: {
+        Row: {
+          article_id: string
+          created_at: string
+          created_by: string | null
+          date_mouvement: string
+          id: string
+          motif: string | null
+          photo_url: string | null
+          quantite: number
+          type: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          created_by?: string | null
+          date_mouvement?: string
+          id?: string
+          motif?: string | null
+          photo_url?: string | null
+          quantite?: number
+          type: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          created_by?: string | null
+          date_mouvement?: string
+          id?: string
+          motif?: string | null
+          photo_url?: string | null
+          quantite?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "economat_mouvements_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "economat_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "economat_mouvements_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "v_economat_stock"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fiches_techniques: {
         Row: {
           cout_unitaire_mp: number
@@ -1241,6 +1334,24 @@ export type Database = {
       }
     }
     Views: {
+      v_economat_stock: {
+        Row: {
+          actif: boolean | null
+          categorie: string | null
+          id: string | null
+          nom: string | null
+          prix_unitaire: number | null
+          stock_courant: number | null
+          stock_initial: number | null
+          stock_min: number | null
+          total_entrees: number | null
+          total_pertes: number | null
+          total_sorties: number | null
+          unite: string | null
+          valeur_stock: number | null
+        }
+        Relationships: []
+      }
       v_stock_matieres_premieres: {
         Row: {
           alerte_stock: boolean | null
@@ -1278,6 +1389,7 @@ export type Database = {
         | "labo_viennoiserie"
         | "cuisine_salee"
         | "salle"
+        | "economat"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1411,6 +1523,7 @@ export const Constants = {
         "labo_viennoiserie",
         "cuisine_salee",
         "salle",
+        "economat",
       ],
     },
   },
