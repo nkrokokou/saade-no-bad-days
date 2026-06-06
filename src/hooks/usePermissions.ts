@@ -8,7 +8,7 @@ export type ModuleKey =
   | 'achats_mp' | 'fiches_techniques' | 'bons_transfert'
   | 'stock_tampon' | 'pertes' | 'production'
   | 'inventaire' | 'cloture' | 'degustations'
-  | 'matieres_premieres' | 'tables_restaurant';
+  | 'matieres_premieres' | 'tables_restaurant' | 'economat';
 
 export type Action = 'read' | 'create' | 'update' | 'delete';
 
