@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { SearchFilter } from '@/components/SearchFilter';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
-import { Warehouse, Plus, ArrowDownToLine, ArrowUpFromLine, AlertTriangle, Trash2, Boxes, TrendingDown, Package } from 'lucide-react';
+import { Warehouse, Plus, ArrowDownToLine, AlertTriangle, Trash2, Boxes, TrendingDown, Package } from 'lucide-react';
 
 type StockRow = {
   id: string; categorie: string; nom: string; unite: string; prix_unitaire: number;
