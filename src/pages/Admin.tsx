@@ -34,6 +34,7 @@ const MODULES: { key: string; label: string }[] = [
   { key: 'clients', label: 'Clients & Crédits' },
   { key: 'matieres_premieres', label: 'Matières Premières' },
   { key: 'tables_restaurant', label: 'Tables Restaurant' },
+  { key: 'economat', label: 'Économat' },
 ];
 const ACTIONS: { key: 'can_read' | 'can_create' | 'can_update' | 'can_delete'; label: string }[] = [
   { key: 'can_read', label: 'Lire' },
@@ -48,6 +49,7 @@ const ROLES: { value: UserRole; label: string }[] = [
   { value: 'labo_viennoiserie', label: 'Labo Viennoiserie' },
   { value: 'cuisine_salee', label: 'Cuisine Salée' },
   { value: 'salle', label: 'Salle' },
+  { value: 'economat', label: 'Économat' },
 ];
 
 async function invokeManageUsers(body: any) {

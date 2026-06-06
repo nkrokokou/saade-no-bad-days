@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags, Boxes, Armchair, Mail, ClipboardCheck, ReceiptText,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags, Boxes, Armchair, Mail, ClipboardCheck, ReceiptText, Warehouse,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -16,12 +16,12 @@ import { Button } from '@/components/ui/button';
 
 const roleIcons: Record<UserRole, React.ElementType> = {
   ceo: Crown, labo_patisserie: Cake, labo_viennoiserie: Croissant,
-  cuisine_salee: UtensilsCrossed, salle: Bell,
+  cuisine_salee: UtensilsCrossed, salle: Bell, economat: Warehouse,
 };
 
 const roleLabels: Record<UserRole, string> = {
   ceo: 'CEO', labo_patisserie: 'Labo Pâtisserie', labo_viennoiserie: 'Labo Viennoiserie',
-  cuisine_salee: 'Cuisine Salée', salle: 'Salle',
+  cuisine_salee: 'Cuisine Salée', salle: 'Salle', economat: 'Économat',
 };
 
 interface NavItem { title: string; url: string; icon: React.ElementType; module: ModuleKey; }
@@ -43,6 +43,7 @@ export function AppSidebar() {
     { title: 'Catalogue produits', url: '/catalogue', icon: Package2, module: 'catalogue' },
     { title: 'Catégories', url: '/categories', icon: Tags, module: 'catalogue' },
     { title: 'Matières Premières', url: '/matieres-premieres', icon: Boxes, module: 'matieres_premieres' },
+    { title: 'Économat', url: '/economat', icon: Warehouse, module: 'economat' },
     { title: t('nav.achats'), url: '/achats-mp', icon: ShoppingCart, module: 'achats_mp' },
     { title: t('nav.fiches'), url: '/fiches-techniques', icon: BookOpen, module: 'fiches_techniques' },
     { title: 'Tables Restaurant', url: '/tables-restaurant', icon: Armchair, module: 'tables_restaurant' },

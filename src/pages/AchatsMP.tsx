@@ -44,11 +44,24 @@ export default function AchatsMP() {
 
   const addAchat = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('achats_mp').insert({ date_achat: selectedDate, fournisseur: form.fournisseur, produit: form.produit, quantite: form.quantite, unite: form.unite, prix_unitaire: form.prix_unitaire, prix_total: form.quantite * form.prix_unitaire, matiere_premiere_id: form.matiere_premiere_id, created_by: user?.id } as any);
+      if (!form.produit?.trim()) throw new Error('Le nom du produit est obligatoire');
+      if (!form.quantite || form.quantite <= 0) throw new Error('La quantité doit être supérieure à 0');
+      if (!form.prix_unitaire || form.prix_unitaire <= 0) throw new Error('Le prix unitaire doit être supérieur à 0');
+      const { error } = await supabase.from('achats_mp').insert({
+        date_achat: selectedDate,
+        fournisseur: form.fournisseur || '',
+        produit: form.produit.trim(),
+        quantite: form.quantite,
+        unite: form.unite || 'kg',
+        prix_unitaire: form.prix_unitaire,
+        prix_total: form.quantite * form.prix_unitaire,
+        matiere_premiere_id: form.matiere_premiere_id,
+        created_by: user?.id,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['achats_mp'] }); qc.invalidateQueries({ queryKey: ['v_stock_mp'] }); setShowAdd(false); setForm({ fournisseur: '', produit: '', quantite: 0, unite: 'kg', prix_unitaire: 0, matiere_premiere_id: null }); toast.success('Achat ajouté · stock MP mis à jour'); },
-    onError: () => toast.error('Erreur'),
+    onError: (e: any) => toast.error(e?.message || 'Erreur lors de l\'ajout'),
   });
 
   const deleteAchat = useMutation({
