@@ -94,7 +94,7 @@ export default function AchatsMP() {
       }
       qc.invalidateQueries({ queryKey: ['achats_mp'] });
       toast.success(`${imported} achats importés`);
-    } catch { toast.error('Erreur'); }
+    } catch (e: any) { toast.error(`Import : ${e?.message || 'Erreur inconnue'}`); }
   };
 
   return (
