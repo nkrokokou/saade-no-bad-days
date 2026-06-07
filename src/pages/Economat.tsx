@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { SearchFilter } from '@/components/SearchFilter';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { exportToExcel, exportToPDF, parseExcelAllSheets } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { Warehouse, Plus, ArrowDownToLine, AlertTriangle, Trash2, Boxes, TrendingDown, Package } from 'lucide-react';
 
