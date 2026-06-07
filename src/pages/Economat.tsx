@@ -152,6 +152,56 @@ export default function Economat() {
     onError: (e: any) => toast.error(e?.message || 'Erreur'),
   });
 
+  const handleExport = () => {
+    exportToExcel(stock.map(s => ({
+      'Catégorie': s.categorie, 'Désignation': s.nom, 'Unité': s.unite,
+      'Stock initial': s.stock_initial, 'Entrées': s.total_entrees, 'Sorties': s.total_sorties,
+      'Pertes': s.total_pertes, 'Stock final': s.stock_courant,
+      'Prix unitaire': s.prix_unitaire, 'Valeur totale': s.valeur_stock,
+      'Stock min': s.stock_min,
+    })), 'economat_stock');
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF('Économat — État des stocks',
+      ['Catégorie', 'Désignation', 'Unité', 'Stock', 'P.U.', 'Valeur'],
+      stock.map(s => [s.categorie, s.nom, s.unite, s.stock_courant, s.prix_unitaire, s.valeur_stock]));
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const sheets = await parseExcelAllSheets(file);
+      const rows = sheets[0]?.rows || [];
+      if (!rows.length) { toast.warning('Fichier vide'); return; }
+      let currentCat = 'DIVERS';
+      const articles: any[] = [];
+      for (const r of rows) {
+        const nom = String(r['MATIERES/DESIGNATION'] || r['Désignation'] || r['Designation'] || r['Nom'] || '').trim();
+        if (!nom) continue;
+        const initial = Number(r['SOTCKS INITIAL'] || r['STOCKS INITIAL'] || r['Stock initial'] || 0);
+        const unite = String(r['UNITE/G'] || r['Unité'] || r['Unite'] || '').trim();
+        const pu = Number(r['PRIX UNITAIRE'] || r['Prix unitaire'] || 0);
+        // Ligne d'en-tête de catégorie : pas d'unité ni de prix → on stocke comme catégorie courante
+        if (!initial && !unite && !pu && nom === nom.toUpperCase()) {
+          currentCat = nom;
+          continue;
+        }
+        articles.push({
+          categorie: currentCat, nom, unite: unite || 'G',
+          stock_initial: initial, prix_unitaire: pu, stock_min: 0, actif: true,
+        });
+      }
+      if (!articles.length) { toast.warning('Aucun article à importer'); return; }
+      // Upsert par (categorie, nom)
+      const { error } = await supabase.from('economat_articles').upsert(articles, { onConflict: 'categorie,nom' } as any);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['v_economat_stock'] });
+      toast.success(`${articles.length} articles importés / mis à jour`);
+    } catch (e: any) {
+      toast.error(`Import : ${e?.message || 'Erreur'}`);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
