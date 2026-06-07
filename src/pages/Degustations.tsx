@@ -91,7 +91,7 @@ export default function Degustations() {
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('degustations').delete().eq('id', id); if (error) throw error; },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['degustations'] }); setDeleteId(null); toast.success('Dégustation supprimée'); },
-    onError: () => toast.error('Erreur'),
+    onError: (e: any) => toast.error(`Suppression : ${e?.message || 'Erreur inconnue'}`),
   });
 
   const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;

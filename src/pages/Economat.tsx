@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { SearchFilter } from '@/components/SearchFilter';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ExcelImportExport } from '@/components/ExcelImportExport';
+import { exportToExcel, exportToPDF, parseExcelAllSheets } from '@/hooks/useExcelImportExport';
 import { toast } from 'sonner';
 import { Warehouse, Plus, ArrowDownToLine, AlertTriangle, Trash2, Boxes, TrendingDown, Package } from 'lucide-react';
 
@@ -150,13 +152,75 @@ export default function Economat() {
     onError: (e: any) => toast.error(e?.message || 'Erreur'),
   });
 
+  const handleExport = () => {
+    exportToExcel(stock.map(s => ({
+      'Catégorie': s.categorie, 'Désignation': s.nom, 'Unité': s.unite,
+      'Stock initial': s.stock_initial, 'Entrées': s.total_entrees, 'Sorties': s.total_sorties,
+      'Pertes': s.total_pertes, 'Stock final': s.stock_courant,
+      'Prix unitaire': s.prix_unitaire, 'Valeur totale': s.valeur_stock,
+      'Stock min': s.stock_min,
+    })), 'economat_stock');
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF('Économat — État des stocks',
+      ['Catégorie', 'Désignation', 'Unité', 'Stock', 'P.U.', 'Valeur'],
+      stock.map(s => [s.categorie, s.nom, s.unite, s.stock_courant, s.prix_unitaire, s.valeur_stock]));
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const sheets = await parseExcelAllSheets(file);
+      const rows = sheets[0]?.rows || [];
+      if (!rows.length) { toast.warning('Fichier vide'); return; }
+      let currentCat = 'DIVERS';
+      const articles: any[] = [];
+      for (const r of rows) {
+        const nom = String(r['MATIERES/DESIGNATION'] || r['Désignation'] || r['Designation'] || r['Nom'] || '').trim();
+        if (!nom) continue;
+        const initial = Number(r['SOTCKS INITIAL'] || r['STOCKS INITIAL'] || r['Stock initial'] || 0);
+        const unite = String(r['UNITE/G'] || r['Unité'] || r['Unite'] || '').trim();
+        const pu = Number(r['PRIX UNITAIRE'] || r['Prix unitaire'] || 0);
+        // Ligne d'en-tête de catégorie : pas d'unité ni de prix → on stocke comme catégorie courante
+        if (!initial && !unite && !pu && nom === nom.toUpperCase()) {
+          currentCat = nom;
+          continue;
+        }
+        articles.push({
+          categorie: currentCat, nom, unite: unite || 'G',
+          stock_initial: initial, prix_unitaire: pu, stock_min: 0, actif: true,
+        });
+      }
+      if (!articles.length) { toast.warning('Aucun article à importer'); return; }
+      // Récupère les articles existants pour décider insert vs update (par nom normalisé)
+      const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      const existingMap = new Map(stock.map(s => [norm(s.nom), s.id]));
+      let inserted = 0, updated = 0;
+      for (const a of articles) {
+        const existingId = existingMap.get(norm(a.nom));
+        if (existingId) {
+          const { error } = await supabase.from('economat_articles').update({ categorie: a.categorie, unite: a.unite, prix_unitaire: a.prix_unitaire, stock_initial: a.stock_initial }).eq('id', existingId);
+          if (!error) updated++;
+        } else {
+          const { error } = await supabase.from('economat_articles').insert(a);
+          if (!error) inserted++;
+        }
+      }
+      qc.invalidateQueries({ queryKey: ['v_economat_stock'] });
+      toast.success(`Import : ${inserted} créés, ${updated} mis à jour`);
+    } catch (e: any) {
+      toast.error(`Import : ${e?.message || 'Erreur'}`);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
           <Warehouse className="h-6 w-6 text-primary" /> Économat
         </h1>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
           <Dialog open={showMouv} onOpenChange={setShowMouv}>
             <DialogTrigger asChild>
               <Button variant="secondary"><ArrowDownToLine className="h-4 w-4 mr-1" /> Mouvement</Button>

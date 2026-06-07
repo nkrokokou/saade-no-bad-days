@@ -64,7 +64,7 @@ export default function ProductionLabo() {
       setLocal(prev => { const c = { ...prev }; delete c[pid]; return c; });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['production_labo'] }); setDeleteId(null); toast.success('Ligne effacée'); },
-    onError: () => toast.error('Erreur'),
+    onError: (e: any) => toast.error(`Production : ${e?.message || 'Erreur inconnue'}`),
   });
 
   const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;
