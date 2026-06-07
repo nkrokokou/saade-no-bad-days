@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!
 
-    // Require authentication
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -27,10 +26,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // User-scoped DB client (RLS enforced)
     const db = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } })
 
-    // Fetch recent data for context
     const today = new Date().toISOString().slice(0, 10)
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
     const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
@@ -41,42 +38,69 @@ Deno.serve(async (req) => {
       { data: recentCloture },
       { data: recentAchats },
       { data: produits },
+      { data: economatStock },
+      { data: economatMouv },
+      { data: ventes },
     ] = await Promise.all([
       db.from('pertes').select('*, produits(nom, categorie)').gte('semaine_debut', weekAgo).limit(100),
       db.from('production_labo').select('*, produits(nom, categorie)').gte('date_production', weekAgo).limit(100),
       db.from('cloture_journaliere').select('*, produits(nom, categorie)').gte('date_cloture', weekAgo).limit(200),
       db.from('achats_mp').select('*').gte('date_achat', monthAgo).limit(100),
-      db.from('produits').select('nom, categorie').limit(200),
+      db.from('produits').select('nom, categorie, prix_vente, prix_cout, actif').eq('actif', true).limit(300),
+      db.from('v_economat_stock').select('*').limit(500),
+      db.from('economat_mouvements').select('*, economat_articles(nom, unite)').gte('date_mouvement', weekAgo).limit(100),
+      db.from('ventes').select('id, total, mode_paiement, created_at').gte('created_at', weekAgo).limit(200),
     ])
+
+    const alertesEconomat = (economatStock || []).filter((s: any) => Number(s.stock_courant) <= Number(s.stock_min) && Number(s.stock_min) > 0);
+    const valeurStock = (economatStock || []).reduce((sum: number, s: any) => sum + Number(s.valeur_stock || 0), 0);
+    const caSemaine = (ventes || []).reduce((sum: number, v: any) => sum + Number(v.total || 0), 0);
 
     const dataContext = `
 DONNÉES SAADÉ (pâtisserie libanaise, Lomé, Togo) — Date: ${today}
+CA 7 jours: ${caSemaine.toLocaleString('fr-FR')} F · Ventes: ${ventes?.length || 0}
+Valeur économat totale: ${valeurStock.toLocaleString('fr-FR')} F · Articles en alerte: ${alertesEconomat.length}
 
-PRODUITS: ${produits?.map(p => `${p.nom} (${p.categorie})`).join(', ') || 'Aucun'}
+PRODUITS ACTIFS (${produits?.length || 0}): ${produits?.slice(0, 100).map(p => `${p.nom} [${p.categorie}] ${p.prix_vente}F`).join(' | ') || '—'}
 
-PERTES (7 derniers jours): ${JSON.stringify(recentPertes?.map(p => ({ produit: (p as any).produits?.nom, qte: p.quantite, jour: p.jour, labo: p.type_labo })) || [])}
+ÉCONOMAT — État du stock (${economatStock?.length || 0} articles):
+${(economatStock || []).map((s: any) => `${s.categorie} · ${s.nom} : stock=${s.stock_courant} ${s.unite} (init=${s.stock_initial}, entrées=${s.total_entrees}, sorties=${s.total_sorties}, pertes=${s.total_pertes}) · ${s.prix_unitaire}F → ${s.valeur_stock}F${Number(s.stock_courant) <= Number(s.stock_min) && Number(s.stock_min) > 0 ? ' ⚠️ ALERTE' : ''}`).join('\n')}
 
-PRODUCTION (7 derniers jours): ${JSON.stringify(recentProduction?.map(p => ({ produit: (p as any).produits?.nom, produite: p.qte_produite, perte: p.qte_perte, sortie_salle: p.qte_sortie_en_salle, date: p.date_production })) || [])}
+ÉCONOMAT — Mouvements 7j:
+${(economatMouv || []).map((m: any) => `${m.date_mouvement} ${m.type} ${m.quantite} ${m.economat_articles?.unite || ''} de ${m.economat_articles?.nom || '?'} (${m.motif || '—'})`).join('\n')}
 
-CLÔTURE SALLE (7 derniers jours): ${JSON.stringify(recentCloture?.map(c => ({ produit: (c as any).produits?.nom, vendue: c.qte_vendue, invendu: c.qte_invendu, moins50: c.prix_invendu_50, perte: c.qte_perte, date: c.date_cloture })) || [])}
+PERTES 7j: ${JSON.stringify(recentPertes?.map(p => ({ produit: (p as any).produits?.nom, qte: p.quantite, jour: p.jour, labo: p.type_labo })) || [])}
 
-ACHATS MP (30 derniers jours): ${JSON.stringify(recentAchats?.map(a => ({ produit: a.produit, fournisseur: a.fournisseur, qte: a.quantite, total: a.prix_total, date: a.date_achat })) || [])}
+PRODUCTION 7j: ${JSON.stringify(recentProduction?.map(p => ({ produit: (p as any).produits?.nom, produite: p.qte_produite, perte: p.qte_perte, sortie_salle: p.qte_sortie_en_salle, date: p.date_production })) || [])}
+
+CLÔTURE SALLE 7j: ${JSON.stringify(recentCloture?.map(c => ({ produit: (c as any).produits?.nom, vendue: c.qte_vendue, invendu: c.qte_invendu, perte: c.qte_perte, date: c.date_cloture })) || [])}
+
+ACHATS MP 30j: ${JSON.stringify(recentAchats?.map(a => ({ produit: a.produit, fournisseur: a.fournisseur, qte: a.quantite, total: a.prix_total, date: a.date_achat })) || [])}
 `
 
     const { messages } = await req.json()
+
+    const systemPrompt = `Tu es l'**Assistante personnelle de la CEO de SAADÉ** (pâtisserie libanaise, Lomé, Togo). Tu es vive, précise, et tu raisonnes comme une CEO expérimentée mais 1000× plus vite.
+
+📋 **Tes capacités** :
+1. Répondre en temps réel sur les **stocks** (économat, articles, alertes, valeur)
+2. Analyser **ventes**, **pertes**, **production**, **achats** avec des chiffres précis
+3. Lire les **fichiers joints** (Excel, CSV, PDF) que la CEO te fournit et les croiser avec les données live
+4. Suggérer des **actions concrètes** : commandes à passer, alertes critiques, optimisations
+5. Quand la CEO te demande un **mouvement de stock** (entrée, sortie, perte), tu PRÉPARES la donnée à saisir et tu indiques précisément où elle doit cliquer dans l'app (page Économat → bouton Mouvement). Pour l'instant, tu ne peux pas valider la saisie toi-même, mais tu peux préparer un récap copiable.
+6. Si on te joint un fichier d'inventaire, **compare-le aux stocks actuels** et signale les écarts.
+
+🎯 **Style** : français, concis, bullet points + emojis pour la lisibilité. Toujours des chiffres précis. Conclus par 1 ou 2 actions à faire.
+
+${dataContext}`
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-flash',
         messages: [
-          {
-            role: 'system',
-            content: `Tu es l'assistant analytique de SAADÉ, une pâtisserie libanaise à Lomé, Togo. Tu analyses les données de production, ventes, pertes et achats pour fournir des insights actionables. Réponds en français, sois concis et utilise des emojis pour la lisibilité. Fournis des chiffres précis quand disponibles. Suggère des actions concrètes.
-
-${dataContext}`
-          },
+          { role: 'system', content: systemPrompt },
           ...messages,
         ],
         stream: true,

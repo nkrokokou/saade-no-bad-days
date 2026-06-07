@@ -1,8 +1,8 @@
 # Guide Utilisateur — SAADÉ
 
-Dernière mise à jour : mai 2026.
+Dernière mise à jour : **juin 2026** (mise à jour Économat + Assistante IA).
 
-Cette application gère le laboratoire pâtisserie, la cuisine, la salle, la caisse et les rapports CEO de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
+Cette application gère le laboratoire pâtisserie, la cuisine, la salle, la caisse, **l'économat** et les rapports CEO de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
 
 ---
 
@@ -12,12 +12,13 @@ Chaque utilisateur a un compte et un rôle :
 
 | Rôle | Accès principal |
 |------|-----------------|
-| **CEO** | Tout — administration, rapports, audits, paramètres |
+| **CEO** | Tout — administration, rapports, audits, paramètres, IA |
 | **Labo pâtisserie / viennoiserie** | Production, pertes, fiches techniques |
 | **Cuisine salée** | Production cuisine, pertes, fiches |
 | **Salle / Caisse** | POS, tables, clients, clôture |
+| **Économat** *(nouveau)* | Gestion complète du stock matières premières : articles, mouvements (entrées / sorties / pertes), alertes, import / export Excel |
 
-La CEO crée les comptes depuis **Administration → Utilisateurs**.
+La CEO crée les comptes depuis **Administration → Utilisateurs** et y assigne le rôle.
 
 ---
 
@@ -120,9 +121,38 @@ Page **Clôture journalière** :
 
 ## 11. Rapports & Audits CEO
 
-- **Rapports CEO** : rapport journalier envoyé par email (configurable).
+- **Rapports CEO** : rapport journalier envoyé par email **automatiquement à 23h00** (configurable).
 - **Audits CEO** : grille d'audit multi-rubriques avec défauts / améliorations.
-- **Insights bot** : analyse IA des ventes et tendances (Lovable AI Gateway).
+- **Assistante IA** *(nouvelle version)* : voir section 17.
+
+---
+
+## 12. Économat *(nouveau module)*
+
+Page **Économat** (rôles : CEO + Économat).
+
+### Référentiel
+- 210+ articles importés depuis la fiche de stock client (Arômes, Fruits & légumes, Viandes, Laitiers, Épicerie, etc.).
+- Pour chaque article : catégorie, nom, unité (G / KG / L / pièce), prix unitaire, stock initial, stock minimum (alerte).
+- Boutons **+ Nouvel article**, **Éditer**, **Supprimer**.
+
+### Mouvements de stock
+- Bouton **Mouvement** → 3 types :
+  - **Entrée** : réception fournisseur, achat
+  - **Sortie** : consommation, transfert vers labo / cuisine
+  - **Perte / Avarie** : casse, péremption
+- Le **stock courant** est recalculé automatiquement : `initial + entrées − sorties − pertes`.
+- L'historique des 200 derniers mouvements est consultable dans l'onglet **Mouvements**.
+
+### Indicateurs en haut de page
+- Nombre d'articles, valeur totale du stock (FCFA), pertes cumulées, alertes (stock ≤ minimum).
+
+### Import / Export Excel
+- **Exporter Excel / PDF** : exporte l'état complet du stock.
+- **Importer Excel** : compatible avec le modèle « FICHE DE STOCK VILLA NO BAD DAY ». Colonnes reconnues :
+  `MATIERES/DESIGNATION` · `SOTCKS INITIAL` · `UNITE/G` · `PRIX UNITAIRE`.
+- Les lignes d'**en-tête en majuscules** (ex : « AROME / COLORANTS », « FRUITS ET LEGUMES ») sont détectées comme **catégories** automatiquement.
+- L'import met à jour les articles déjà connus (par nom) et crée les nouveaux.
 
 ---
 
@@ -167,15 +197,47 @@ Page **Clôture journalière** :
 
 ---
 
-## 16. Dépannage rapide
+## 17. Assistante IA (CEO) *(nouveau)*
+
+Page **Assistant IA** — un véritable assistant personnel pour la CEO, qui raisonne sur l'ensemble des données de l'application en temps réel.
+
+### Ce qu'il sait faire
+- 📦 Répondre instantanément sur le **stock économat** : « Quel est le stock de farine ? », « Quels articles sont en alerte ? », « Quelle est la valeur de mon stock ? »
+- 💰 Analyser les **ventes**, **pertes**, **production**, **achats matières premières** des 7 / 30 derniers jours.
+- 📎 **Lire un fichier joint** (Excel `.xlsx`, `.csv` ou PDF) → bouton trombone à gauche de la zone de saisie. L'IA croise le fichier avec les données live (ex : « Compare cet inventaire fournisseur avec mon stock actuel »).
+- 🎯 Suggérer des actions concrètes (commandes à passer, alertes critiques, produits à arrêter, etc.).
+
+### Mouvement de stock via l'IA
+Quand on demande à l'IA « la production a sorti 3 cupcakes » ou « ajoute 2 kg de farine », elle **prépare la saisie** (article, type, quantité, motif) et indique précisément où cliquer dans **Économat → Mouvement**. La validation finale reste manuelle pour traçabilité (audit log).
+
+### Exemples de questions
+- « Quel est le stock actuel d'économat ? »
+- « Quels articles sont en alerte stock ? »
+- « Top 5 produits les plus vendus cette semaine »
+- « Analyse de rentabilité par catégorie »
+- *(joindre un Excel fournisseur)* « Compare-le à mon stock et liste les écarts »
+
+---
+
+## 18. Sauvegarde & sécurité
+
+- Données stockées dans Lovable Cloud (sauvegardes automatiques).
+- RLS (Row Level Security) : chaque rôle voit uniquement ce qu'il doit voir.
+- Audit complet de toutes les actions sensibles.
+
+---
+
+## 19. Dépannage rapide
 
 | Problème | Solution |
 |----------|----------|
 | Ticket cuisine vide | Vérifier que les produits ne sont pas tous en catégorie "Boisson" (qui sont exclues par défaut). Voir Modèles de tickets. |
-| Suppression produit refusée | Normal : le produit est utilisé dans l'historique. Il est désactivé à la place. |
+| Suppression produit refusée | Normal : le produit est utilisé dans l'historique. Il est **désactivé** automatiquement (toast clair indiquant le nombre de références préservées). Aucune erreur SQL n'est affichée à l'utilisateur. |
+| « Erreur » affiché sans détail | Corrigé en juin 2026 : tous les messages d'erreur affichent désormais la cause réelle (ex : « Sauvegarde : violates unique constraint »). |
 | Vente en attente après reconnexion | Ouvrir le POS, attendre 30 s, la file se vide automatiquement. Ne pas vider le cache navigateur. |
-| Import Excel rejeté | Vérifier les en-têtes : `INGREDIENT(S)` / `QTE` / `UNITE`. Le nom de l'onglet doit contenir le nom du produit. |
+| Import Excel rejeté | Vérifier les en-têtes. Pour Économat : `MATIERES/DESIGNATION`, `SOTCKS INITIAL`, `UNITE/G`, `PRIX UNITAIRE`. Pour fiches techniques : `INGREDIENT(S)`, `QTE`, `UNITE`. |
 | Stock à 0 par défaut en clôture | Calcul auto : il faut avoir saisi les achats et la production de la journée. |
+| IA ne lit pas le PDF | Privilégier Excel/CSV. Les PDF scannés (image) ne sont pas OCRisés ; convertir en Excel d'abord. |
 
 ---
 

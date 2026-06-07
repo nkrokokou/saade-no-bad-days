@@ -203,13 +203,13 @@ export default function ClotureJournaliere() {
       setLocal({});
       toast.success('Clôture sauvegardée');
     },
-    onError: () => toast.error('Erreur lors de la sauvegarde'),
+    onError: (e: any) => toast.error(`Sauvegarde : ${e?.message || 'Erreur inconnue'}`),
   });
 
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('cloture_journaliere').delete().eq('id', id); if (error) throw error; },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['cloture_journaliere'] }); setDeleteId(null); toast.success('Entrée supprimée'); },
-    onError: () => toast.error('Erreur'),
+    onError: (e: any) => toast.error(`Suppression : ${e?.message || 'Erreur inconnue'}`),
   });
 
   const getEntryId = (pid: string) => entries.find((e: any) => e.produit_id === pid)?.id as string | undefined;

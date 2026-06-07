@@ -44,7 +44,7 @@ export default function StockTampon() {
       }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['stock_tampon'] }); setLocalQty({}); toast.success('Stock sauvegardé'); },
-    onError: () => toast.error('Erreur'),
+    onError: (e: any) => toast.error(`Sauvegarde stock : ${e?.message || 'Erreur inconnue'}`),
   });
 
   const getQty = (pid: string) => localQty[pid] !== undefined ? localQty[pid] : stockEntries.find((s: any) => s.produit_id === pid)?.quantite ?? 0;

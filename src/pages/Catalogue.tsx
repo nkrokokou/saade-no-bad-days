@@ -85,31 +85,40 @@ export default function Catalogue() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
+      const refTables = [
+        'vente_lignes', 'bon_transfert_lignes', 'fiches_techniques',
+        'production_labo', 'cloture_journaliere', 'pertes',
+        'stock_tampon', 'degustations', 'mouvements_stock',
+      ] as const;
+      let totalRefs = 0;
+      for (const t of refTables) {
+        const { count } = await supabase.from(t as any).select('id', { count: 'exact', head: true }).eq('produit_id', id);
+        totalRefs += count || 0;
+      }
+      if (totalRefs > 0) {
+        const { error: e2 } = await supabase.from('produits').update({ actif: false }).eq('id', id);
+        if (e2) throw new Error(e2.message);
+        return { mode: 'deactivated' as const, refs: totalRefs };
+      }
       const { error } = await supabase.from('produits').delete().eq('id', id);
       if (error) {
-        // Produit référencé (ventes, bons de transfert, fiches…) → désactivation au lieu de suppression
-        const msg = (error.message || '').toLowerCase();
-        if (msg.includes('foreign key') || msg.includes('violates') || (error as any).code === '23503') {
-          const { error: e2 } = await supabase.from('produits').update({ actif: false }).eq('id', id);
-          if (e2) throw e2;
-          return 'deactivated' as const;
-        }
-        throw error;
+        const { error: e2 } = await supabase.from('produits').update({ actif: false }).eq('id', id);
+        if (e2) throw new Error(`Suppression impossible : ${error.message}`);
+        return { mode: 'deactivated' as const, refs: 0 };
       }
-      return 'deleted' as const;
+      return { mode: 'deleted' as const, refs: 0 };
     },
     onSuccess: async (res) => {
       await qc.invalidateQueries({ queryKey: ['catalogue'] });
       await qc.invalidateQueries({ queryKey: ['produits'] });
-      await qc.refetchQueries({ queryKey: ['catalogue'] });
-      if (res === 'deactivated') {
-        toast.success("Produit désactivé : il a été utilisé dans des ventes/fiches, il est masqué du catalogue mais l'historique est préservé.", { duration: 7000 });
+      if (res.mode === 'deactivated') {
+        toast.success(`Produit désactivé (${res.refs} référence(s) historiques préservées). Il est masqué du catalogue mais l'historique est intact.`, { duration: 7000 });
       } else {
         toast.success('Produit supprimé');
       }
       setToDelete(null);
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.message || 'Erreur inconnue lors de la suppression'),
   });
 
   const duplicate = (p: Produit) => {
