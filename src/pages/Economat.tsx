@@ -192,11 +192,22 @@ export default function Economat() {
         });
       }
       if (!articles.length) { toast.warning('Aucun article à importer'); return; }
-      // Upsert par (categorie, nom)
-      const { error } = await supabase.from('economat_articles').upsert(articles, { onConflict: 'categorie,nom' } as any);
-      if (error) throw error;
+      // Récupère les articles existants pour décider insert vs update (par nom normalisé)
+      const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      const existingMap = new Map(stock.map(s => [norm(s.nom), s.id]));
+      let inserted = 0, updated = 0;
+      for (const a of articles) {
+        const existingId = existingMap.get(norm(a.nom));
+        if (existingId) {
+          const { error } = await supabase.from('economat_articles').update({ categorie: a.categorie, unite: a.unite, prix_unitaire: a.prix_unitaire, stock_initial: a.stock_initial }).eq('id', existingId);
+          if (!error) updated++;
+        } else {
+          const { error } = await supabase.from('economat_articles').insert(a);
+          if (!error) inserted++;
+        }
+      }
       qc.invalidateQueries({ queryKey: ['v_economat_stock'] });
-      toast.success(`${articles.length} articles importés / mis à jour`);
+      toast.success(`Import : ${inserted} créés, ${updated} mis à jour`);
     } catch (e: any) {
       toast.error(`Import : ${e?.message || 'Erreur'}`);
     }
