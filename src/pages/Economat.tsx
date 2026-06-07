@@ -208,8 +208,8 @@ export default function Economat() {
         <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
           <Warehouse className="h-6 w-6 text-primary" /> Économat
         </h1>
-        <div className="flex gap-2 flex-wrap">
-          <Dialog open={showMouv} onOpenChange={setShowMouv}>
+        <div className="flex gap-2 flex-wrap items-center">
+          <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
             <DialogTrigger asChild>
               <Button variant="secondary"><ArrowDownToLine className="h-4 w-4 mr-1" /> Mouvement</Button>
             </DialogTrigger>
