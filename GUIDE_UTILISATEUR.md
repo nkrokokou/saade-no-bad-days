@@ -1,8 +1,8 @@
 # Guide Utilisateur — SAADÉ
 
-Dernière mise à jour : mai 2026.
+Dernière mise à jour : **juin 2026** (mise à jour Économat + Assistante IA).
 
-Cette application gère le laboratoire pâtisserie, la cuisine, la salle, la caisse et les rapports CEO de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
+Cette application gère le laboratoire pâtisserie, la cuisine, la salle, la caisse, **l'économat** et les rapports CEO de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
 
 ---
 
@@ -12,12 +12,13 @@ Chaque utilisateur a un compte et un rôle :
 
 | Rôle | Accès principal |
 |------|-----------------|
-| **CEO** | Tout — administration, rapports, audits, paramètres |
+| **CEO** | Tout — administration, rapports, audits, paramètres, IA |
 | **Labo pâtisserie / viennoiserie** | Production, pertes, fiches techniques |
 | **Cuisine salée** | Production cuisine, pertes, fiches |
 | **Salle / Caisse** | POS, tables, clients, clôture |
+| **Économat** *(nouveau)* | Gestion complète du stock matières premières : articles, mouvements (entrées / sorties / pertes), alertes, import / export Excel |
 
-La CEO crée les comptes depuis **Administration → Utilisateurs**.
+La CEO crée les comptes depuis **Administration → Utilisateurs** et y assigne le rôle.
 
 ---
 
@@ -120,9 +121,38 @@ Page **Clôture journalière** :
 
 ## 11. Rapports & Audits CEO
 
-- **Rapports CEO** : rapport journalier envoyé par email (configurable).
+- **Rapports CEO** : rapport journalier envoyé par email **automatiquement à 23h00** (configurable).
 - **Audits CEO** : grille d'audit multi-rubriques avec défauts / améliorations.
-- **Insights bot** : analyse IA des ventes et tendances (Lovable AI Gateway).
+- **Assistante IA** *(nouvelle version)* : voir section 17.
+
+---
+
+## 12. Économat *(nouveau module)*
+
+Page **Économat** (rôles : CEO + Économat).
+
+### Référentiel
+- 210+ articles importés depuis la fiche de stock client (Arômes, Fruits & légumes, Viandes, Laitiers, Épicerie, etc.).
+- Pour chaque article : catégorie, nom, unité (G / KG / L / pièce), prix unitaire, stock initial, stock minimum (alerte).
+- Boutons **+ Nouvel article**, **Éditer**, **Supprimer**.
+
+### Mouvements de stock
+- Bouton **Mouvement** → 3 types :
+  - **Entrée** : réception fournisseur, achat
+  - **Sortie** : consommation, transfert vers labo / cuisine
+  - **Perte / Avarie** : casse, péremption
+- Le **stock courant** est recalculé automatiquement : `initial + entrées − sorties − pertes`.
+- L'historique des 200 derniers mouvements est consultable dans l'onglet **Mouvements**.
+
+### Indicateurs en haut de page
+- Nombre d'articles, valeur totale du stock (FCFA), pertes cumulées, alertes (stock ≤ minimum).
+
+### Import / Export Excel
+- **Exporter Excel / PDF** : exporte l'état complet du stock.
+- **Importer Excel** : compatible avec le modèle « FICHE DE STOCK VILLA NO BAD DAY ». Colonnes reconnues :
+  `MATIERES/DESIGNATION` · `SOTCKS INITIAL` · `UNITE/G` · `PRIX UNITAIRE`.
+- Les lignes d'**en-tête en majuscules** (ex : « AROME / COLORANTS », « FRUITS ET LEGUMES ») sont détectées comme **catégories** automatiquement.
+- L'import met à jour les articles déjà connus (par nom) et crée les nouveaux.
 
 ---
 
