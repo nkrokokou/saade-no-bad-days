@@ -197,15 +197,47 @@ Page **Économat** (rôles : CEO + Économat).
 
 ---
 
-## 16. Dépannage rapide
+## 17. Assistante IA (CEO) *(nouveau)*
+
+Page **Assistant IA** — un véritable assistant personnel pour la CEO, qui raisonne sur l'ensemble des données de l'application en temps réel.
+
+### Ce qu'il sait faire
+- 📦 Répondre instantanément sur le **stock économat** : « Quel est le stock de farine ? », « Quels articles sont en alerte ? », « Quelle est la valeur de mon stock ? »
+- 💰 Analyser les **ventes**, **pertes**, **production**, **achats matières premières** des 7 / 30 derniers jours.
+- 📎 **Lire un fichier joint** (Excel `.xlsx`, `.csv` ou PDF) → bouton trombone à gauche de la zone de saisie. L'IA croise le fichier avec les données live (ex : « Compare cet inventaire fournisseur avec mon stock actuel »).
+- 🎯 Suggérer des actions concrètes (commandes à passer, alertes critiques, produits à arrêter, etc.).
+
+### Mouvement de stock via l'IA
+Quand on demande à l'IA « la production a sorti 3 cupcakes » ou « ajoute 2 kg de farine », elle **prépare la saisie** (article, type, quantité, motif) et indique précisément où cliquer dans **Économat → Mouvement**. La validation finale reste manuelle pour traçabilité (audit log).
+
+### Exemples de questions
+- « Quel est le stock actuel d'économat ? »
+- « Quels articles sont en alerte stock ? »
+- « Top 5 produits les plus vendus cette semaine »
+- « Analyse de rentabilité par catégorie »
+- *(joindre un Excel fournisseur)* « Compare-le à mon stock et liste les écarts »
+
+---
+
+## 18. Sauvegarde & sécurité
+
+- Données stockées dans Lovable Cloud (sauvegardes automatiques).
+- RLS (Row Level Security) : chaque rôle voit uniquement ce qu'il doit voir.
+- Audit complet de toutes les actions sensibles.
+
+---
+
+## 19. Dépannage rapide
 
 | Problème | Solution |
 |----------|----------|
 | Ticket cuisine vide | Vérifier que les produits ne sont pas tous en catégorie "Boisson" (qui sont exclues par défaut). Voir Modèles de tickets. |
-| Suppression produit refusée | Normal : le produit est utilisé dans l'historique. Il est désactivé à la place. |
+| Suppression produit refusée | Normal : le produit est utilisé dans l'historique. Il est **désactivé** automatiquement (toast clair indiquant le nombre de références préservées). Aucune erreur SQL n'est affichée à l'utilisateur. |
+| « Erreur » affiché sans détail | Corrigé en juin 2026 : tous les messages d'erreur affichent désormais la cause réelle (ex : « Sauvegarde : violates unique constraint »). |
 | Vente en attente après reconnexion | Ouvrir le POS, attendre 30 s, la file se vide automatiquement. Ne pas vider le cache navigateur. |
-| Import Excel rejeté | Vérifier les en-têtes : `INGREDIENT(S)` / `QTE` / `UNITE`. Le nom de l'onglet doit contenir le nom du produit. |
+| Import Excel rejeté | Vérifier les en-têtes. Pour Économat : `MATIERES/DESIGNATION`, `SOTCKS INITIAL`, `UNITE/G`, `PRIX UNITAIRE`. Pour fiches techniques : `INGREDIENT(S)`, `QTE`, `UNITE`. |
 | Stock à 0 par défaut en clôture | Calcul auto : il faut avoir saisi les achats et la production de la journée. |
+| IA ne lit pas le PDF | Privilégier Excel/CSV. Les PDF scannés (image) ne sont pas OCRisés ; convertir en Excel d'abord. |
 
 ---
 
