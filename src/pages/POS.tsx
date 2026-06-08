@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, X, ShoppingCart, PauseCircle, Utensils } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, ShoppingCart, PauseCircle, Utensils } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit, useProducts } from '@/hooks/useProducts';
@@ -613,98 +613,48 @@ export default function POS() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3">
-        <div className="space-y-2">
-          <div className="flex gap-2 items-center">
-            <div className="relative flex-1"><Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} className="pl-8" /></div>
-          </div>
-          <Tabs value={activeCat} onValueChange={setActiveCat}>
-            <ScrollArea className="w-full"><TabsList className="w-max">
-              <TabsTrigger value="all">Tous</TabsTrigger>
-              {categories.map(c => <TabsTrigger key={c} value={c}>{c.replace(/_/g, ' ')}</TabsTrigger>)}
-            </TabsList></ScrollArea>
-          </Tabs>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {filtered.map(p => {
-              const dispo = getStockDispo(p.id);
-              const rupture = dispo !== null && dispo <= 0;
-              const bas = dispo !== null && dispo > 0 && dispo <= 5;
-              return (
-                <button key={p.id} onClick={() => addToCart(p)} disabled={rupture}
-                  className={`relative border rounded-lg p-2 text-left transition-colors flex flex-col gap-1 active:scale-95 ${rupture ? 'opacity-50 cursor-not-allowed bg-muted' : 'hover:bg-accent hover:border-primary'}`}>
-                  <span className={`absolute top-1 right-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                    dispo === null ? 'bg-muted-foreground/70 text-background'
-                      : rupture ? 'bg-destructive text-destructive-foreground'
-                      : bas ? 'bg-orange-500 text-white'
-                      : 'bg-green-600 text-white'
-                  }`}>
-                    {dispo === null ? 'Dispo' : rupture ? 'Rupture' : `${dispo}`}
-                  </span>
-                  {p.photo_url ? (
-                    <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
-                  ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
-                  <div className="text-xs font-medium line-clamp-2">{p.nom}</div>
-                  <div className="text-xs font-bold text-primary">{(p.prix_vente || 0).toLocaleString()} F</div>
-                </button>
-              );
-            })}
-            {filtered.length === 0 && <div className="col-span-full text-center text-muted-foreground py-6 text-sm">Aucun produit</div>}
-          </div>
+      <div className="space-y-2">
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1"><Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} className="pl-8" /></div>
         </div>
-
-        {/* Panier desktop */}
-        <Card className="hidden lg:block lg:sticky lg:top-16 self-start">
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="font-heading font-semibold">Ticket en cours</h2>
-              {cart.length > 0 && <Button size="icon" variant="ghost" onClick={clearCart}><X className="h-4 w-4" /></Button>}
-            </div>
-            <ScrollArea className="h-[280px] border rounded">
-              {cart.length === 0 && <div className="text-center text-muted-foreground py-12 text-sm">Cliquez sur des produits</div>}
-              {cart.map(l => (
-                <div key={l.produit.id} className="flex items-center gap-2 p-2 border-b">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{l.produit.nom}</div>
-                    <div className="text-xs text-muted-foreground">{(l.produit.prix_vente || 0).toLocaleString()} F × {l.quantite}</div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(l.produit.id, -1)}><Minus className="h-3 w-3" /></Button>
-                    <span className="w-6 text-center text-sm">{l.quantite}</span>
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(l.produit.id, 1)}><Plus className="h-3 w-3" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeLine(l.produit.id)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                  </div>
-                </div>
-              ))}
-            </ScrollArea>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs">Remise</Label>
-              <Input type="number" value={remiseGlobale} onChange={e => setRemiseGlobale(Number(e.target.value) || 0)} className="h-8" />
-            </div>
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total</span><span className="text-primary">{totalTicket.toLocaleString()} F</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" disabled={!session || cart.length === 0 || holdTab.isPending} onClick={() => holdTab.mutate()}>
-                <PauseCircle className="h-4 w-4 mr-1" />En attente
-              </Button>
-              <Button disabled={!session || cart.length === 0} onClick={() => setPayOpen(true)}>Encaisser</Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="secondary" size="sm" disabled={cart.length === 0} onClick={printCuisineFromCart}>
-                <Utensils className="h-4 w-4 mr-1" />Bon Cuisine
-              </Button>
-              {lastTicket
-                ? <Button variant="outline" size="sm" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>
-                : <Button variant="outline" size="sm" disabled><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>}
-            </div>
-          </CardContent>
-        </Card>
+        <Tabs value={activeCat} onValueChange={setActiveCat}>
+          <ScrollArea className="w-full"><TabsList className="w-max">
+            <TabsTrigger value="all">Tous</TabsTrigger>
+            {categories.map(c => <TabsTrigger key={c} value={c}>{c.replace(/_/g, ' ')}</TabsTrigger>)}
+          </TabsList></ScrollArea>
+        </Tabs>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 pb-24">
+          {filtered.map(p => {
+            const dispo = getStockDispo(p.id);
+            const rupture = dispo !== null && dispo <= 0;
+            const bas = dispo !== null && dispo > 0 && dispo <= 5;
+            return (
+              <button key={p.id} onClick={() => addToCart(p)} disabled={rupture}
+                className={`relative border rounded-lg p-2 text-left transition-colors flex flex-col gap-1 active:scale-95 ${rupture ? 'opacity-50 cursor-not-allowed bg-muted' : 'hover:bg-accent hover:border-primary'}`}>
+                <span className={`absolute top-1 right-1 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  dispo === null ? 'bg-muted-foreground/70 text-background'
+                    : rupture ? 'bg-destructive text-destructive-foreground'
+                    : bas ? 'bg-orange-500 text-white'
+                    : 'bg-green-600 text-white'
+                }`}>
+                  {dispo === null ? 'Dispo' : rupture ? 'Rupture' : `${dispo}`}
+                </span>
+                {p.photo_url ? (
+                  <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
+                ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
+                <div className="text-xs font-medium line-clamp-2">{p.nom}</div>
+                <div className="text-xs font-bold text-primary">{(p.prix_vente || 0).toLocaleString()} F</div>
+              </button>
+            );
+          })}
+          {filtered.length === 0 && <div className="col-span-full text-center text-muted-foreground py-6 text-sm">Aucun produit</div>}
+        </div>
       </div>
 
-      {/* FAB mobile */}
+      {/* Bulle panier flottante — identique sur mobile, tablette et PC */}
       {cart.length > 0 && (
         <Button onClick={() => setCartOpen(true)}
-          className="lg:hidden fixed bottom-4 right-4 z-40 h-14 px-5 rounded-full shadow-2xl gap-2 text-base">
+          className="fixed bottom-6 right-6 z-40 h-16 px-6 rounded-full shadow-2xl gap-2 text-base animate-fade-in">
           <ShoppingCart className="h-5 w-5" />
           <span className="font-bold">{totalTicket.toLocaleString()} F</span>
           <span className="bg-primary-foreground/20 px-2 py-0.5 rounded-full text-xs">{cart.reduce((s, l) => s + l.quantite, 0)}</span>
@@ -712,7 +662,7 @@ export default function POS() {
       )}
 
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
-        <SheetContent side="bottom" className="h-[90vh] flex flex-col p-4 lg:hidden">
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-4">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-between">
               <span>Ticket en cours</span>
