@@ -15,7 +15,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 import { Plus, Trash2, BookOpen, Calculator, Upload, FileDown } from 'lucide-react';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
-import { FicheMetaPanel } from '@/components/FicheMetaPanel';
+import { FicheExcelView } from '@/components/FicheExcelView';
 import { parseFicheWorkbook, type ParsedFiche } from '@/lib/parseFicheExcel';
 import { FicheImportPreviewDialog } from '@/components/FicheImportPreviewDialog';
 
