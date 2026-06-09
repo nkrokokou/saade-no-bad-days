@@ -150,12 +150,12 @@ export function parseFicheSheet(
   const ingredients: ParsedIngredient[] = [];
   let stopRow = grid.length;
 
+  let currentSection = '';
   if (header) {
     for (let i = header.headerIdx + 1; i < grid.length; i++) {
       const row = grid[i] || [];
       const nom = String(row[header.colNom] ?? '').trim();
       if (!nom) {
-        // empty row → check if step section follows
         let stepFound = false;
         for (let k = i + 1; k < Math.min(i + 4, grid.length); k++) {
           const cells = (grid[k] || []).map((c: any) => String(c ?? ''));
@@ -166,17 +166,24 @@ export function parseFicheSheet(
       }
       if (isStepSectionHeader(nom)) { stopRow = i; break; }
       if (/^(total|sous[\s-]*total|cout)/i.test(norm(nom))) continue;
+      const qte = parseNum(row[header.colQte]);
+      // Section header detected: text only, no quantity, and other cols empty
+      if (qte <= 0) {
+        const hasOther = (header.colUnite >= 0 && String(row[header.colUnite] ?? '').trim())
+          || (header.colCout >= 0 && String(row[header.colCout] ?? '').trim());
+        if (!hasOther && nom.length < 40) { currentSection = nom.toUpperCase(); }
+        continue;
+      }
       const mp = mps.find(m => norm(m.nom) === norm(nom))
         || mps.find(m => norm(m.nom).includes(norm(nom)) && norm(nom).length > 3)
         || mps.find(m => norm(nom).includes(norm(m.nom)) && norm(m.nom).length > 3);
-      const qte = parseNum(row[header.colQte]);
-      if (qte <= 0) continue;
       ingredients.push({
         nom,
         quantite: qte,
         unite: String((header.colUnite >= 0 ? row[header.colUnite] : '') || mp?.unite || 'G').trim().toUpperCase(),
         cout_unitaire: header.colCout >= 0 ? parseNum(row[header.colCout]) || (mp?.prix_unitaire || 0) : (mp?.prix_unitaire || 0),
         mp_id: mp?.id || null,
+        section: currentSection || undefined,
       });
     }
   }
