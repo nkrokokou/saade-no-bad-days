@@ -6,6 +6,7 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { CommandPalette } from '@/components/CommandPalette';
+import { NotificationBell } from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +31,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin': 'Administration',
   '/audit': "Journal d'audit",
   '/rapports-ceo': 'Rapports CEO',
+  '/caisses-live': 'Caisses (temps réel)',
 };
 
 export function AppLayout({ module }: { module?: ModuleKey }) {
@@ -86,6 +88,7 @@ export function AppLayout({ module }: { module?: ModuleKey }) {
               <Button variant="ghost" size="icon" className="md:hidden" onClick={openPalette} aria-label="Rechercher">
                 <Search className="h-4 w-4" />
               </Button>
+              <NotificationBell />
               <LanguageSwitcher />
               <ThemeToggle />
             </div>
