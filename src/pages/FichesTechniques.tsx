@@ -197,7 +197,7 @@ export default function FichesTechniques() {
   if (selectedProduct && selectedProd) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-2 print:hidden">
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => setSelectedProduct(null)}>← Retour</Button>
             <h1 className="text-xl font-heading font-bold">{selectedProd.nom}</h1>
@@ -216,111 +216,40 @@ export default function FichesTechniques() {
               className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) runImportPreview(f, true); e.target.value = ''; }}
             />
-            <Dialog open={showAdd} onOpenChange={setShowAdd}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Ajouter MP</Button>
-              </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Ajouter une matière première</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div>
-                  <Label>Matière première *</Label>
-                  <Select
-                    value={form.matiere_premiere_id}
-                    onValueChange={v => {
-                      const mp = mps.find(m => m.id === v);
-                      if (mp) setForm(p => ({ ...p, matiere_premiere_id: mp.id, matiere_premiere: mp.nom, unite_mp: mp.unite, cout_unitaire_mp: mp.prix_unitaire }));
-                    }}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Sélectionner depuis le référentiel…" /></SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {mps.map(m => <SelectItem key={m.id} value={m.id}>{m.nom} <span className="text-xs text-muted-foreground ml-2">({m.prix_unitaire?.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} F/{m.unite})</span></SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div><Label>Quantité ({form.unite_mp})</Label><Input type="number" step="0.001" value={form.quantite_mp || ''} onChange={e => setForm(p => ({ ...p, quantite_mp: parseFloat(e.target.value) || 0 }))} /></div>
-                  <div><Label>Coût/{form.unite_mp}</Label><Input type="number" value={form.cout_unitaire_mp || ''} onChange={e => setForm(p => ({ ...p, cout_unitaire_mp: parseFloat(e.target.value) || 0 }))} /></div>
-                </div>
-                <p className="text-sm text-muted-foreground">Coût ingrédient : <strong>{((form.quantite_mp || 0) * (form.cout_unitaire_mp || 0)).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} FCFA</strong></p>
-                <Button className="w-full" onClick={() => addFiche.mutate()} disabled={addFiche.isPending || !form.matiere_premiere}>
-                  {addFiche.isPending ? 'Ajout...' : 'Ajouter'}
-                </Button>
-              </div>
-            </DialogContent>
-            </Dialog>
           </div>
         </div>
 
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">Coût de revient</p>
-              <p className="text-xl font-bold text-primary">{coutTotal.toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">Prix de vente</p>
-              <p className="text-xl font-bold">{(selectedProd.prix_vente || 0).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">Marge</p>
-              <p className={`text-xl font-bold ${(selectedProd.prix_vente || 0) - coutTotal > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                {((selectedProd.prix_vente || 0) - coutTotal).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span>
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-3 grid-cols-3 print:hidden">
+          <Card><CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Coût de revient</p>
+            <p className="text-xl font-bold text-primary">{coutTotal.toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
+          </CardContent></Card>
+          <Card><CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Prix de vente</p>
+            <p className="text-xl font-bold">{(selectedProd.prix_vente || 0).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
+          </CardContent></Card>
+          <Card><CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Marge</p>
+            <p className={`text-xl font-bold ${(selectedProd.prix_vente || 0) - coutTotal > 0 ? 'text-green-600' : 'text-destructive'}`}>
+              {((selectedProd.prix_vente || 0) - coutTotal).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span>
+            </p>
+          </CardContent></Card>
         </div>
 
-        <FicheMetaPanel produitId={selectedProduct!} coutTotal={coutTotal} />
+        <FicheExcelView
+          productId={selectedProduct!}
+          productName={selectedProd.nom}
+          mps={mps}
+          userId={user?.id}
+        />
 
-
-        <Card>
-          <CardContent className="overflow-x-auto pt-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Matière première</TableHead>
-                  <TableHead>Quantité</TableHead>
-                  <TableHead>Unité</TableHead>
-                  <TableHead>Coût/unité</TableHead>
-                  <TableHead>Coût total</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fiches.map((f: any) => (
-                  <TableRow key={f.id}>
-                    <TableCell className="font-medium">{f.matiere_premiere}</TableCell>
-                    <TableCell>{f.quantite_mp}</TableCell>
-                    <TableCell>{f.unite_mp}</TableCell>
-                    <TableCell>{f.cout_unitaire_mp?.toLocaleString('fr-FR')}</TableCell>
-                    <TableCell className="font-medium">{(f.quantite_mp * f.cout_unitaire_mp).toLocaleString('fr-FR')}</TableCell>
-                    <TableCell>
-                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(f.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {fiches.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucun ingrédient · ajoutez les matières premières</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <ConfirmDialog
-          open={!!deleteId}
-          onOpenChange={() => setDeleteId(null)}
-          title="Supprimer l'ingrédient ?"
-          description="Cette action est irréversible."
-          destructive
-          onConfirm={() => deleteId && deleteFiche.mutate(deleteId)}
+        <FicheImportPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          parsed={previewResults}
+          products={products as any}
+          importing={importing}
+          onConfirm={confirmImport}
         />
       </div>
     );
