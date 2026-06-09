@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SearchFilter } from '@/components/SearchFilter';
 import { toast } from 'sonner';
-import { BookOpen, Calculator, Upload, FileDown } from 'lucide-react';
+import { BookOpen, Calculator, Upload, FileDown, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { FicheExcelView } from '@/components/FicheExcelView';
 import { parseFicheWorkbook, type ParsedFiche } from '@/lib/parseFicheExcel';
@@ -80,6 +81,27 @@ export default function FichesTechniques() {
       toast.error('Lecture impossible : ' + (e.message || 'Format invalide'));
     }
   };
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteFiche = async () => {
+    if (!selectedProduct) return;
+    try {
+      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        supabase.from('fiches_techniques').delete().eq('produit_id', selectedProduct),
+        supabase.from('fiches_techniques_meta').delete().eq('produit_id', selectedProduct),
+      ]);
+      if (e1) throw e1;
+      if (e2) throw e2;
+      toast.success('Fiche technique supprimée');
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
+      setConfirmDelete(false);
+      setSelectedProduct(null);
+    } catch (e: any) {
+      toast.error('Erreur : ' + (e.message || ''));
+    }
+  };
+
 
   const confirmImport = async (selected: Array<ParsedFiche & { productId: string }>) => {
     setImporting(true);
@@ -182,6 +204,9 @@ export default function FichesTechniques() {
             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 mr-1" /> Importer
             </Button>
+            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Supprimer fiche
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -191,6 +216,7 @@ export default function FichesTechniques() {
             />
           </div>
         </div>
+
 
         <div className="grid gap-3 grid-cols-3 print:hidden">
           <Card><CardContent className="pt-4">
@@ -224,9 +250,19 @@ export default function FichesTechniques() {
           isLoading={importing}
           onConfirm={confirmImport}
         />
+
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Supprimer la fiche technique ?"
+          description={`Tous les ingrédients, étapes et paramètres de "${selectedProd.nom}" seront définitivement effacés. Le produit lui-même reste.`}
+          destructive
+          onConfirm={deleteFiche}
+        />
       </div>
     );
   }
+
 
   // ── Export / Import multi-produits depuis la liste ──
   const exportAllFiches = async () => {
