@@ -397,25 +397,23 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Imprime un ticket par poste de préparation (cuisine, labo…) — applique le template cuisine
+  // Imprime un ticket par imprimante cible (chaud / froid / caisse) — applique le template cuisine
   const printPrepTickets = (lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const groups: Record<string, CartLine[]> = {};
-    const excludeBoissons = tplCuisine?.exclude_boissons ?? true;
     lines.forEach(l => {
-      const cat = (l.produit.categorie || '').toUpperCase();
-      const isBoisson = /BOISSON|SOFT|EAU|JUS|COLA|BAR/.test(cat);
-      // Toute boisson va au bar ; tout le reste va en cuisine (par défaut)
-      // sauf si le produit a un poste explicitement défini (labo, etc.)
-      let poste = l.produit.poste_preparation || '';
-      if (!poste || poste === 'salle') poste = isBoisson ? 'bar' : 'cuisine';
-      if (excludeBoissons && (poste === 'bar' || isBoisson)) return;
-      (groups[poste] = groups[poste] || []).push(l);
+      // Priorité : produit.imprimante_cible (override) → catégorie.imprimante_cible → fallback 'chaud'
+      const override = (l.produit as any).imprimante_cible as string | undefined;
+      const fromCat = catImprimante[l.produit.categorie] || 'chaud';
+      const cible = override || fromCat;
+      if (cible === 'aucune') return; // pas d'impression cuisine
+      if (cible === 'caisse') return; // imprimé sur le ticket caisse uniquement
+      (groups[cible] = groups[cible] || []).push(l);
     });
     if (Object.keys(groups).length === 0) {
-      toast.info('Aucun article à préparer (uniquement des boissons ?)');
+      toast.info('Aucun article à préparer en cuisine');
       return;
     }
-    Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
+    Object.entries(groups).forEach(([cible, grp]) => printPrepTicket(cible, grp, ctx));
   };
 
   // Imprime un bon cuisine à la demande (depuis le panier en cours)
@@ -424,6 +422,7 @@ export default function POS() {
     const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
     printPrepTickets(cart, { tableNum, serveur, numero: currentTabId ? 'EN ATTENTE' : 'BROUILLON' });
   };
+
 
   // Impression via iframe cachée · évite le blocage des popups
   const printViaIframe = (html: string, label: string) => {
