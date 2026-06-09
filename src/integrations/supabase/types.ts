@@ -241,27 +241,41 @@ export type Database = {
           actif: boolean
           created_at: string
           id: string
+          imprimante_cible: string | null
           nom: string
           ordre: number
+          parent_id: string | null
           updated_at: string
         }
         Insert: {
           actif?: boolean
           created_at?: string
           id?: string
+          imprimante_cible?: string | null
           nom: string
           ordre?: number
+          parent_id?: string | null
           updated_at?: string
         }
         Update: {
           actif?: boolean
           created_at?: string
           id?: string
+          imprimante_cible?: string | null
           nom?: string
           ordre?: number
+          parent_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_produits_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories_produits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {
@@ -703,6 +717,7 @@ export type Database = {
           id: string
           module: string
           role: Database["public"]["Enums"]["app_role"]
+          submodule: string | null
         }
         Insert: {
           can_create?: boolean
@@ -712,6 +727,7 @@ export type Database = {
           id?: string
           module: string
           role: Database["public"]["Enums"]["app_role"]
+          submodule?: string | null
         }
         Update: {
           can_create?: boolean
@@ -721,6 +737,7 @@ export type Database = {
           id?: string
           module?: string
           role?: Database["public"]["Enums"]["app_role"]
+          submodule?: string | null
         }
         Relationships: []
       }
@@ -897,6 +914,7 @@ export type Database = {
           categorie: string
           created_at: string
           id: string
+          imprimante_cible: string | null
           nom: string
           photo_url: string | null
           poste_preparation: string
@@ -911,6 +929,7 @@ export type Database = {
           categorie?: string
           created_at?: string
           id?: string
+          imprimante_cible?: string | null
           nom: string
           photo_url?: string | null
           poste_preparation?: string
@@ -925,6 +944,7 @@ export type Database = {
           categorie?: string
           created_at?: string
           id?: string
+          imprimante_cible?: string | null
           nom?: string
           photo_url?: string | null
           poste_preparation?: string
@@ -1178,6 +1198,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          palette: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          palette?: string
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          palette?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1369,6 +1410,7 @@ export type Database = {
       }
     }
     Functions: {
+      auto_close_open_sessions: { Args: never; Returns: undefined }
       can_perform: {
         Args: { _action: string; _module: string; _user_id: string }
         Returns: boolean
