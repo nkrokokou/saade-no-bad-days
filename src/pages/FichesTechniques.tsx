@@ -16,7 +16,8 @@ import { toast } from 'sonner';
 import { Plus, Trash2, BookOpen, Calculator, Upload, FileDown } from 'lucide-react';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { FicheMetaPanel } from '@/components/FicheMetaPanel';
-import * as XLSX from 'xlsx';
+import { parseFicheWorkbook, type ParsedFiche } from '@/lib/parseFicheExcel';
+import { FicheImportPreviewDialog } from '@/components/FicheImportPreviewDialog';
 
 type MP = { id: string; nom: string; unite: string; prix_unitaire: number };
 
@@ -103,6 +104,74 @@ export default function FichesTechniques() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const listFileRef = useRef<HTMLInputElement>(null);
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewResults, setPreviewResults] = useState<ParsedFiche[]>([]);
+  const [importing, setImporting] = useState(false);
+
+  const runImportPreview = async (file: File, restrictToSelected: boolean) => {
+    try {
+      const buf = await file.arrayBuffer();
+      let results = parseFicheWorkbook(buf, products as any, mps);
+      if (restrictToSelected && selectedProduct) {
+        results = results.map(r => ({ ...r, productId: selectedProduct }));
+      }
+      if (results.length === 0) {
+        toast.warning('Aucune fiche détectée. Vérifiez : nom du produit + en-tête INGREDIENT / QTE / UNITE.');
+        return;
+      }
+      setPreviewResults(results);
+      setPreviewOpen(true);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Lecture impossible : ' + (e.message || 'Format invalide'));
+    }
+  };
+
+  const confirmImport = async (selected: Array<ParsedFiche & { productId: string }>) => {
+    setImporting(true);
+    try {
+      const rows = selected.flatMap(r => r.ingredients.map(ing => ({
+        produit_id: r.productId,
+        matiere_premiere_id: ing.mp_id || null,
+        matiere_premiere: ing.nom,
+        quantite_mp: ing.quantite,
+        unite_mp: ing.unite,
+        cout_unitaire_mp: ing.cout_unitaire,
+        created_by: user?.id,
+      })));
+      if (rows.length > 0) {
+        const { error } = await supabase.from('fiches_techniques').insert(rows);
+        if (error) throw error;
+      }
+      // Upsert meta (etapes + rendement + cuisson…) per produit
+      for (const r of selected) {
+        const hasMeta = r.etapes.length > 0 || r.meta.rendement || r.meta.temps_cuisson_min || r.meta.temperature_cuisson || r.meta.conservation;
+        if (!hasMeta) continue;
+        const payload: any = { produit_id: r.productId, created_by: user?.id };
+        if (r.etapes.length) payload.etapes = r.etapes.map((e, i) => `${i + 1}. ${e}`).join('\n');
+        if (r.meta.rendement) payload.rendement = r.meta.rendement;
+        if (r.meta.rendement_unite) payload.rendement_unite = r.meta.rendement_unite;
+        if (r.meta.temps_cuisson_min) payload.temps_cuisson_min = r.meta.temps_cuisson_min;
+        if (r.meta.temps_preparation_min) payload.temps_preparation_min = r.meta.temps_preparation_min;
+        if (r.meta.temperature_cuisson) payload.temperature_cuisson = r.meta.temperature_cuisson;
+        if (r.meta.conservation) payload.conservation = r.meta.conservation;
+        await supabase.from('fiches_techniques_meta').upsert(payload, { onConflict: 'produit_id' });
+      }
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['fiches_meta'] });
+      qc.invalidateQueries({ queryKey: ['catalogue'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
+      toast.success(`Import OK : ${rows.length} ingrédient(s) sur ${selected.length} fiche(s)`);
+      setPreviewOpen(false);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erreur import : ' + (e.message || ''));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+
   const selectedProd = products.find(p => p.id === selectedProduct);
   const coutTotal = fiches.reduce((s: number, f: any) => s + (f.quantite_mp * f.cout_unitaire_mp), 0);
 
@@ -121,74 +190,8 @@ export default function FichesTechniques() {
     exportToExcel(rows, `fiche_technique_${selectedProd.nom}`, 'Fiche');
   };
 
-  const handleImportExcel = async (file: File) => {
-    if (!selectedProduct) return;
-    try {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-      const norm = (s: any) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const parseNum = (v: any) => {
-        const m = String(v ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/);
-        return m ? parseFloat(m[0]) : 0;
-      };
 
-      const collected: any[] = [];
-      for (const sn of wb.SheetNames) {
-        const grid: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
-        // Try structured layout first: find header row with INGREDIENTS / QTE / UNITE
-        let headerIdx = -1, colNom = -1, colQte = -1, colUnite = -1, colCout = -1;
-        for (let i = 0; i < grid.length; i++) {
-          const row = grid[i].map(norm);
-          const ing = row.findIndex(c => c.includes('ingredient') || c.includes('matiere') || c === 'mp');
-          if (ing >= 0) {
-            const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite'));
-            if (qte >= 0) {
-              headerIdx = i; colNom = ing; colQte = qte;
-              colUnite = row.findIndex(c => c.includes('unite'));
-              colCout = row.findIndex(c => c.includes('cout') || c.includes('prix'));
-              break;
-            }
-          }
-        }
-        if (headerIdx >= 0) {
-          for (let i = headerIdx + 1; i < grid.length; i++) {
-            const row = grid[i];
-            const nom = String(row[colNom] ?? '').trim();
-            if (!nom) continue;
-            // stop if we hit another section header
-            if (norm(nom).includes('ingredient') || norm(nom).includes('produit')) break;
-            const mp = mps.find(m => norm(m.nom) === norm(nom));
-            const quantite = parseNum(row[colQte]);
-            const unite = String((colUnite >= 0 ? row[colUnite] : '') || mp?.unite || 'G').trim().toUpperCase();
-            const cout = colCout >= 0 ? parseNum(row[colCout]) : (mp?.prix_unitaire || 0);
-            collected.push({
-              produit_id: selectedProduct,
-              matiere_premiere_id: mp?.id || null,
-              matiere_premiere: nom,
-              quantite_mp: quantite,
-              unite_mp: unite,
-              cout_unitaire_mp: cout,
-              created_by: user?.id,
-            });
-          }
-        }
-      }
 
-      if (collected.length === 0) {
-        toast.warning("Aucun ingrédient trouvé. Vérifiez l'en-tête INGREDIENTS / QTE / UNITE.");
-        return;
-      }
-      const { error } = await supabase.from('fiches_techniques').insert(collected);
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
-      qc.invalidateQueries({ queryKey: ['catalogue'] });
-      qc.invalidateQueries({ queryKey: ['produits'] });
-      toast.success(`${collected.length} ingrédient(s) importé(s)`);
-    } catch (e: any) {
-      console.error(e);
-      toast.error('Erreur import : ' + (e.message || 'Format invalide'));
-    }
-  };
 
 
   if (selectedProduct && selectedProd) {
@@ -211,7 +214,7 @@ export default function FichesTechniques() {
               type="file"
               accept=".xlsx,.xls,.csv"
               className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) handleImportExcel(f); e.target.value = ''; }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) runImportPreview(f, true); e.target.value = ''; }}
             />
             <Dialog open={showAdd} onOpenChange={setShowAdd}>
               <DialogTrigger asChild>
@@ -341,105 +344,8 @@ export default function FichesTechniques() {
     exportToExcel(rows, 'fiches_techniques_completes', 'Fiches');
   };
 
-  const importAllFiches = async (file: File) => {
-    try {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-      const norm = (s: any) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const parseNum = (v: any) => {
-        const m = String(v ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/);
-        return m ? parseFloat(m[0]) : 0;
-      };
-      const collected: any[] = [];
 
-      const detectedSheets: string[] = [];
-      const skippedSheets: string[] = [];
 
-      for (const sn of wb.SheetNames) {
-        const grid: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
-        let headerIdx = -1, colProduit = -1, colNom = -1, colQte = -1, colUnite = -1, colCout = -1;
-        // 1) Détecte un bloc méta clé/valeur "PRODUIT" | "<nom>" placé au-dessus de l'en-tête
-        let metaProductName = '';
-        for (let i = 0; i < Math.min(grid.length, 50); i++) {
-          const row = grid[i] || [];
-          for (let j = 0; j < row.length; j++) {
-            const key = norm(row[j]);
-            if (key === 'produit' || key === 'recette' || key === 'nom du produit' || key === 'article') {
-              for (let k = j + 1; k < row.length; k++) {
-                const v = String(row[k] ?? '').trim();
-                if (v) { metaProductName = v; break; }
-              }
-              if (metaProductName) break;
-            }
-          }
-          if (metaProductName) break;
-        }
-        for (let i = 0; i < Math.min(grid.length, 50); i++) {
-          const row = (grid[i] || []).map(norm);
-          const ing = row.findIndex(c => c.includes('ingredient') || c.includes('matiere') || c === 'nom' || c.includes('designation'));
-          if (ing < 0) continue;
-          const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite') || c === 'q');
-          headerIdx = i;
-          colNom = ing;
-          colQte = qte >= 0 ? qte : ing + 1;
-          colUnite = row.findIndex(c => c.includes('unite') || c === 'u' || c === 'um');
-          colCout = row.findIndex(c => c.includes('cout') || c.includes('prix') || c.includes('pu'));
-          colProduit = row.findIndex(c => c.includes('produit') || c.includes('recette') || c.includes('article'));
-          break;
-        }
-        if (headerIdx < 0) { skippedSheets.push(sn); continue; }
-        const matchProduct = (name: string) =>
-          products.find(p => norm(p.nom) === norm(name)) ||
-          products.find(p => norm(name).includes(norm(p.nom)) || norm(p.nom).includes(norm(name)));
-        const productFromSheet = matchProduct(sn) || (metaProductName ? matchProduct(metaProductName) : undefined);
-        let sheetCount = 0;
-        for (let i = headerIdx + 1; i < grid.length; i++) {
-          const row = grid[i] || [];
-          const nom = String(row[colNom] ?? '').trim();
-          if (!nom) continue;
-          if (norm(nom).includes('ingredient') || norm(nom).includes('total')) continue;
-          const prodName = colProduit >= 0 ? String(row[colProduit] ?? '').trim() : '';
-          const prod = prodName
-            ? (products.find(p => norm(p.nom) === norm(prodName))
-              || products.find(p => norm(p.nom).includes(norm(prodName)) || norm(prodName).includes(norm(p.nom))))
-            : productFromSheet;
-          if (!prod) continue;
-          const mp = mps.find(m => norm(m.nom) === norm(nom))
-            || mps.find(m => norm(m.nom).includes(norm(nom)) || norm(nom).includes(norm(m.nom)));
-          collected.push({
-            produit_id: prod.id,
-            matiere_premiere_id: mp?.id || null,
-            matiere_premiere: nom,
-            quantite_mp: parseNum(row[colQte]),
-            unite_mp: String((colUnite >= 0 ? row[colUnite] : '') || mp?.unite || 'G').trim().toUpperCase(),
-            cout_unitaire_mp: colCout >= 0 ? parseNum(row[colCout]) : (mp?.prix_unitaire || 0),
-            created_by: user?.id,
-          });
-          sheetCount++;
-        }
-        if (sheetCount > 0) detectedSheets.push(`${sn} (${sheetCount})`);
-        else skippedSheets.push(sn);
-      }
-      if (collected.length === 0) {
-        toast.warning(
-          `Aucun ingrédient importé. Onglets ignorés : ${skippedSheets.join(', ') || '(aucun)'}. ` +
-          `Vérifiez : nom d'onglet = nom du produit, ou ajoutez une colonne PRODUIT. ` +
-          `En-têtes acceptés : INGREDIENT / QTE / UNITE.`,
-          { duration: 9000 }
-        );
-        return;
-      }
-      const { error } = await supabase.from('fiches_techniques').insert(collected);
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
-      qc.invalidateQueries({ queryKey: ['catalogue'] });
-      qc.invalidateQueries({ queryKey: ['produits'] });
-      toast.success(`${collected.length} ingrédient(s) importé(s) sur ${new Set(collected.map(c => c.produit_id)).size} produit(s)`);
-    } catch (e: any) {
-      console.error(e);
-      toast.error('Erreur import : ' + (e.message || 'Format invalide'));
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -455,7 +361,7 @@ export default function FichesTechniques() {
             <Upload className="h-4 w-4 mr-1" /> Importer Excel
           </Button>
           <input ref={listFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) importAllFiches(f); e.target.value = ''; }} />
+            onChange={e => { const f = e.target.files?.[0]; if (f) runImportPreview(f, false); e.target.value = ''; }} />
           <SearchFilter value={search} onChange={setSearch} className="w-56" />
         </div>
       </div>
@@ -484,6 +390,15 @@ export default function FichesTechniques() {
           </CardContent>
         </Card>
       ))}
+
+      <FicheImportPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        results={previewResults}
+        products={products as any}
+        onConfirm={confirmImport}
+        isLoading={importing}
+      />
     </div>
   );
 }
