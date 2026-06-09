@@ -190,74 +190,8 @@ export default function FichesTechniques() {
     exportToExcel(rows, `fiche_technique_${selectedProd.nom}`, 'Fiche');
   };
 
-  const handleImportExcel = async (file: File) => {
-    if (!selectedProduct) return;
-    try {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-      const norm = (s: any) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const parseNum = (v: any) => {
-        const m = String(v ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/);
-        return m ? parseFloat(m[0]) : 0;
-      };
 
-      const collected: any[] = [];
-      for (const sn of wb.SheetNames) {
-        const grid: any[][] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
-        // Try structured layout first: find header row with INGREDIENTS / QTE / UNITE
-        let headerIdx = -1, colNom = -1, colQte = -1, colUnite = -1, colCout = -1;
-        for (let i = 0; i < grid.length; i++) {
-          const row = grid[i].map(norm);
-          const ing = row.findIndex(c => c.includes('ingredient') || c.includes('matiere') || c === 'mp');
-          if (ing >= 0) {
-            const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite'));
-            if (qte >= 0) {
-              headerIdx = i; colNom = ing; colQte = qte;
-              colUnite = row.findIndex(c => c.includes('unite'));
-              colCout = row.findIndex(c => c.includes('cout') || c.includes('prix'));
-              break;
-            }
-          }
-        }
-        if (headerIdx >= 0) {
-          for (let i = headerIdx + 1; i < grid.length; i++) {
-            const row = grid[i];
-            const nom = String(row[colNom] ?? '').trim();
-            if (!nom) continue;
-            // stop if we hit another section header
-            if (norm(nom).includes('ingredient') || norm(nom).includes('produit')) break;
-            const mp = mps.find(m => norm(m.nom) === norm(nom));
-            const quantite = parseNum(row[colQte]);
-            const unite = String((colUnite >= 0 ? row[colUnite] : '') || mp?.unite || 'G').trim().toUpperCase();
-            const cout = colCout >= 0 ? parseNum(row[colCout]) : (mp?.prix_unitaire || 0);
-            collected.push({
-              produit_id: selectedProduct,
-              matiere_premiere_id: mp?.id || null,
-              matiere_premiere: nom,
-              quantite_mp: quantite,
-              unite_mp: unite,
-              cout_unitaire_mp: cout,
-              created_by: user?.id,
-            });
-          }
-        }
-      }
 
-      if (collected.length === 0) {
-        toast.warning("Aucun ingrédient trouvé. Vérifiez l'en-tête INGREDIENTS / QTE / UNITE.");
-        return;
-      }
-      const { error } = await supabase.from('fiches_techniques').insert(collected);
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
-      qc.invalidateQueries({ queryKey: ['catalogue'] });
-      qc.invalidateQueries({ queryKey: ['produits'] });
-      toast.success(`${collected.length} ingrédient(s) importé(s)`);
-    } catch (e: any) {
-      console.error(e);
-      toast.error('Erreur import : ' + (e.message || 'Format invalide'));
-    }
-  };
 
 
   if (selectedProduct && selectedProd) {
