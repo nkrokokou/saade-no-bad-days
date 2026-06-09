@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Settings, Users, Database, Plus, Trash2, Edit, Save, Download, Upload, Shield, AlertTriangle } from 'lucide-react';
+import { Settings, Users, Database, Plus, Trash2, Edit, Save, Download, Upload, Shield, AlertTriangle, KeyRound } from 'lucide-react';
+import { SecurityTwoFA } from '@/components/SecurityTwoFA';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
@@ -239,7 +240,12 @@ export default function Admin() {
           <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> Utilisateurs</TabsTrigger>
           <TabsTrigger value="permissions"><Shield className="h-3.5 w-3.5 mr-1" /> Permissions</TabsTrigger>
           <TabsTrigger value="backup"><Database className="h-3.5 w-3.5 mr-1" /> Sauvegarde</TabsTrigger>
+          <TabsTrigger value="security"><KeyRound className="h-3.5 w-3.5 mr-1" /> Sécurité (2FA)</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="security">
+          <SecurityTwoFA roleHint={profile?.role} />
+        </TabsContent>
 
         {/* ── PROFILE ── */}
         <TabsContent value="profile">
