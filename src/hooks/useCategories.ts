@@ -6,6 +6,8 @@ export interface Categorie {
   nom: string;
   ordre: number;
   actif: boolean;
+  parent_id?: string | null;
+  imprimante_cible?: 'chaud' | 'froid' | 'caisse' | 'aucune';
 }
 
 export function useCategories(activeOnly = true) {
