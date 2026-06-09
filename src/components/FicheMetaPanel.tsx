@@ -26,6 +26,18 @@ interface MetaData {
   conservation: string;
 }
 
+const fromRow = (d: any): MetaData => ({
+  id: d.id,
+  rendement: d.rendement,
+  rendement_unite: d.rendement_unite || 'pièces',
+  temps_preparation_min: d.temps_preparation_min,
+  temps_cuisson_min: d.temps_cuisson_min,
+  temperature_cuisson: d.temperature_cuisson,
+  allergenes: d.allergenes || [],
+  etapes: d.etapes || '',
+  conservation: d.conservation || '',
+});
+
 const EMPTY: MetaData = {
   rendement: null, rendement_unite: 'pièces',
   temps_preparation_min: null, temps_cuisson_min: null, temperature_cuisson: null,
@@ -43,7 +55,7 @@ export function FicheMetaPanel({ produitId, coutTotal }: { produitId: string; co
       setLoading(true);
       const { data } = await supabase.from('fiches_techniques_meta')
         .select('*').eq('produit_id', produitId).maybeSingle();
-      if (data) setMeta({ ...EMPTY, ...data, allergenes: data.allergenes || [] });
+      if (data) setMeta(fromRow(data));
       else setMeta(EMPTY);
       setLoading(false);
     })();
@@ -61,7 +73,7 @@ export function FicheMetaPanel({ produitId, coutTotal }: { produitId: string; co
     toast.success('Fiche enregistrée');
     const { data } = await supabase.from('fiches_techniques_meta')
       .select('*').eq('produit_id', produitId).maybeSingle();
-    if (data) setMeta({ ...EMPTY, ...data, allergenes: data.allergenes || [] });
+      if (data) setMeta(fromRow(data));
   };
 
   const toggleAllergene = (a: string) => {
