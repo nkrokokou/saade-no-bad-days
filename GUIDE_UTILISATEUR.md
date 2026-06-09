@@ -448,13 +448,28 @@ Menu **Administration → Sécurité (2FA)**.
 
 ---
 
+## 32. Fiches techniques enrichies *(nouveau)*
+
+Dans **Fiches techniques → [sélectionner un produit]**, un panneau « Fiche détaillée » apparaît sous les ingrédients :
+
+- **Rendement** : nombre de pièces / portions produites par la recette (calcule automatiquement le coût unitaire par pièce).
+- **Temps de préparation** et **temps de cuisson** (minutes).
+- **Température du four** (°C).
+- **Allergènes** : sélecteur visuel avec les 11 allergènes majeurs + ajout libre.
+- **Étapes de fabrication** : zone de texte multilignes (numérotation manuelle ou libre).
+- **Conservation** : DLC, mode (sous vide, frais, congélateur).
+
+Toutes ces données sont enregistrées par produit et accessibles aux labos / cuisine. Le **coût par pièce** est recalculé en direct dès que le rendement ou les ingrédients changent.
+
+---
+
 ## 🔜 À venir (prochaines itérations)
 
 | Chantier | Statut |
 |----------|--------|
-| Refonte fiches techniques (alignée Excel multi-feuilles) | en cours |
-| Seed catalogue produits Ô MY DOG (≈80 items) | à valider |
+| Seed catalogue produits Ô MY DOG (≈80 items) | nécessite l'export Excel des cartes |
 | Notifications push navigateur (au-delà de l'in-app) | planifié |
+
 
 
 
