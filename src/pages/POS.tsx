@@ -41,7 +41,11 @@ const POSTE_LABELS: Record<string, string> = {
   bar: 'BAR / BOISSONS',
   labo_patisserie: 'LABO PÂTISSERIE',
   labo_viennoiserie: 'LABO VIENNOISERIE',
+  chaud: 'CUISINE CHAUDE',
+  froid: 'CUISINE FROIDE',
+  caisse: 'CAISSE',
 };
+
 
 interface TableResto { id: string; numero: string; zone: string | null; places: number; }
 
