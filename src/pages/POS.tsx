@@ -16,7 +16,9 @@ import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, ShoppingCart, Pause
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit, useProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 import { queueVente, isOffline } from '@/lib/offlineQueue';
+
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
 
@@ -39,7 +41,11 @@ const POSTE_LABELS: Record<string, string> = {
   bar: 'BAR / BOISSONS',
   labo_patisserie: 'LABO PÂTISSERIE',
   labo_viennoiserie: 'LABO VIENNOISERIE',
+  chaud: 'CUISINE CHAUDE',
+  froid: 'CUISINE FROIDE',
+  caisse: 'CAISSE',
 };
+
 
 interface TableResto { id: string; numero: string; zone: string | null; places: number; }
 
@@ -68,6 +74,14 @@ export default function POS() {
 
   // Produits
   const { data: produits = [] } = useProducts();
+  const { data: catList = [] } = useCategories(false);
+  // Map nom catégorie → imprimante_cible
+  const catImprimante = useMemo(() => {
+    const m: Record<string, string> = {};
+    catList.forEach(c => { m[c.nom] = c.imprimante_cible || 'chaud'; });
+    return m;
+  }, [catList]);
+
 
   // Templates de tickets (cuisine / caisse) gérés par la CEO
   const { data: ticketTemplates = [] } = useQuery({
@@ -383,25 +397,23 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Imprime un ticket par poste de préparation (cuisine, labo…) — applique le template cuisine
+  // Imprime un ticket par imprimante cible (chaud / froid / caisse) — applique le template cuisine
   const printPrepTickets = (lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const groups: Record<string, CartLine[]> = {};
-    const excludeBoissons = tplCuisine?.exclude_boissons ?? true;
     lines.forEach(l => {
-      const cat = (l.produit.categorie || '').toUpperCase();
-      const isBoisson = /BOISSON|SOFT|EAU|JUS|COLA|BAR/.test(cat);
-      // Toute boisson va au bar ; tout le reste va en cuisine (par défaut)
-      // sauf si le produit a un poste explicitement défini (labo, etc.)
-      let poste = l.produit.poste_preparation || '';
-      if (!poste || poste === 'salle') poste = isBoisson ? 'bar' : 'cuisine';
-      if (excludeBoissons && (poste === 'bar' || isBoisson)) return;
-      (groups[poste] = groups[poste] || []).push(l);
+      // Priorité : produit.imprimante_cible (override) → catégorie.imprimante_cible → fallback 'chaud'
+      const override = (l.produit as any).imprimante_cible as string | undefined;
+      const fromCat = catImprimante[l.produit.categorie] || 'chaud';
+      const cible = override || fromCat;
+      if (cible === 'aucune') return; // pas d'impression cuisine
+      if (cible === 'caisse') return; // imprimé sur le ticket caisse uniquement
+      (groups[cible] = groups[cible] || []).push(l);
     });
     if (Object.keys(groups).length === 0) {
-      toast.info('Aucun article à préparer (uniquement des boissons ?)');
+      toast.info('Aucun article à préparer en cuisine');
       return;
     }
-    Object.entries(groups).forEach(([poste, grp]) => printPrepTicket(poste, grp, ctx));
+    Object.entries(groups).forEach(([cible, grp]) => printPrepTicket(cible, grp, ctx));
   };
 
   // Imprime un bon cuisine à la demande (depuis le panier en cours)
@@ -410,6 +422,7 @@ export default function POS() {
     const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
     printPrepTickets(cart, { tableNum, serveur, numero: currentTabId ? 'EN ATTENTE' : 'BROUILLON' });
   };
+
 
   // Impression via iframe cachée · évite le blocage des popups
   const printViaIframe = (html: string, label: string) => {
