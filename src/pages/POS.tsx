@@ -74,6 +74,14 @@ export default function POS() {
 
   // Produits
   const { data: produits = [] } = useProducts();
+  const { data: catList = [] } = useCategories(false);
+  // Map nom catégorie → imprimante_cible
+  const catImprimante = useMemo(() => {
+    const m: Record<string, string> = {};
+    catList.forEach(c => { m[c.nom] = c.imprimante_cible || 'chaud'; });
+    return m;
+  }, [catList]);
+
 
   // Templates de tickets (cuisine / caisse) gérés par la CEO
   const { data: ticketTemplates = [] } = useQuery({
