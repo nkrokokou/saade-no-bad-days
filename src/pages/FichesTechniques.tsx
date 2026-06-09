@@ -101,6 +101,7 @@ export default function FichesTechniques() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const listFileRef = useRef<HTMLInputElement>(null);
 
   const selectedProd = products.find(p => p.id === selectedProduct);
   const coutTotal = fiches.reduce((s: number, f: any) => s + (f.quantite_mp * f.cout_unitaire_mp), 0);
@@ -323,8 +324,6 @@ export default function FichesTechniques() {
   }
 
   // ── Export / Import multi-produits depuis la liste ──
-  const listFileRef = useRef<HTMLInputElement>(null);
-
   const exportAllFiches = async () => {
     const { data: all } = await supabase.from('fiches_techniques').select('*');
     const rows = (all || []).map((f: any) => {
