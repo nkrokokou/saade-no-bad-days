@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 import { Plus, Trash2, BookOpen, Calculator, Upload, FileDown } from 'lucide-react';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
+import { FicheMetaPanel } from '@/components/FicheMetaPanel';
 import * as XLSX from 'xlsx';
 
 type MP = { id: string; nom: string; unite: string; prix_unitaire: number };
@@ -269,6 +270,9 @@ export default function FichesTechniques() {
             </CardContent>
           </Card>
         </div>
+
+        <FicheMetaPanel produitId={selectedProduct!} coutTotal={coutTotal} />
+
 
         <Card>
           <CardContent className="overflow-x-auto pt-4">

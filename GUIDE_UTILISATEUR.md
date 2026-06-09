@@ -1,6 +1,6 @@
 # Guide Utilisateur — SAADÉ
 
-Dernière mise à jour : **juin 2026** (v6 — Passage de quart, 2FA TOTP, notifications in-app, caisses temps réel, QZ Tray, palettes, sous-catégories, imprimantes ciblées, crédit sans décrémentation, clôture automatique 23h59).
+Dernière mise à jour : **juin 2026** (v7 — Fiches techniques enrichies, passage de quart, 2FA TOTP, notifications in-app, caisses temps réel, QZ Tray, palettes, sous-catégories, imprimantes ciblées, crédit sans décrémentation, clôture automatique 23h59).
 
 
 Cette application gère le **laboratoire pâtisserie / viennoiserie**, la **cuisine salée**, la **salle / caisse**, l'**économat** et les **rapports CEO** de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
@@ -448,13 +448,28 @@ Menu **Administration → Sécurité (2FA)**.
 
 ---
 
+## 32. Fiches techniques enrichies *(nouveau)*
+
+Dans **Fiches techniques → [sélectionner un produit]**, un panneau « Fiche détaillée » apparaît sous les ingrédients :
+
+- **Rendement** : nombre de pièces / portions produites par la recette (calcule automatiquement le coût unitaire par pièce).
+- **Temps de préparation** et **temps de cuisson** (minutes).
+- **Température du four** (°C).
+- **Allergènes** : sélecteur visuel avec les 11 allergènes majeurs + ajout libre.
+- **Étapes de fabrication** : zone de texte multilignes (numérotation manuelle ou libre).
+- **Conservation** : DLC, mode (sous vide, frais, congélateur).
+
+Toutes ces données sont enregistrées par produit et accessibles aux labos / cuisine. Le **coût par pièce** est recalculé en direct dès que le rendement ou les ingrédients changent.
+
+---
+
 ## 🔜 À venir (prochaines itérations)
 
 | Chantier | Statut |
 |----------|--------|
-| Refonte fiches techniques (alignée Excel multi-feuilles) | en cours |
-| Seed catalogue produits Ô MY DOG (≈80 items) | à valider |
+| Seed catalogue produits Ô MY DOG (≈80 items) | nécessite l'export Excel des cartes |
 | Notifications push navigateur (au-delà de l'in-app) | planifié |
+
 
 
 

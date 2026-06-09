@@ -627,6 +627,65 @@ export type Database = {
           },
         ]
       }
+      fiches_techniques_meta: {
+        Row: {
+          allergenes: string[] | null
+          conservation: string | null
+          created_at: string
+          created_by: string | null
+          etapes: string | null
+          id: string
+          photo_url: string | null
+          produit_id: string
+          rendement: number | null
+          rendement_unite: string | null
+          temperature_cuisson: number | null
+          temps_cuisson_min: number | null
+          temps_preparation_min: number | null
+          updated_at: string
+        }
+        Insert: {
+          allergenes?: string[] | null
+          conservation?: string | null
+          created_at?: string
+          created_by?: string | null
+          etapes?: string | null
+          id?: string
+          photo_url?: string | null
+          produit_id: string
+          rendement?: number | null
+          rendement_unite?: string | null
+          temperature_cuisson?: number | null
+          temps_cuisson_min?: number | null
+          temps_preparation_min?: number | null
+          updated_at?: string
+        }
+        Update: {
+          allergenes?: string[] | null
+          conservation?: string | null
+          created_at?: string
+          created_by?: string | null
+          etapes?: string | null
+          id?: string
+          photo_url?: string | null
+          produit_id?: string
+          rendement?: number | null
+          rendement_unite?: string | null
+          temperature_cuisson?: number | null
+          temps_cuisson_min?: number | null
+          temps_preparation_min?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiches_techniques_meta_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: true
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventaire: {
         Row: {
           created_at: string
