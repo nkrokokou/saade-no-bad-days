@@ -1,6 +1,6 @@
 # Guide Utilisateur — SAADÉ
 
-Dernière mise à jour : **juin 2026** (v5 — Notifications in-app, Caisses temps réel, intégration QZ Tray, palettes, sous-catégories, imprimantes ciblées, crédit sans décrémentation, clôture automatique 23h59).
+Dernière mise à jour : **juin 2026** (v6 — Passage de quart, 2FA TOTP, notifications in-app, caisses temps réel, QZ Tray, palettes, sous-catégories, imprimantes ciblées, crédit sans décrémentation, clôture automatique 23h59).
 
 
 Cette application gère le **laboratoire pâtisserie / viennoiserie**, la **cuisine salée**, la **salle / caisse**, l'**économat** et les **rapports CEO** de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
@@ -422,15 +422,40 @@ Pour éviter le dialogue d'impression Chrome à chaque ticket :
 
 ---
 
+## 30. Passage de quart *(nouveau)*
+
+Dans la page **Caisse / POS**, à côté de « Fermer caisse », un bouton **Passer le quart** permet à un caissier de céder son poste à un collègue sans interruption :
+
+1. Cliquer sur **Passer le quart**.
+2. Saisir le montant **espèces compté en caisse** (l'écart théorique vs réel est calculé et enregistré).
+3. Saisir un **motif** optionnel (« Relève 14h », « Pause déjeuner »).
+4. Confirmer.
+
+→ La session courante est clôturée et une **nouvelle session** s'ouvre automatiquement avec le montant compté comme **fond initial**. Le caissier suivant n'a qu'à se connecter et encaisser. Les deux sessions sont liées (champ `session_parent_id`) pour la traçabilité.
+
+---
+
+## 31. Sécurité — Authentification à deux facteurs (2FA) *(nouveau)*
+
+Menu **Administration → Sécurité (2FA)**.
+
+1. Cliquer sur **Activer le 2FA (TOTP)**.
+2. Scanner le **QR code** avec Google Authenticator, Authy ou 1Password (ou saisir le code manuellement).
+3. Entrer le code à 6 chiffres pour valider.
+4. À la prochaine connexion, un code 2FA sera demandé en plus du mot de passe.
+
+> Les rôles **CEO** et **Économat** voient un encart d'alerte rouge tant que le 2FA n'est pas activé : leurs données financières et stocks doivent impérativement être protégées.
+
+---
+
 ## 🔜 À venir (prochaines itérations)
 
 | Chantier | Statut |
 |----------|--------|
 | Refonte fiches techniques (alignée Excel multi-feuilles) | en cours |
 | Seed catalogue produits Ô MY DOG (≈80 items) | à valider |
-| 2FA TOTP CEO + Économat | planifié (Supabase MFA — UI d'enrôlement à finaliser) |
-| Mode « passage de quart » caissier (UI dédiée) | DB prête, UI à finaliser |
 | Notifications push navigateur (au-delà de l'in-app) | planifié |
+
 
 
 
