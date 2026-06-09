@@ -183,6 +183,9 @@ export default function FichesTechniques() {
             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 mr-1" /> Importer
             </Button>
+            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Supprimer fiche
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -192,6 +195,7 @@ export default function FichesTechniques() {
             />
           </div>
         </div>
+
 
         <div className="grid gap-3 grid-cols-3 print:hidden">
           <Card><CardContent className="pt-4">
