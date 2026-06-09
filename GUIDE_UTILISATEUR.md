@@ -1,6 +1,7 @@
 # Guide Utilisateur — SAADÉ
 
-Dernière mise à jour : **juin 2026** (v3 — Économat, Assistante IA CEO, tests Playwright, corrections caisse).
+Dernière mise à jour : **juin 2026** (v4 — Palettes de couleurs, sous-catégories, imprimantes ciblées, crédit sans décrémentation, clôture automatique 23h59).
+
 
 Cette application gère le **laboratoire pâtisserie / viennoiserie**, la **cuisine salée**, la **salle / caisse**, l'**économat** et les **rapports CEO** de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
 
