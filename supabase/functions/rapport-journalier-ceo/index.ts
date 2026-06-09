@@ -261,7 +261,81 @@ function renderHTML(r: any): string {
 </body></html>`;
 }
 
-async function sendEmail(subject: string, html: string): Promise<{ ok: boolean; error?: string }> {
+function toCsv(rows: any[], headers: string[]): string {
+  const esc = (v: any) => {
+    const s = v == null ? '' : String(v);
+    return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const head = headers.join(';');
+  const body = rows.map(r => headers.map(h => esc(r[h])).join(';')).join('\n');
+  return '\ufeff' + head + '\n' + body; // BOM pour Excel
+}
+
+function b64(str: string): string {
+  // UTF-8 -> base64 (Deno)
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+async function buildAttachments(supabase: any, date: string): Promise<any[]> {
+  const dayStart = `${date}T00:00:00.000Z`;
+  const dayEnd = `${date}T23:59:59.999Z`;
+  const atts: any[] = [];
+
+  // 1. Ventes du jour
+  const { data: ventes } = await supabase
+    .from('ventes')
+    .select('numero_ticket, date_vente, total, mode_paiement, statut, client_nom')
+    .gte('date_vente', dayStart).lte('date_vente', dayEnd);
+  if (ventes?.length) {
+    atts.push({
+      filename: `ventes-${date}.csv`,
+      content: b64(toCsv(ventes, ['numero_ticket', 'date_vente', 'total', 'mode_paiement', 'statut', 'client_nom'])),
+    });
+  }
+
+  // 2. Stock économat (état courant)
+  const { data: articles } = await supabase
+    .from('economat_articles')
+    .select('categorie, nom, unite, stock_initial, stock_min, prix_unitaire')
+    .eq('actif', true)
+    .order('categorie').order('nom');
+  if (articles?.length) {
+    // Calcul stock courant via mouvements
+    const { data: mvts } = await supabase
+      .from('economat_mouvements')
+      .select('article_id, type, quantite');
+    const stockBy: Record<string, number> = {};
+    (mvts || []).forEach((m: any) => {
+      const sign = m.type === 'entree' ? 1 : -1;
+      stockBy[m.article_id] = (stockBy[m.article_id] || 0) + sign * Number(m.quantite || 0);
+    });
+    const rows = articles.map((a: any) => ({
+      ...a,
+      stock_courant: Number(a.stock_initial || 0) + (stockBy[a.id] || 0),
+      alerte: (Number(a.stock_initial || 0) + (stockBy[a.id] || 0)) <= Number(a.stock_min || 0) ? 'OUI' : '',
+    }));
+    atts.push({
+      filename: `economat-stock-${date}.csv`,
+      content: b64(toCsv(rows, ['categorie', 'nom', 'unite', 'stock_courant', 'stock_min', 'prix_unitaire', 'alerte'])),
+    });
+  }
+
+  // 3. Achats MP du jour
+  const { data: achats } = await supabase
+    .from('achats_mp')
+    .select('date_achat, fournisseur, produit, quantite, unite, prix_unitaire, prix_total')
+    .eq('date_achat', date);
+  if (achats?.length) {
+    atts.push({
+      filename: `achats-mp-${date}.csv`,
+      content: b64(toCsv(achats, ['date_achat', 'fournisseur', 'produit', 'quantite', 'unite', 'prix_unitaire', 'prix_total'])),
+    });
+  }
+
+  return atts;
+}
+
+async function sendEmail(subject: string, html: string, attachments: any[] = []): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -274,6 +348,7 @@ async function sendEmail(subject: string, html: string): Promise<{ ok: boolean; 
         to: [CEO_EMAIL],
         subject,
         html,
+        attachments,
       }),
     });
     const data = await res.json();
@@ -285,6 +360,7 @@ async function sendEmail(subject: string, html: string): Promise<{ ok: boolean; 
     return { ok: false, error: e?.message || String(e) };
   }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -345,7 +421,9 @@ Deno.serve(async (req) => {
     const html = renderHTML(report);
     const subject = `SAADÉ — Rapport du ${report.dayLabel} • CA ${fmtXOF(report.ca)}`;
 
-    const sendRes = await sendEmail(subject, html);
+    const attachments = await buildAttachments(supabase, date);
+    const sendRes = await sendEmail(subject, html, attachments);
+
 
     const payload = {
       report,

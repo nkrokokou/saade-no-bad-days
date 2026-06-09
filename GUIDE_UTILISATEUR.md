@@ -343,18 +343,57 @@ Si une session de caisse reste **ouverte** à la fin de la journée :
 
 ---
 
+## 24. Impression cuisine chaude / froide ciblée *(v4)*
+
+À l'encaissement, le bon cuisine est désormais **automatiquement réparti** selon `imprimante_cible` de la catégorie du produit :
+
+- Produits catégorisés **🔥 chaud** → bon « CUISINE CHAUDE »
+- Produits catégorisés **❄️ froid** → bon « CUISINE FROIDE »
+- Produits catégorisés **🧾 caisse** → uniquement sur le ticket caisse, pas de bon cuisine
+- Produits catégorisés **— aucune** → ignorés
+
+Si le panier mélange chaud + froid, **deux bons distincts** sont imprimés en séquence (chaque imprimante reçoit ses items).
+
+Un produit peut surcharger sa catégorie via `produits.imprimante_cible` (rare, pour exceptions).
+
+---
+
+## 25. Synchro Achats MP ↔ Économat *(v4)*
+
+Quand un achat est enregistré dans **Achats MP**, un trigger SQL vérifie automatiquement si un article économat porte le même nom (insensible à la casse) :
+
+- ✅ Match trouvé → une **entrée de stock économat** est créée automatiquement avec le motif *« Achat MP auto »*.
+- ❌ Pas de match → rien ne se passe (évite la duplication forcée).
+
+Aucune double saisie. Si tu veux qu'un MP alimente automatiquement l'économat, il suffit de créer l'article économat avec le même nom une fois.
+
+---
+
+## 26. Rapport CEO quotidien avec pièces jointes *(v4)*
+
+Le mail automatique de 23h00 inclut désormais **3 CSV en pièces jointes** (lisibles directement dans Excel) :
+
+| Fichier | Contenu |
+|---------|---------|
+| `ventes-YYYY-MM-DD.csv` | toutes les ventes du jour (n° ticket, total, mode, client) |
+| `economat-stock-YYYY-MM-DD.csv` | état complet du stock économat + alertes |
+| `achats-mp-YYYY-MM-DD.csv` | tous les achats MP du jour |
+
+Les fichiers utilisent un BOM UTF-8 → Excel les ouvre proprement avec les accents.
+
+---
+
 ## 🔜 À venir (prochaines itérations)
 
 | Chantier | Statut |
 |----------|--------|
 | Refonte fiches techniques (alignée Excel multi-feuilles) | en cours |
 | Seed catalogue produits Ô MY DOG (≈80 items) | à valider |
-| Synchro Achats MP ↔ Économat automatique | planifié |
 | QZ Tray : impression directe sans dialogue Chrome | planifié |
 | 2FA obligatoire CEO + Économat | planifié |
-| Backup Excel quotidien par email | planifié |
-| Suppression granulaire avec export auto | planifié |
-| Tableau caisses temps réel + journal écarts | planifié |
+| Suppression granulaire avec export auto | planifié (existant : sauvegarde JSON complète dans Admin) |
+| Tableau caisses temps réel + journal écarts | planifié (existant : récap dans rapport CEO) |
 | Mode « passage de quart » caissier | planifié |
 | Notifications push (stock critique, écart caisse, crédits) | planifié |
+
 
