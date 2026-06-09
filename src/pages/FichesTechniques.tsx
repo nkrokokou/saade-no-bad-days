@@ -21,9 +21,6 @@ export default function FichesTechniques() {
   const { data: products = [] } = useProducts();
   const [search, setSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState<{ matiere_premiere_id: string; matiere_premiere: string; quantite_mp: number; unite_mp: string; cout_unitaire_mp: number }>({ matiere_premiere_id: '', matiere_premiere: '', quantite_mp: 0, unite_mp: 'G', cout_unitaire_mp: 0 });
 
   const { data: mps = [] } = useQuery({
     queryKey: ['matieres_premieres', 'select'],
@@ -57,43 +54,6 @@ export default function FichesTechniques() {
     acc[cat].push(p);
     return acc;
   }, {} as Record<string, typeof products>);
-
-  const addFiche = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from('fiches_techniques').insert({
-        produit_id: selectedProduct!,
-        matiere_premiere_id: form.matiere_premiere_id || null,
-        matiere_premiere: form.matiere_premiere,
-        quantite_mp: form.quantite_mp,
-        unite_mp: form.unite_mp,
-        cout_unitaire_mp: form.cout_unitaire_mp,
-        created_by: user?.id,
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
-      qc.invalidateQueries({ queryKey: ['catalogue'] });
-      qc.invalidateQueries({ queryKey: ['produits'] });
-      setShowAdd(false);
-      setForm({ matiere_premiere_id: '', matiere_premiere: '', quantite_mp: 0, unite_mp: 'G', cout_unitaire_mp: 0 });
-      toast.success('Ingrédient ajouté');
-    },
-  });
-
-  const deleteFiche = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('fiches_techniques').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
-      qc.invalidateQueries({ queryKey: ['catalogue'] });
-      qc.invalidateQueries({ queryKey: ['produits'] });
-      setDeleteId(null);
-      toast.success('Ingrédient supprimé');
-    },
-  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const listFileRef = useRef<HTMLInputElement>(null);
