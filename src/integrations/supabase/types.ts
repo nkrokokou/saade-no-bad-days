@@ -782,6 +782,45 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          lien: string | null
+          lue: boolean
+          message: string
+          role_cible: Database["public"]["Enums"]["app_role"] | null
+          severite: string
+          titre: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lien?: string | null
+          lue?: boolean
+          message: string
+          role_cible?: Database["public"]["Enums"]["app_role"] | null
+          severite?: string
+          titre: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lien?: string | null
+          lue?: boolean
+          message?: string
+          role_cible?: Database["public"]["Enums"]["app_role"] | null
+          severite?: string
+          titre?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       paiements_credits: {
         Row: {
           created_at: string
@@ -1022,9 +1061,11 @@ export type Database = {
           fond_final_compte: number | null
           fond_initial: number
           id: string
+          motif_fermeture: string | null
           notes: string | null
           ouvert_at: string
           ouvert_par: string | null
+          session_parent_id: string | null
           statut: string
         }
         Insert: {
@@ -1035,9 +1076,11 @@ export type Database = {
           fond_final_compte?: number | null
           fond_initial?: number
           id?: string
+          motif_fermeture?: string | null
           notes?: string | null
           ouvert_at?: string
           ouvert_par?: string | null
+          session_parent_id?: string | null
           statut?: string
         }
         Update: {
@@ -1048,12 +1091,22 @@ export type Database = {
           fond_final_compte?: number | null
           fond_initial?: number
           id?: string
+          motif_fermeture?: string | null
           notes?: string | null
           ouvert_at?: string
           ouvert_par?: string | null
+          session_parent_id?: string | null
           statut?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sessions_caisse_session_parent_id_fkey"
+            columns: ["session_parent_id"]
+            isOneToOne: false
+            referencedRelation: "sessions_caisse"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_tampon: {
         Row: {
@@ -1415,6 +1468,7 @@ export type Database = {
         Args: { _action: string; _module: string; _user_id: string }
         Returns: boolean
       }
+      generer_alertes_systeme: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
