@@ -383,17 +383,54 @@ Les fichiers utilisent un BOM UTF-8 → Excel les ouvre proprement avec les acce
 
 ---
 
+## 27. Notifications in-app *(nouveau)*
+
+Une **cloche 🔔** apparaît en haut à droite de chaque page. Elle affiche un badge rouge avec le nombre d'alertes non lues.
+
+Trois types d'alertes sont générés automatiquement toutes les **30 minutes** :
+
+| Type | Destinataire | Seuil |
+|------|--------------|-------|
+| **Stock critique** | CEO + Économat | Stock économat ≤ seuil minimum |
+| **Écart de caisse** | CEO | Écart > 2 000 F CFA à la clôture |
+| **Crédit ancien** | CEO | Crédit non soldé depuis > 30 jours |
+
+Cliquez sur une notification pour la marquer comme lue, ou utilisez « Tout lire ».
+
+---
+
+## 28. Caisses (temps réel) *(nouveau — CEO)*
+
+Menu **Caisses (live)** côté CEO. Page rafraîchie automatiquement toutes les 30 secondes :
+
+- **Sessions ouvertes** : nom du caissier, heure d'ouverture, fond initial, nombre de ventes, CA en direct.
+- **Journal des écarts du jour** : attendu / compté / écart. Les écarts > 2 000 F CFA sont surlignés en rouge.
+- **Statut auto 23h59** : les sessions oubliées et fermées automatiquement sont marquées d'un badge rouge « Auto 23h59 ».
+
+---
+
+## 29. QZ Tray (impression directe) *(nouveau)*
+
+Pour éviter le dialogue d'impression Chrome à chaque ticket :
+
+1. Télécharger **QZ Tray 2.2+** depuis [qz.io/download](https://qz.io/download) (gratuit, multi-OS).
+2. Installer et laisser tourner en arrière-plan (icône dans la barre système).
+3. L'application détecte automatiquement le service. Si présent, les bons de préparation et tickets sont envoyés directement à l'imprimante définie dans la catégorie (`chaud` / `froid` / `caisse`).
+4. Si QZ Tray est absent ou hors ligne → **fallback automatique** vers le dialogue Chrome (aucune interruption).
+
+> En production, configurer un certificat signé QZ pour éviter le warning de sécurité. En interne (réseau privé), le mode anonyme suffit.
+
+---
+
 ## 🔜 À venir (prochaines itérations)
 
 | Chantier | Statut |
 |----------|--------|
 | Refonte fiches techniques (alignée Excel multi-feuilles) | en cours |
 | Seed catalogue produits Ô MY DOG (≈80 items) | à valider |
-| QZ Tray : impression directe sans dialogue Chrome | planifié |
-| 2FA obligatoire CEO + Économat | planifié |
-| Suppression granulaire avec export auto | planifié (existant : sauvegarde JSON complète dans Admin) |
-| Tableau caisses temps réel + journal écarts | planifié (existant : récap dans rapport CEO) |
-| Mode « passage de quart » caissier | planifié |
-| Notifications push (stock critique, écart caisse, crédits) | planifié |
+| 2FA TOTP CEO + Économat | planifié (Supabase MFA — UI d'enrôlement à finaliser) |
+| Mode « passage de quart » caissier (UI dédiée) | DB prête, UI à finaliser |
+| Notifications push navigateur (au-delà de l'in-app) | planifié |
+
 
 
