@@ -628,6 +628,7 @@ export default function POS() {
               </Button>
             )}
             {!session && <Button size="sm" onClick={() => setOpenSessionDialog(true)}><Unlock className="h-4 w-4 mr-1" />Ouvrir caisse</Button>}
+            {session && <Button size="sm" variant="secondary" onClick={() => setQuartDialog(true)}><Unlock className="h-4 w-4 mr-1" />Passer le quart</Button>}
             {session && <Button size="sm" variant="outline" onClick={() => setCloseSessionDialog(true)}><Lock className="h-4 w-4 mr-1" />Fermer caisse</Button>}
           </div>
         </CardContent>
