@@ -833,6 +833,23 @@ export default function POS() {
           <DialogFooter><Button onClick={() => closeSessionMut.mutate()} variant="destructive">Fermer la caisse</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog passage de quart */}
+      <Dialog open={quartDialog} onOpenChange={setQuartDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Passage de quart</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            La session courante sera clôturée et une nouvelle session sera ouverte automatiquement
+            avec le montant compté comme fond initial. Le caissier suivant pourra encaisser immédiatement.
+          </p>
+          <div><Label>Espèces comptées (F)</Label><Input type="number" value={fondCompte} onChange={e => setFondCompte(Number(e.target.value) || 0)} /></div>
+          <div><Label>Motif / note (optionnel)</Label><Input value={quartMotif} onChange={e => setQuartMotif(e.target.value)} placeholder="Ex : Relève 14h" /></div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setQuartDialog(false)}>Annuler</Button>
+            <Button onClick={() => passageQuartMut.mutate()}>Confirmer le passage</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
