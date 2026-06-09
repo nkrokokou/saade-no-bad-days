@@ -200,9 +200,9 @@ export default function FichesTechniques() {
         <FicheImportPreviewDialog
           open={previewOpen}
           onOpenChange={setPreviewOpen}
-          parsed={previewResults}
+          results={previewResults}
           products={products as any}
-          importing={importing}
+          isLoading={importing}
           onConfirm={confirmImport}
         />
       </div>
