@@ -63,6 +63,8 @@ export default function POS() {
   const [notes, setNotes] = useState('');
   const [openSessionDialog, setOpenSessionDialog] = useState(false);
   const [closeSessionDialog, setCloseSessionDialog] = useState(false);
+  const [quartDialog, setQuartDialog] = useState(false);
+  const [quartMotif, setQuartMotif] = useState('');
   const [fondInitial, setFondInitial] = useState(0);
   const [fondCompte, setFondCompte] = useState(0);
   const [lastTicket, setLastTicket] = useState<any>(null);
@@ -220,6 +222,35 @@ export default function POS() {
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Caisse fermée'); refetchSession(); setCloseSessionDialog(false); setFondCompte(0); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Passage de quart : ferme la session courante et en ouvre une nouvelle (même fond compté)
+  const passageQuartMut = useMutation({
+    mutationFn: async () => {
+      if (!session) throw new Error('Aucune session');
+      const { data: ventesData } = await supabase.from('ventes').select('total, mode_paiement').eq('session_id', session.id).eq('statut', 'validee');
+      const totalEspeces = (ventesData || []).filter(v => v.mode_paiement === 'especes').reduce((s, v) => s + Number(v.total), 0);
+      const fondAttendu = Number(session.fond_initial) + totalEspeces;
+      const ecart = fondCompte - fondAttendu;
+      const { error: e1 } = await supabase.from('sessions_caisse').update({
+        statut: 'fermee', ferme_par: user?.id, ferme_at: new Date().toISOString(),
+        fond_final_attendu: fondAttendu, fond_final_compte: fondCompte, ecart,
+        motif_fermeture: quartMotif || 'Passage de quart',
+      }).eq('id', session.id);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from('sessions_caisse').insert({
+        ouvert_par: user?.id, fond_initial: fondCompte, statut: 'ouverte',
+        session_parent_id: session.id,
+        notes: `Reprise après ${session.id.slice(0, 8)} — ${quartMotif || 'passage de quart'}`,
+      });
+      if (e2) throw e2;
+    },
+    onSuccess: () => {
+      toast.success('Passage de quart effectué — nouvelle session ouverte');
+      refetchSession();
+      setQuartDialog(false); setFondCompte(0); setQuartMotif('');
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
