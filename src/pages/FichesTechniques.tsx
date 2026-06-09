@@ -82,6 +82,27 @@ export default function FichesTechniques() {
     }
   };
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteFiche = async () => {
+    if (!selectedProduct) return;
+    try {
+      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        supabase.from('fiches_techniques').delete().eq('produit_id', selectedProduct),
+        supabase.from('fiches_techniques_meta').delete().eq('produit_id', selectedProduct),
+      ]);
+      if (e1) throw e1;
+      if (e2) throw e2;
+      toast.success('Fiche technique supprimée');
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
+      setConfirmDelete(false);
+      setSelectedProduct(null);
+    } catch (e: any) {
+      toast.error('Erreur : ' + (e.message || ''));
+    }
+  };
+
+
   const confirmImport = async (selected: Array<ParsedFiche & { productId: string }>) => {
     setImporting(true);
     try {
