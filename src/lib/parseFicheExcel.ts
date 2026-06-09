@@ -95,7 +95,23 @@ const extractMeta = (grid: any[][]): ParsedFiche['meta'] => {
         return '';
       };
       if (!k) continue;
-      if (k.startsWith('rendement') || k === 'quantite produite' || k === 'production') {
+      if (k === 'moule') {
+        const v = String(next()).trim(); if (v) meta.moule = v;
+      } else if (k.startsWith('taille longueur') || k === 'longueur') {
+        const v = String(next()).trim(); if (v) meta.taille_longueur = v;
+      } else if (k.startsWith('taille hauteur') || k === 'hauteur') {
+        const v = String(next()).trim(); if (v) meta.taille_hauteur = v;
+      } else if (k === 'diametre' || k.startsWith('diametre')) {
+        const vals: string[] = [];
+        for (let c = j + 1; c < row.length; c++) {
+          const v = String(row[c] ?? '').trim();
+          if (v) vals.push(v);
+        }
+        if (vals[0]) meta.diametre = vals[0];
+        if (vals[1]) meta.diametre_secondaire = vals[1];
+      } else if (k.includes('qte') && k.includes('recette')) {
+        const n = parseNum(next()); if (n > 0) { meta.qte_recette = n; meta.rendement = n; meta.rendement_unite = 'pièces'; }
+      } else if (k.startsWith('rendement') || k === 'quantite produite' || k === 'production') {
         const v = next();
         const n = parseNum(v);
         if (n > 0) {
@@ -107,7 +123,7 @@ const extractMeta = (grid: any[][]): ParsedFiche['meta'] => {
         const n = parseNum(next()); if (n > 0) meta.temps_cuisson_min = Math.round(n);
       } else if (k.includes('temps') && (k.includes('prep') || k.includes('repos'))) {
         const n = parseNum(next()); if (n > 0) meta.temps_preparation_min = Math.round(n);
-      } else if (k.startsWith('temperature') || k === 'temp' || k === 't°' || k.includes('temp cuisson')) {
+      } else if (k.startsWith('t°') || k.startsWith('temperature') || k === 'temp' || k.includes('temp cuisson')) {
         const n = parseNum(next()); if (n > 0) meta.temperature_cuisson = Math.round(n);
       } else if (k.startsWith('dlc') || k.startsWith('conservation') || k.includes('duree de vie')) {
         const v = String(next()).trim(); if (v) meta.conservation = v;
