@@ -361,7 +361,7 @@ export default function FichesTechniques() {
             <Upload className="h-4 w-4 mr-1" /> Importer Excel
           </Button>
           <input ref={listFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) importAllFiches(f); e.target.value = ''; }} />
+            onChange={e => { const f = e.target.files?.[0]; if (f) runImportPreview(f, false); e.target.value = ''; }} />
           <SearchFilter value={search} onChange={setSearch} className="w-56" />
         </div>
       </div>
@@ -390,6 +390,15 @@ export default function FichesTechniques() {
           </CardContent>
         </Card>
       ))}
+
+      <FicheImportPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        results={previewResults}
+        products={products as any}
+        onConfirm={confirmImport}
+        isLoading={importing}
+      />
     </div>
   );
 }
