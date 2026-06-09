@@ -212,6 +212,8 @@ export default function POS() {
   // Construit payload vente + lignes
   const buildVentePayload = (statut: 'validee' | 'en_cours') => {
     const tId = tableId === 'comptoir' ? null : tableId;
+    // Crédit : la vente reste en credit_pending — pas de décrémentation stock tant que pas soldé
+    const finalStatut: string = statut === 'validee' && paymentMode === 'credit' ? 'credit_pending' : statut;
     return {
       vente: {
         session_id: session!.id,
@@ -223,13 +225,14 @@ export default function POS() {
         encaisse_par: statut === 'validee' ? user?.id : null,
         client_nom: clientNom || null,
         notes: notes || null,
-        statut,
+        statut: finalStatut,
         table_id: tId,
         serveur_id: null as any,
       } as any,
       serveurNom: serveur,
     };
   };
+
 
   // Mettre en attente (tab)
   const holdTab = useMutation({
