@@ -577,8 +577,10 @@ export type Database = {
           id: string
           matiere_premiere: string | null
           matiere_premiere_id: string | null
+          ordre: number | null
           produit_id: string
           quantite_mp: number
+          section: string | null
           unite_mp: string
         }
         Insert: {
@@ -588,8 +590,10 @@ export type Database = {
           id?: string
           matiere_premiere?: string | null
           matiere_premiere_id?: string | null
+          ordre?: number | null
           produit_id: string
           quantite_mp?: number
+          section?: string | null
           unite_mp?: string
         }
         Update: {
@@ -599,8 +603,10 @@ export type Database = {
           id?: string
           matiere_premiere?: string | null
           matiere_premiere_id?: string | null
+          ordre?: number | null
           produit_id?: string
           quantite_mp?: number
+          section?: string | null
           unite_mp?: string
         }
         Relationships: [
@@ -633,12 +639,18 @@ export type Database = {
           conservation: string | null
           created_at: string
           created_by: string | null
+          diametre: string | null
+          diametre_secondaire: string | null
           etapes: string | null
           id: string
+          moule: string | null
           photo_url: string | null
           produit_id: string
+          qte_recette: number | null
           rendement: number | null
           rendement_unite: string | null
+          taille_hauteur: string | null
+          taille_longueur: string | null
           temperature_cuisson: number | null
           temps_cuisson_min: number | null
           temps_preparation_min: number | null
@@ -649,12 +661,18 @@ export type Database = {
           conservation?: string | null
           created_at?: string
           created_by?: string | null
+          diametre?: string | null
+          diametre_secondaire?: string | null
           etapes?: string | null
           id?: string
+          moule?: string | null
           photo_url?: string | null
           produit_id: string
+          qte_recette?: number | null
           rendement?: number | null
           rendement_unite?: string | null
+          taille_hauteur?: string | null
+          taille_longueur?: string | null
           temperature_cuisson?: number | null
           temps_cuisson_min?: number | null
           temps_preparation_min?: number | null
@@ -665,12 +683,18 @@ export type Database = {
           conservation?: string | null
           created_at?: string
           created_by?: string | null
+          diametre?: string | null
+          diametre_secondaire?: string | null
           etapes?: string | null
           id?: string
+          moule?: string | null
           photo_url?: string | null
           produit_id?: string
+          qte_recette?: number | null
           rendement?: number | null
           rendement_unite?: string | null
+          taille_hauteur?: string | null
+          taille_longueur?: string | null
           temperature_cuisson?: number | null
           temps_cuisson_min?: number | null
           temps_preparation_min?: number | null
