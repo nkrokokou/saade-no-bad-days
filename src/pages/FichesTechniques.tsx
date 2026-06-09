@@ -84,8 +84,20 @@ export default function FichesTechniques() {
   const confirmImport = async (selected: Array<ParsedFiche & { productId: string }>) => {
     setImporting(true);
     try {
-      const rows = selected.flatMap(r => r.ingredients.map(ing => ({
+      // Anti-doublons : supprime d'abord les ingrédients existants pour chaque produit importé
+      const productIds = Array.from(new Set(selected.map(r => r.productId)));
+      if (productIds.length) {
+        const { error: delErr } = await supabase
+          .from('fiches_techniques')
+          .delete()
+          .in('produit_id', productIds);
+        if (delErr) throw delErr;
+      }
+
+      const rows = selected.flatMap(r => r.ingredients.map((ing, idx) => ({
         produit_id: r.productId,
+        section: ing.section || null,
+        ordre: idx,
         matiere_premiere_id: ing.mp_id || null,
         matiere_premiere: ing.nom,
         quantite_mp: ing.quantite,
@@ -97,25 +109,32 @@ export default function FichesTechniques() {
         const { error } = await supabase.from('fiches_techniques').insert(rows);
         if (error) throw error;
       }
-      // Upsert meta (etapes + rendement + cuisson…) per produit
+      // Upsert meta complète par produit
       for (const r of selected) {
-        const hasMeta = r.etapes.length > 0 || r.meta.rendement || r.meta.temps_cuisson_min || r.meta.temperature_cuisson || r.meta.conservation;
-        if (!hasMeta) continue;
-        const payload: any = { produit_id: r.productId, created_by: user?.id };
-        if (r.etapes.length) payload.etapes = r.etapes.map((e, i) => `${i + 1}. ${e}`).join('\n');
-        if (r.meta.rendement) payload.rendement = r.meta.rendement;
-        if (r.meta.rendement_unite) payload.rendement_unite = r.meta.rendement_unite;
-        if (r.meta.temps_cuisson_min) payload.temps_cuisson_min = r.meta.temps_cuisson_min;
-        if (r.meta.temps_preparation_min) payload.temps_preparation_min = r.meta.temps_preparation_min;
-        if (r.meta.temperature_cuisson) payload.temperature_cuisson = r.meta.temperature_cuisson;
-        if (r.meta.conservation) payload.conservation = r.meta.conservation;
+        const payload: any = {
+          produit_id: r.productId,
+          created_by: user?.id,
+          moule: r.meta.moule ?? null,
+          taille_longueur: r.meta.taille_longueur ?? null,
+          taille_hauteur: r.meta.taille_hauteur ?? null,
+          diametre: r.meta.diametre ?? null,
+          diametre_secondaire: r.meta.diametre_secondaire ?? null,
+          qte_recette: r.meta.qte_recette ?? null,
+          rendement: r.meta.rendement ?? null,
+          rendement_unite: r.meta.rendement_unite ?? null,
+          temps_cuisson_min: r.meta.temps_cuisson_min ?? null,
+          temps_preparation_min: r.meta.temps_preparation_min ?? null,
+          temperature_cuisson: r.meta.temperature_cuisson ?? null,
+          conservation: r.meta.conservation ?? null,
+          etapes: r.etapes.length ? r.etapes.map((e, i) => `${i + 1}. ${e}`).join('\n') : null,
+        };
         await supabase.from('fiches_techniques_meta').upsert(payload, { onConflict: 'produit_id' });
       }
       qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
       qc.invalidateQueries({ queryKey: ['fiches_meta'] });
       qc.invalidateQueries({ queryKey: ['catalogue'] });
       qc.invalidateQueries({ queryKey: ['produits'] });
-      toast.success(`Import OK : ${rows.length} ingrédient(s) sur ${selected.length} fiche(s)`);
+      toast.success(`Import OK : ${rows.length} ingrédient(s) sur ${selected.length} fiche(s) (anciennes lignes remplacées)`);
       setPreviewOpen(false);
     } catch (e: any) {
       console.error(e);
