@@ -249,14 +249,8 @@ export default function FichesTechniques() {
           products={products as any}
           isLoading={importing}
           onConfirm={confirmImport}
-        <FicheImportPreviewDialog
-          open={previewOpen}
-          onOpenChange={setPreviewOpen}
-          results={previewResults}
-          products={products as any}
-          isLoading={importing}
-          onConfirm={confirmImport}
         />
+
         <ConfirmDialog
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
