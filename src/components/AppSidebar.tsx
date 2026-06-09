@@ -57,6 +57,7 @@ export function AppSidebar() {
     { title: t('nav.admin'), url: '/admin', icon: Settings, module: 'admin' },
     { title: t('nav.audit'), url: '/audit', icon: History, module: 'admin' },
     { title: 'Rapports CEO', url: '/rapports-ceo', icon: Mail, module: 'admin' },
+    { title: 'Caisses (live)', url: '/caisses-live', icon: BarChart3, module: 'admin' },
     { title: 'Audits CEO', url: '/audits-ceo', icon: ClipboardCheck, module: 'admin' },
     { title: 'Modèles de tickets', url: '/ticket-templates', icon: ReceiptText, module: 'admin' },
   ];
