@@ -6,6 +6,7 @@ export type ParsedIngredient = {
   unite: string;
   cout_unitaire: number;
   mp_id?: string | null;
+  section?: string;
 };
 
 export type ParsedFiche = {
@@ -21,6 +22,12 @@ export type ParsedFiche = {
     temps_cuisson_min?: number;
     temperature_cuisson?: number;
     conservation?: string;
+    moule?: string;
+    taille_longueur?: string;
+    taille_hauteur?: string;
+    diametre?: string;
+    diametre_secondaire?: string;
+    qte_recette?: number;
   };
 };
 
