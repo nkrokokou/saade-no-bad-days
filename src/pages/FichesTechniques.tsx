@@ -16,7 +16,8 @@ import { toast } from 'sonner';
 import { Plus, Trash2, BookOpen, Calculator, Upload, FileDown } from 'lucide-react';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { FicheMetaPanel } from '@/components/FicheMetaPanel';
-import * as XLSX from 'xlsx';
+import { parseFicheWorkbook, type ParsedFiche } from '@/lib/parseFicheExcel';
+import { FicheImportPreviewDialog } from '@/components/FicheImportPreviewDialog';
 
 type MP = { id: string; nom: string; unite: string; prix_unitaire: number };
 
