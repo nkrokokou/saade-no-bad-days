@@ -214,7 +214,7 @@ export default function FichesTechniques() {
               type="file"
               accept=".xlsx,.xls,.csv"
               className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) handleImportExcel(f); e.target.value = ''; }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) runImportPreview(f, true); e.target.value = ''; }}
             />
             <Dialog open={showAdd} onOpenChange={setShowAdd}>
               <DialogTrigger asChild>
