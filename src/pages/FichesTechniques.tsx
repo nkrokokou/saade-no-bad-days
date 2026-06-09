@@ -104,6 +104,74 @@ export default function FichesTechniques() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const listFileRef = useRef<HTMLInputElement>(null);
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewResults, setPreviewResults] = useState<ParsedFiche[]>([]);
+  const [importing, setImporting] = useState(false);
+
+  const runImportPreview = async (file: File, restrictToSelected: boolean) => {
+    try {
+      const buf = await file.arrayBuffer();
+      let results = parseFicheWorkbook(buf, products as any, mps);
+      if (restrictToSelected && selectedProduct) {
+        results = results.map(r => ({ ...r, productId: selectedProduct }));
+      }
+      if (results.length === 0) {
+        toast.warning('Aucune fiche détectée. Vérifiez : nom du produit + en-tête INGREDIENT / QTE / UNITE.');
+        return;
+      }
+      setPreviewResults(results);
+      setPreviewOpen(true);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Lecture impossible : ' + (e.message || 'Format invalide'));
+    }
+  };
+
+  const confirmImport = async (selected: Array<ParsedFiche & { productId: string }>) => {
+    setImporting(true);
+    try {
+      const rows = selected.flatMap(r => r.ingredients.map(ing => ({
+        produit_id: r.productId,
+        matiere_premiere_id: ing.mp_id || null,
+        matiere_premiere: ing.nom,
+        quantite_mp: ing.quantite,
+        unite_mp: ing.unite,
+        cout_unitaire_mp: ing.cout_unitaire,
+        created_by: user?.id,
+      })));
+      if (rows.length > 0) {
+        const { error } = await supabase.from('fiches_techniques').insert(rows);
+        if (error) throw error;
+      }
+      // Upsert meta (etapes + rendement + cuisson…) per produit
+      for (const r of selected) {
+        const hasMeta = r.etapes.length > 0 || r.meta.rendement || r.meta.temps_cuisson_min || r.meta.temperature_cuisson || r.meta.conservation;
+        if (!hasMeta) continue;
+        const payload: any = { produit_id: r.productId, created_by: user?.id };
+        if (r.etapes.length) payload.etapes = r.etapes.map((e, i) => `${i + 1}. ${e}`).join('\n');
+        if (r.meta.rendement) payload.rendement = r.meta.rendement;
+        if (r.meta.rendement_unite) payload.rendement_unite = r.meta.rendement_unite;
+        if (r.meta.temps_cuisson_min) payload.temps_cuisson_min = r.meta.temps_cuisson_min;
+        if (r.meta.temps_preparation_min) payload.temps_preparation_min = r.meta.temps_preparation_min;
+        if (r.meta.temperature_cuisson) payload.temperature_cuisson = r.meta.temperature_cuisson;
+        if (r.meta.conservation) payload.conservation = r.meta.conservation;
+        await supabase.from('fiches_techniques_meta').upsert(payload, { onConflict: 'produit_id' });
+      }
+      qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
+      qc.invalidateQueries({ queryKey: ['fiches_meta'] });
+      qc.invalidateQueries({ queryKey: ['catalogue'] });
+      qc.invalidateQueries({ queryKey: ['produits'] });
+      toast.success(`Import OK : ${rows.length} ingrédient(s) sur ${selected.length} fiche(s)`);
+      setPreviewOpen(false);
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erreur import : ' + (e.message || ''));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+
   const selectedProd = products.find(p => p.id === selectedProduct);
   const coutTotal = fiches.reduce((s: number, f: any) => s + (f.quantite_mp * f.cout_unitaire_mp), 0);
 
