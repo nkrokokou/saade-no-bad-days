@@ -1,6 +1,7 @@
 # Guide Utilisateur — SAADÉ
 
-Dernière mise à jour : **juin 2026** (v3 — Économat, Assistante IA CEO, tests Playwright, corrections caisse).
+Dernière mise à jour : **juin 2026** (v4 — Palettes de couleurs, sous-catégories, imprimantes ciblées, crédit sans décrémentation, clôture automatique 23h59).
+
 
 Cette application gère le **laboratoire pâtisserie / viennoiserie**, la **cuisine salée**, la **salle / caisse**, l'**économat** et les **rapports CEO** de SAADÉ (Lomé, Togo). Elle s'utilise dans Chrome (PC, tablette tactile, smartphone) et peut être **installée comme application** via « Ajouter à l'écran d'accueil ».
 
@@ -260,3 +261,100 @@ Dire « la production a sorti 3 cupcakes » → l'IA **prépare** la saisie (art
 ---
 
 Pour toute évolution, contacter l'équipe technique.
+
+---
+
+## 19. Palettes de couleurs & thème *(v4)*
+
+En haut à droite de l'écran, deux nouvelles icônes :
+
+- **🎨 Palette** : 5 jeux de couleurs au choix :
+  - **SAADÉ Classique** — crème + caramel + espresso (défaut)
+  - **Olive Royal** — olive + doré
+  - **Rose Or** — rose framboise + or
+  - **Marine Lounge** — bleu marine + orange brûlé
+  - **Émeraude** — vert émeraude + or
+- **🌙 Mode sombre / clair** : bascule instantanée.
+
+Le choix est **mémorisé par utilisateur** côté base (`user_preferences`) — il suit la personne sur n'importe quel appareil.
+
+---
+
+## 20. Sous-catégories produits *(v4)*
+
+**Administration → Catégories** affiche désormais une arborescence à deux niveaux :
+
+- Une catégorie peut être **racine** (ex. BURGERS) ou **enfant** d'une autre (ex. BURGERS → BURGERS POULET).
+- À l'édition, choisir la catégorie parente dans le sélecteur (laisser vide = catégorie racine).
+- Une catégorie ne peut pas être supprimée tant qu'elle contient des sous-catégories ou des produits.
+
+---
+
+## 21. Imprimantes ciblées (Cuisine chaude / froide / Caisse) *(v4)*
+
+Chaque catégorie a maintenant une **imprimante cible** :
+
+| Cible | Pour quoi | Exemples |
+|-------|-----------|----------|
+| 🔥 **Cuisine chaude** | grill, friteuse, plancha | burgers, hot dogs, frites |
+| ❄️ **Cuisine froide** | poste froid, dressage | salades, desserts, donuts |
+| 🧾 **Caisse uniquement** | pas de prépa cuisine | boissons, snacks emballés, à emporter |
+| — **Aucune** | rien à imprimer en cuisine | items techniques |
+
+**Configuration** : Administration → Catégories → éditer → choisir « Imprimante cible ».
+
+**À l'encaissement** : le bon cuisine est automatiquement réparti vers la bonne imprimante. Chrome se souvient du choix par bouton (« Bon Cuisine chaude », « Bon Cuisine froide », « Ticket Caisse »).
+
+> 💡 Pour une impression sans dialogue Chrome, installer **QZ Tray** (gratuit) — guide technique séparé.
+
+---
+
+## 22. Crédit sans décrémentation du stock *(v4)*
+
+**Règle métier validée par la CEO** : un produit vendu à crédit ne sort **pas** du stock tant que le client n'a pas payé. Cela évite de fausser les calculs d'inventaire.
+
+### Comment ça marche
+1. Au POS, mode de paiement **Crédit** → vente créée avec statut `credit_pending`.
+2. **Aucun mouvement de stock** n'est généré.
+3. Quand le client paie (page Clients → encaissement crédit) et que le solde tombe à 0 :
+   - Le statut crédit passe à **« soldé »**.
+   - La vente devient officielle (`vente`).
+   - Les mouvements de stock sont générés automatiquement (trigger SQL).
+
+### Garde-fous
+- Plafond de crédit par client (champ `plafond_credit` dans la fiche client).
+- Alerte CEO pour les crédits ouverts > 7 jours (à venir).
+- Inventaire physique hebdomadaire recommandé pour rattraper les écarts.
+- Confirmation explicite à la création d'un crédit.
+
+---
+
+## 23. Clôture automatique caisse à 23h59 *(v4)*
+
+Si une session de caisse reste **ouverte** à la fin de la journée :
+
+- À **23h59** (heure de Lomé), un job planifié ferme automatiquement toutes les sessions oubliées.
+- Le statut passe à `fermee_auto`.
+- Le fond final attendu est calculé : `fond initial + total ventes espèces`.
+- Une note est ajoutée : *« [Fermeture automatique 23h59] »*.
+- Le rapport CEO du lendemain liste ces fermetures automatiques (à venir).
+
+> ⚠️ Ne remplace pas la clôture manuelle (qui inclut le comptage physique). À utiliser comme filet de sécurité.
+
+---
+
+## 🔜 À venir (prochaines itérations)
+
+| Chantier | Statut |
+|----------|--------|
+| Refonte fiches techniques (alignée Excel multi-feuilles) | en cours |
+| Seed catalogue produits Ô MY DOG (≈80 items) | à valider |
+| Synchro Achats MP ↔ Économat automatique | planifié |
+| QZ Tray : impression directe sans dialogue Chrome | planifié |
+| 2FA obligatoire CEO + Économat | planifié |
+| Backup Excel quotidien par email | planifié |
+| Suppression granulaire avec export auto | planifié |
+| Tableau caisses temps réel + journal écarts | planifié |
+| Mode « passage de quart » caissier | planifié |
+| Notifications push (stock critique, écart caisse, crédits) | planifié |
+

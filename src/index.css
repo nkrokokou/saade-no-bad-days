@@ -8,34 +8,24 @@
   :root {
     --background: 30 33% 96%;
     --foreground: 20 60% 8%;
-
     --card: 30 30% 98%;
     --card-foreground: 20 60% 8%;
-
     --popover: 30 30% 98%;
     --popover-foreground: 20 60% 8%;
-
     --primary: 33 45% 56%;
     --primary-foreground: 30 33% 96%;
-
     --secondary: 30 20% 90%;
     --secondary-foreground: 20 60% 8%;
-
     --muted: 30 15% 92%;
     --muted-foreground: 20 10% 45%;
-
     --accent: 33 45% 56%;
     --accent-foreground: 30 33% 96%;
-
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 30 20% 87%;
     --input: 30 20% 87%;
     --ring: 33 45% 56%;
-
     --radius: 0.75rem;
-
     --sidebar-background: 20 60% 8%;
     --sidebar-foreground: 30 20% 90%;
     --sidebar-primary: 33 45% 56%;
@@ -44,11 +34,126 @@
     --sidebar-accent-foreground: 30 20% 90%;
     --sidebar-border: 20 30% 16%;
     --sidebar-ring: 33 45% 56%;
-
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+  }
+
+  /* === PALETTE: Olive Royal === */
+  [data-palette="olive_royal"] {
+    --background: 60 20% 96%;
+    --foreground: 80 30% 10%;
+    --card: 60 20% 98%;
+    --card-foreground: 80 30% 10%;
+    --popover: 60 20% 98%;
+    --popover-foreground: 80 30% 10%;
+    --primary: 82 35% 35%;
+    --primary-foreground: 60 30% 96%;
+    --secondary: 60 15% 90%;
+    --secondary-foreground: 80 30% 10%;
+    --muted: 60 12% 92%;
+    --muted-foreground: 80 10% 40%;
+    --accent: 45 75% 50%;
+    --accent-foreground: 80 30% 10%;
+    --border: 60 15% 85%;
+    --input: 60 15% 85%;
+    --ring: 82 35% 35%;
+    --sidebar-background: 80 30% 12%;
+    --sidebar-foreground: 60 20% 90%;
+    --sidebar-primary: 45 75% 60%;
+    --sidebar-primary-foreground: 80 30% 10%;
+    --sidebar-accent: 80 25% 18%;
+    --sidebar-accent-foreground: 60 20% 92%;
+    --sidebar-border: 80 20% 20%;
+    --sidebar-ring: 45 75% 60%;
+  }
+
+  /* === PALETTE: Rose Or === */
+  [data-palette="rose_or"] {
+    --background: 20 30% 97%;
+    --foreground: 350 30% 12%;
+    --card: 20 30% 99%;
+    --card-foreground: 350 30% 12%;
+    --popover: 20 30% 99%;
+    --popover-foreground: 350 30% 12%;
+    --primary: 350 55% 55%;
+    --primary-foreground: 20 30% 98%;
+    --secondary: 20 25% 92%;
+    --secondary-foreground: 350 30% 12%;
+    --muted: 20 20% 94%;
+    --muted-foreground: 350 10% 45%;
+    --accent: 38 80% 55%;
+    --accent-foreground: 350 30% 12%;
+    --border: 20 20% 88%;
+    --input: 20 20% 88%;
+    --ring: 350 55% 55%;
+    --sidebar-background: 350 35% 14%;
+    --sidebar-foreground: 20 25% 92%;
+    --sidebar-primary: 38 80% 60%;
+    --sidebar-primary-foreground: 350 30% 12%;
+    --sidebar-accent: 350 30% 20%;
+    --sidebar-accent-foreground: 20 25% 92%;
+    --sidebar-border: 350 25% 22%;
+    --sidebar-ring: 38 80% 60%;
+  }
+
+  /* === PALETTE: Marine Lounge === */
+  [data-palette="marine"] {
+    --background: 210 30% 97%;
+    --foreground: 215 50% 12%;
+    --card: 210 30% 99%;
+    --card-foreground: 215 50% 12%;
+    --popover: 210 30% 99%;
+    --popover-foreground: 215 50% 12%;
+    --primary: 210 60% 40%;
+    --primary-foreground: 210 30% 98%;
+    --secondary: 210 25% 92%;
+    --secondary-foreground: 215 50% 12%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 30 85% 55%;
+    --accent-foreground: 215 50% 12%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 210 60% 40%;
+    --sidebar-background: 215 55% 14%;
+    --sidebar-foreground: 210 25% 92%;
+    --sidebar-primary: 30 85% 60%;
+    --sidebar-primary-foreground: 215 50% 12%;
+    --sidebar-accent: 215 45% 20%;
+    --sidebar-accent-foreground: 210 25% 92%;
+    --sidebar-border: 215 40% 22%;
+    --sidebar-ring: 30 85% 60%;
+  }
+
+  /* === PALETTE: Émeraude === */
+  [data-palette="emeraude"] {
+    --background: 150 20% 97%;
+    --foreground: 160 40% 10%;
+    --card: 150 20% 99%;
+    --card-foreground: 160 40% 10%;
+    --popover: 150 20% 99%;
+    --popover-foreground: 160 40% 10%;
+    --primary: 160 55% 35%;
+    --primary-foreground: 150 25% 98%;
+    --secondary: 150 18% 92%;
+    --secondary-foreground: 160 40% 10%;
+    --muted: 150 15% 94%;
+    --muted-foreground: 160 10% 42%;
+    --accent: 42 80% 55%;
+    --accent-foreground: 160 40% 10%;
+    --border: 150 15% 88%;
+    --input: 150 15% 88%;
+    --ring: 160 55% 35%;
+    --sidebar-background: 160 45% 12%;
+    --sidebar-foreground: 150 20% 92%;
+    --sidebar-primary: 42 80% 60%;
+    --sidebar-primary-foreground: 160 40% 10%;
+    --sidebar-accent: 160 35% 18%;
+    --sidebar-accent-foreground: 150 20% 92%;
+    --sidebar-border: 160 30% 22%;
+    --sidebar-ring: 42 80% 60%;
   }
 
   .dark {
@@ -80,53 +185,31 @@
     --sidebar-border: 20 30% 12%;
     --sidebar-ring: 33 45% 56%;
   }
+
+  /* Dark variants per palette — assombrissement automatique */
+  .dark[data-palette="olive_royal"] { --background: 80 30% 6%; --card: 80 25% 10%; --popover: 80 25% 10%; --foreground: 60 20% 92%; --muted: 80 15% 14%; --border: 80 15% 18%; --input: 80 15% 18%; }
+  .dark[data-palette="rose_or"]     { --background: 350 35% 7%; --card: 350 30% 11%; --popover: 350 30% 11%; --foreground: 20 25% 92%; --muted: 350 20% 14%; --border: 350 20% 18%; --input: 350 20% 18%; }
+  .dark[data-palette="marine"]      { --background: 215 50% 7%; --card: 215 45% 11%; --popover: 215 45% 11%; --foreground: 210 25% 92%; --muted: 215 30% 14%; --border: 215 30% 18%; --input: 215 30% 18%; }
+  .dark[data-palette="emeraude"]    { --background: 160 45% 6%; --card: 160 40% 10%; --popover: 160 40% 10%; --foreground: 150 20% 92%; --muted: 160 25% 13%; --border: 160 25% 17%; --input: 160 25% 17%; }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  html {
-    -webkit-text-size-adjust: 100%;
-  }
-  body {
-    @apply bg-background text-foreground font-body antialiased;
-    overscroll-behavior-y: none;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
-  }
-  /* Better default focus rings */
-  :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
-  }
+  * { @apply border-border; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-background text-foreground font-body antialiased; overscroll-behavior-y: none; }
+  h1, h2, h3, h4, h5, h6 { @apply font-heading; }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
 }
 
 @layer utilities {
-  .gradient-primary {
-    background: linear-gradient(135deg, hsl(33 45% 56%), hsl(25 55% 45%));
-  }
-  .gradient-dark {
-    background: linear-gradient(180deg, hsl(20 60% 8%), hsl(20 50% 12%));
-  }
-  .hover-lift {
-    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
-  }
-  .tap-highlight {
-    -webkit-tap-highlight-color: transparent;
-  }
-  /* Mobile-first: respect safe areas on notched devices */
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .safe-top {
-    padding-top: env(safe-area-inset-top);
-  }
+  .gradient-primary { background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))); }
+  .gradient-dark    { background: linear-gradient(180deg, hsl(var(--sidebar-background)), hsl(var(--sidebar-accent))); }
+  .hover-lift       { @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md; }
+  .tap-highlight    { -webkit-tap-highlight-color: transparent; }
+  .safe-bottom      { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top         { padding-top: env(safe-area-inset-top); }
 }
 
-/* Better touch targets on mobile */
 @media (max-width: 640px) {
-  button, a, input, select, textarea {
-    -webkit-tap-highlight-color: transparent;
-  }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 }
