@@ -249,10 +249,26 @@ export default function FichesTechniques() {
           products={products as any}
           isLoading={importing}
           onConfirm={confirmImport}
+        <FicheImportPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          results={previewResults}
+          products={products as any}
+          isLoading={importing}
+          onConfirm={confirmImport}
+        />
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Supprimer la fiche technique ?"
+          description={`Tous les ingrédients, étapes et paramètres de "${selectedProd.nom}" seront définitivement effacés. Le produit lui-même reste.`}
+          destructive
+          onConfirm={deleteFiche}
         />
       </div>
     );
   }
+
 
   // ── Export / Import multi-produits depuis la liste ──
   const exportAllFiches = async () => {
