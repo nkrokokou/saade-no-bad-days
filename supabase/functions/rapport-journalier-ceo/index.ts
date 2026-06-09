@@ -421,7 +421,9 @@ Deno.serve(async (req) => {
     const html = renderHTML(report);
     const subject = `SAADÉ — Rapport du ${report.dayLabel} • CA ${fmtXOF(report.ca)}`;
 
-    const sendRes = await sendEmail(subject, html);
+    const attachments = await buildAttachments(supabase, date);
+    const sendRes = await sendEmail(subject, html, attachments);
+
 
     const payload = {
       report,
