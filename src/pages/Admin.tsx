@@ -492,13 +492,13 @@ function PermissionsMatrix() {
   });
 
   const toggle = useMutation({
-    mutationFn: async ({ role, module, action, value }: { role: string; module: string; action: string; value: boolean }) => {
-      const existing = perms.find((p: any) => p.role === role && p.module === module);
+    mutationFn: async ({ role, module, submodule, action, value }: { role: string; module: string; submodule: string | null; action: string; value: boolean }) => {
+      const existing = perms.find((p: any) => p.role === role && p.module === module && (p.submodule ?? null) === submodule);
       if (existing) {
         const { error } = await supabase.from('module_permissions').update({ [action]: value } as any).eq('id', existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('module_permissions').insert({ role, module, [action]: value } as any);
+        const { error } = await supabase.from('module_permissions').insert({ role, module, submodule, [action]: value } as any);
         if (error) throw error;
       }
     },
@@ -506,8 +506,8 @@ function PermissionsMatrix() {
     onError: (e: any) => toast.error(e.message || 'Erreur'),
   });
 
-  const getPerm = (role: string, module: string, action: string): boolean => {
-    const p = perms.find((x: any) => x.role === role && x.module === module);
+  const getPerm = (role: string, module: string, submodule: string | null, action: string): boolean => {
+    const p = perms.find((x: any) => x.role === role && x.module === module && (x.submodule ?? null) === submodule);
     return p ? !!(p as any)[action] : false;
   };
 
@@ -517,7 +517,7 @@ function PermissionsMatrix() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" /> Matrice des permissions</CardTitle>
-        <p className="text-sm text-muted-foreground">Le CEO a tous les droits par défaut. Cochez/décochez pour autoriser une action à un rôle.</p>
+        <p className="text-sm text-muted-foreground">Le CEO a tous les droits par défaut. La 1ère ligne d'un module contrôle l'accès global, les lignes en retrait contrôlent les sous-sections.</p>
       </CardHeader>
       <CardContent>
         {isLoading ? <p className="text-muted-foreground text-sm">Chargement...</p> : (
@@ -531,23 +531,38 @@ function PermissionsMatrix() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-muted-foreground">
-                        <th className="py-2 pr-4 font-medium">Module</th>
+                        <th className="py-2 pr-4 font-medium">Module / Sous-section</th>
                         {ACTIONS.map(a => <th key={a.key} className="py-2 px-2 text-center font-medium">{a.label}</th>)}
                       </tr>
                     </thead>
                     <tbody>
                       {MODULES.map(mod => (
-                        <tr key={mod.key} className="border-t">
-                          <td className="py-2 pr-4">{mod.label}</td>
-                          {ACTIONS.map(a => (
-                            <td key={a.key} className="py-2 px-2 text-center">
-                              <Checkbox
-                                checked={getPerm(role.value, mod.key, a.key)}
-                                onCheckedChange={v => toggle.mutate({ role: role.value, module: mod.key, action: a.key, value: !!v })}
-                              />
-                            </td>
+                        <>
+                          <tr key={mod.key} className="border-t bg-muted/30">
+                            <td className="py-2 pr-4 font-medium">{mod.label}</td>
+                            {ACTIONS.map(a => (
+                              <td key={a.key} className="py-2 px-2 text-center">
+                                <Checkbox
+                                  checked={getPerm(role.value, mod.key, null, a.key)}
+                                  onCheckedChange={v => toggle.mutate({ role: role.value, module: mod.key, submodule: null, action: a.key, value: !!v })}
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                          {mod.submodules?.map(sub => (
+                            <tr key={`${mod.key}.${sub.key}`} className="border-t">
+                              <td className="py-2 pr-4 pl-6 text-muted-foreground text-xs">↳ {sub.label}</td>
+                              {ACTIONS.map(a => (
+                                <td key={a.key} className="py-2 px-2 text-center">
+                                  <Checkbox
+                                    checked={getPerm(role.value, mod.key, sub.key, a.key)}
+                                    onCheckedChange={v => toggle.mutate({ role: role.value, module: mod.key, submodule: sub.key, action: a.key, value: !!v })}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
                           ))}
-                        </tr>
+                        </>
                       ))}
                     </tbody>
                   </table>
@@ -560,3 +575,4 @@ function PermissionsMatrix() {
     </Card>
   );
 }
+
