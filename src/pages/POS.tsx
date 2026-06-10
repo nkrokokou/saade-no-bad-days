@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Produit, useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { queueVente, isOffline } from '@/lib/offlineQueue';
+import { printHtmlOrFallback, isQzAvailable, listPrinters } from '@/lib/qzPrint';
 
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
@@ -455,41 +456,45 @@ export default function POS() {
   };
 
 
-  // Impression via iframe cachée · évite le blocage des popups
-  const printViaIframe = (html: string, label: string) => {
+  // Mapping cible → nom imprimante QZ (configuré via dialog)
+  const getPrinterFor = (cible: string): string | null => {
     try {
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-      const doc = iframe.contentWindow?.document;
-      if (!doc) throw new Error('iframe doc indisponible');
-      doc.open();
-      doc.write(html);
-      doc.close();
-      const triggerPrint = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          toast.success(`🖨️ ${label} envoyé à l'imprimante`);
-        } catch (err: any) {
-          toast.error(`Impression ${label} : ${err?.message || 'erreur'}`);
-        }
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 2000);
-      };
-      // Laisse le temps au DOM de se peindre
-      if (iframe.contentWindow?.document.readyState === 'complete') {
-        setTimeout(triggerPrint, 200);
-      } else {
-        iframe.onload = () => setTimeout(triggerPrint, 200);
+      const map = JSON.parse(localStorage.getItem('qz_printers') || '{}');
+      return map[cible] || null;
+    } catch { return null; }
+  };
+
+  // Impression : QZ Tray (direct, sans dialogue) → fallback iframe + window.print()
+  const printViaIframe = (html: string, label: string, cible: string = 'caisse') => {
+    const fallback = () => {
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (!doc) throw new Error('iframe doc indisponible');
+        doc.open(); doc.write(html); doc.close();
+        const triggerPrint = () => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            toast.success(`🖨️ ${label} envoyé à l'imprimante`);
+          } catch (err: any) {
+            toast.error(`Impression ${label} : ${err?.message || 'erreur'}`);
+          }
+          setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 2000);
+        };
+        if (iframe.contentWindow?.document.readyState === 'complete') setTimeout(triggerPrint, 200);
+        else iframe.onload = () => setTimeout(triggerPrint, 200);
+      } catch (err: any) {
+        toast.error(`Impression échouée : ${err?.message || 'erreur'}`);
       }
-    } catch (err: any) {
-      toast.error(`Impression échouée : ${err?.message || 'erreur'}`);
-    }
+    };
+    const printer = getPrinterFor(cible);
+    // Tentative QZ Tray d'abord (impression directe sans dialogue)
+    printHtmlOrFallback(printer, html, fallback).then(() => {
+      if (printer) toast.success(`🖨️ ${label} → ${printer}`);
+    }).catch(fallback);
   };
 
   const printPrepTicket = (poste: string, lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
