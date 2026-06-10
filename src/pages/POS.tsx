@@ -533,7 +533,7 @@ export default function POS() {
       <hr/>
       <div style="text-align:center;font-size:11px;">${footer || 'À PRÉPARER'}</div>
       </body></html>`;
-    printViaIframe(html, `Bon ${POSTE_LABELS[poste] || poste}`);
+    printViaIframe(html, `Bon ${POSTE_LABELS[poste] || poste}`, poste);
   };
 
   const printTicket = (data: any) => {
