@@ -420,37 +420,52 @@ export default function Admin() {
             <Card className="mt-4 border-destructive/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" /> Zone de danger
+                  <AlertTriangle className="h-5 w-5" /> Zone de danger — Suppression ciblée
                 </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Effacer <strong>toutes les données opérationnelles</strong> (achats, fiches techniques, transferts, production, pertes, stock, inventaire, dégustations, clôtures). Les utilisateurs, rôles et permissions sont conservés. Cette action est <strong>irréversible</strong>.
+                <p className="text-xs text-muted-foreground mt-1">
+                  Une sauvegarde JSON est <strong>automatiquement téléchargée avant chaque suppression</strong>. Utilisateurs, rôles, permissions, catalogue produits, catégories, MP et fiches techniques sont conservés (sauf « Réinitialisation usine » qui efface aussi les fiches techniques).
                 </p>
-                <Dialog open={confirmWipeOpen} onOpenChange={setConfirmWipeOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive">
-                      <Trash2 className="h-4 w-4 mr-1" /> Effacer toutes les données
-                    </Button>
-                  </DialogTrigger>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {WIPE_GROUPS.map(g => (
+                    <div key={g.key} className={`border rounded-md p-3 ${g.key === 'factory' ? 'border-destructive bg-destructive/5' : ''}`}>
+                      <div className="font-medium text-sm flex items-center gap-2">
+                        <AlertTriangle className={`h-4 w-4 ${g.key === 'factory' ? 'text-destructive' : 'text-amber-600'}`} />
+                        {g.label}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">{g.description}</p>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => exportGroupToJSON(g)}>
+                          <Download className="h-3.5 w-3.5 mr-1" /> Sauvegarder
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => { setConfirmGroup(g); setWipeText(''); }} disabled={!!wiping}>
+                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Effacer
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Dialog open={!!confirmGroup} onOpenChange={v => { if (!v) { setConfirmGroup(null); setWipeText(''); } }}>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle className="flex items-center gap-2 text-destructive">
-                        <AlertTriangle className="h-5 w-5" /> Confirmation requise
+                        <AlertTriangle className="h-5 w-5" /> Confirmer : {confirmGroup?.label}
                       </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-3">
-                      <p className="text-sm">
-                        Cette action supprimera définitivement toutes les données opérationnelles. Pour confirmer, tapez <strong>EFFACER</strong> ci-dessous.
-                      </p>
+                      <p className="text-sm">{confirmGroup?.description}</p>
+                      <p className="text-xs text-muted-foreground">Tables impactées : <code className="text-[10px]">{confirmGroup?.tables.join(', ')}</code></p>
+                      <p className="text-sm">Une sauvegarde JSON sera téléchargée automatiquement avant suppression. Pour confirmer, tapez <strong>EFFACER</strong>.</p>
                       <Input value={wipeText} onChange={e => setWipeText(e.target.value)} placeholder="EFFACER" />
                       <Button
                         variant="destructive"
                         className="w-full"
-                        disabled={wipeText !== 'EFFACER' || wiping}
-                        onClick={wipeAllData}
+                        disabled={wipeText !== 'EFFACER' || !!wiping}
+                        onClick={() => confirmGroup && wipeGroup(confirmGroup)}
                       >
-                        {wiping ? 'Effacement...' : 'Confirmer l\'effacement'}
+                        {wiping ? 'Effacement…' : 'Sauvegarder et effacer'}
                       </Button>
                     </div>
                   </DialogContent>
@@ -458,6 +473,7 @@ export default function Admin() {
               </CardContent>
             </Card>
           )}
+
         </TabsContent>
       </Tabs>
     </div>
