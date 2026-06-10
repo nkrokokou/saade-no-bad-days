@@ -870,6 +870,45 @@ export default function POS() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog configuration imprimantes QZ Tray */}
+      <Dialog open={qzDialog} onOpenChange={setQzDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Imprimantes (QZ Tray)</DialogTitle></DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className={`p-2 rounded text-xs ${qzStatus === 'ok' ? 'bg-green-100 text-green-900' : qzStatus === 'ko' ? 'bg-orange-100 text-orange-900' : 'bg-muted'}`}>
+              {qzStatus === 'checking' && 'Détection en cours…'}
+              {qzStatus === 'ok' && `✅ QZ Tray détecté — ${qzPrinters.length} imprimante(s) trouvée(s). Impression directe activée.`}
+              {qzStatus === 'ko' && '⚠️ QZ Tray non détecté. Installez-le depuis https://qz.io/download (impression passera par le dialogue navigateur).'}
+            </div>
+            {qzStatus === 'ok' && (
+              <>
+                <p className="text-xs text-muted-foreground">Associe chaque poste à une imprimante détectée :</p>
+                {['caisse', 'chaud', 'froid'].map(cible => (
+                  <div key={cible} className="flex items-center gap-2">
+                    <Label className="w-20 capitalize">{cible}</Label>
+                    <Select value={qzMap[cible] || '__none__'} onValueChange={v => {
+                      const next = { ...qzMap, [cible]: v === '__none__' ? '' : v };
+                      setQzMap(next);
+                      localStorage.setItem('qz_printers', JSON.stringify(next));
+                    }}>
+                      <SelectTrigger><SelectValue placeholder="Choisir…" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Aucune (dialogue navigateur) —</SelectItem>
+                        {qzPrinters.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setQzDialog(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
