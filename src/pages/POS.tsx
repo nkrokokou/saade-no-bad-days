@@ -611,7 +611,7 @@ export default function POS() {
       <div class="footer">${footer}</div>
       ${legal ? `<div class="footer" style="font-size:10px;color:#444;">${legal}</div>` : ''}
       </body></html>`;
-    printViaIframe(html, `Ticket caisse #${v.numero_ticket}`);
+    printViaIframe(html, `Ticket caisse #${v.numero_ticket}`, 'caisse');
   };
 
   return (
