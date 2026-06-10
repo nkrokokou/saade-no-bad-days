@@ -12,12 +12,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, ShoppingCart, PauseCircle, Utensils } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, ShoppingCart, PauseCircle, Utensils, Settings } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit, useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { queueVente, isOffline } from '@/lib/offlineQueue';
+import { printHtmlOrFallback, isQzAvailable, listPrinters } from '@/lib/qzPrint';
 
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
@@ -73,6 +74,12 @@ export default function POS() {
   const [serveur, setServeur] = useState<string>('');
   const [tabsOpen, setTabsOpen] = useState(false);
   const [currentTabId, setCurrentTabId] = useState<string | null>(null);
+  const [qzDialog, setQzDialog] = useState(false);
+  const [qzPrinters, setQzPrinters] = useState<string[]>([]);
+  const [qzMap, setQzMap] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('qz_printers') || '{}'); } catch { return {}; }
+  });
+  const [qzStatus, setQzStatus] = useState<'idle' | 'checking' | 'ok' | 'ko'>('idle');
 
   // Produits
   const { data: produits = [] } = useProducts();
@@ -455,41 +462,45 @@ export default function POS() {
   };
 
 
-  // Impression via iframe cachée · évite le blocage des popups
-  const printViaIframe = (html: string, label: string) => {
+  // Mapping cible → nom imprimante QZ (configuré via dialog)
+  const getPrinterFor = (cible: string): string | null => {
     try {
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-      const doc = iframe.contentWindow?.document;
-      if (!doc) throw new Error('iframe doc indisponible');
-      doc.open();
-      doc.write(html);
-      doc.close();
-      const triggerPrint = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          toast.success(`🖨️ ${label} envoyé à l'imprimante`);
-        } catch (err: any) {
-          toast.error(`Impression ${label} : ${err?.message || 'erreur'}`);
-        }
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 2000);
-      };
-      // Laisse le temps au DOM de se peindre
-      if (iframe.contentWindow?.document.readyState === 'complete') {
-        setTimeout(triggerPrint, 200);
-      } else {
-        iframe.onload = () => setTimeout(triggerPrint, 200);
+      const map = JSON.parse(localStorage.getItem('qz_printers') || '{}');
+      return map[cible] || null;
+    } catch { return null; }
+  };
+
+  // Impression : QZ Tray (direct, sans dialogue) → fallback iframe + window.print()
+  const printViaIframe = (html: string, label: string, cible: string = 'caisse') => {
+    const fallback = () => {
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (!doc) throw new Error('iframe doc indisponible');
+        doc.open(); doc.write(html); doc.close();
+        const triggerPrint = () => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            toast.success(`🖨️ ${label} envoyé à l'imprimante`);
+          } catch (err: any) {
+            toast.error(`Impression ${label} : ${err?.message || 'erreur'}`);
+          }
+          setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 2000);
+        };
+        if (iframe.contentWindow?.document.readyState === 'complete') setTimeout(triggerPrint, 200);
+        else iframe.onload = () => setTimeout(triggerPrint, 200);
+      } catch (err: any) {
+        toast.error(`Impression échouée : ${err?.message || 'erreur'}`);
       }
-    } catch (err: any) {
-      toast.error(`Impression échouée : ${err?.message || 'erreur'}`);
-    }
+    };
+    const printer = getPrinterFor(cible);
+    // Tentative QZ Tray d'abord (impression directe sans dialogue)
+    printHtmlOrFallback(printer, html, fallback).then(() => {
+      if (printer) toast.success(`🖨️ ${label} → ${printer}`);
+    }).catch(fallback);
   };
 
   const printPrepTicket = (poste: string, lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
@@ -528,7 +539,7 @@ export default function POS() {
       <hr/>
       <div style="text-align:center;font-size:11px;">${footer || 'À PRÉPARER'}</div>
       </body></html>`;
-    printViaIframe(html, `Bon ${POSTE_LABELS[poste] || poste}`);
+    printViaIframe(html, `Bon ${POSTE_LABELS[poste] || poste}`, poste);
   };
 
   const printTicket = (data: any) => {
@@ -606,7 +617,7 @@ export default function POS() {
       <div class="footer">${footer}</div>
       ${legal ? `<div class="footer" style="font-size:10px;color:#444;">${legal}</div>` : ''}
       </body></html>`;
-    printViaIframe(html, `Ticket caisse #${v.numero_ticket}`);
+    printViaIframe(html, `Ticket caisse #${v.numero_ticket}`, 'caisse');
   };
 
   return (
@@ -630,6 +641,12 @@ export default function POS() {
             {!session && <Button size="sm" onClick={() => setOpenSessionDialog(true)}><Unlock className="h-4 w-4 mr-1" />Ouvrir caisse</Button>}
             {session && <Button size="sm" variant="secondary" onClick={() => setQuartDialog(true)}><Unlock className="h-4 w-4 mr-1" />Passer le quart</Button>}
             {session && <Button size="sm" variant="outline" onClick={() => setCloseSessionDialog(true)}><Lock className="h-4 w-4 mr-1" />Fermer caisse</Button>}
+            <Button size="sm" variant="ghost" onClick={async () => {
+              setQzDialog(true); setQzStatus('checking');
+              const ok = await isQzAvailable();
+              setQzStatus(ok ? 'ok' : 'ko');
+              if (ok) setQzPrinters(await listPrinters());
+            }}><Settings className="h-4 w-4 mr-1" />Imprimantes</Button>
           </div>
         </CardContent>
       </Card>
@@ -853,6 +870,45 @@ export default function POS() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog configuration imprimantes QZ Tray */}
+      <Dialog open={qzDialog} onOpenChange={setQzDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Imprimantes (QZ Tray)</DialogTitle></DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className={`p-2 rounded text-xs ${qzStatus === 'ok' ? 'bg-green-100 text-green-900' : qzStatus === 'ko' ? 'bg-orange-100 text-orange-900' : 'bg-muted'}`}>
+              {qzStatus === 'checking' && 'Détection en cours…'}
+              {qzStatus === 'ok' && `✅ QZ Tray détecté — ${qzPrinters.length} imprimante(s) trouvée(s). Impression directe activée.`}
+              {qzStatus === 'ko' && '⚠️ QZ Tray non détecté. Installez-le depuis https://qz.io/download (impression passera par le dialogue navigateur).'}
+            </div>
+            {qzStatus === 'ok' && (
+              <>
+                <p className="text-xs text-muted-foreground">Associe chaque poste à une imprimante détectée :</p>
+                {['caisse', 'chaud', 'froid'].map(cible => (
+                  <div key={cible} className="flex items-center gap-2">
+                    <Label className="w-20 capitalize">{cible}</Label>
+                    <Select value={qzMap[cible] || '__none__'} onValueChange={v => {
+                      const next = { ...qzMap, [cible]: v === '__none__' ? '' : v };
+                      setQzMap(next);
+                      localStorage.setItem('qz_printers', JSON.stringify(next));
+                    }}>
+                      <SelectTrigger><SelectValue placeholder="Choisir…" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Aucune (dialogue navigateur) —</SelectItem>
+                        {qzPrinters.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setQzDialog(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
