@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, ShoppingCart, PauseCircle, Utensils } from 'lucide-react';
+import { Plus, Minus, Trash2, Search, Printer, Lock, Unlock, ShoppingCart, PauseCircle, Utensils, Settings } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Produit, useProducts } from '@/hooks/useProducts';
@@ -74,6 +74,12 @@ export default function POS() {
   const [serveur, setServeur] = useState<string>('');
   const [tabsOpen, setTabsOpen] = useState(false);
   const [currentTabId, setCurrentTabId] = useState<string | null>(null);
+  const [qzDialog, setQzDialog] = useState(false);
+  const [qzPrinters, setQzPrinters] = useState<string[]>([]);
+  const [qzMap, setQzMap] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('qz_printers') || '{}'); } catch { return {}; }
+  });
+  const [qzStatus, setQzStatus] = useState<'idle' | 'checking' | 'ok' | 'ko'>('idle');
 
   // Produits
   const { data: produits = [] } = useProducts();
