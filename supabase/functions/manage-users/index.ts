@@ -13,6 +13,20 @@ function jsonResponse(data: unknown, status = 200) {
   })
 }
 
+// Rate-limit en mémoire (par user_id) : 20 req / minute, 100 / heure
+const rlMap = new Map<string, { minute: number[]; hour: number[] }>()
+function rateLimit(userId: string): { ok: boolean; reason?: string } {
+  const now = Date.now()
+  const entry = rlMap.get(userId) || { minute: [], hour: [] }
+  entry.minute = entry.minute.filter(t => now - t < 60_000)
+  entry.hour = entry.hour.filter(t => now - t < 3_600_000)
+  if (entry.minute.length >= 20) return { ok: false, reason: 'Trop de requêtes (max 20/min)' }
+  if (entry.hour.length >= 100) return { ok: false, reason: 'Trop de requêtes (max 100/h)' }
+  entry.minute.push(now); entry.hour.push(now)
+  rlMap.set(userId, entry)
+  return { ok: true }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -27,6 +41,10 @@ Deno.serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     const { data: { user: caller }, error: userError } = await adminClient.auth.getUser(token)
     if (userError || !caller) return jsonResponse({ error: 'Non autorisé' }, 401)
+
+    // Rate-limit par utilisateur
+    const rl = rateLimit(caller.id)
+    if (!rl.ok) return jsonResponse({ error: rl.reason }, 429)
 
     // CEO check via user_roles
     const { data: ceoCheck } = await adminClient.from('user_roles').select('role').eq('user_id', caller.id).eq('role', 'ceo').maybeSingle()
