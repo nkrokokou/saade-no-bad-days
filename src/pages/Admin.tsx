@@ -181,34 +181,56 @@ export default function Admin() {
     }
   };
 
-  // ── Wipe all data ──
-  const [wiping, setWiping] = useState(false);
-  const [confirmWipeOpen, setConfirmWipeOpen] = useState(false);
+  // ── Wipe groups (granular) ──
+  const WIPE_GROUPS: { key: string; label: string; description: string; tables: string[] }[] = [
+    { key: 'ventes', label: 'Ventes & Caisse', description: 'Tickets, lignes de vente, sessions caisse', tables: ['vente_lignes', 'ventes', 'sessions_caisse'] },
+    { key: 'production', label: 'Production & Transferts', description: 'Production labo, bons de transfert, stock tampon, pertes', tables: ['bon_transfert_lignes', 'bons_transfert', 'production_labo', 'stock_tampon', 'pertes'] },
+    { key: 'achats_mp', label: 'Achats Matières Premières', description: 'Historique des achats fournisseurs et mouvements stock liés', tables: ['achats_mp', 'mouvements_stock'] },
+    { key: 'economat', label: 'Économat', description: 'Mouvements éco. (entrées/sorties). Les articles sont conservés.', tables: ['economat_mouvements'] },
+    { key: 'clients', label: 'Clients & Crédits', description: 'Crédits, paiements, fiches clients', tables: ['paiements_credits', 'credits_clients', 'clients'] },
+    { key: 'factory', label: 'Réinitialisation usine', description: 'TOUTES les données opérationnelles. Utilisateurs et permissions conservés.', tables: ['vente_lignes', 'ventes', 'sessions_caisse', 'paiements_credits', 'credits_clients', 'clients', 'bon_transfert_lignes', 'bons_transfert', 'production_labo', 'stock_tampon', 'pertes', 'inventaire', 'cloture_journaliere', 'degustations', 'achats_mp', 'mouvements_stock', 'economat_mouvements', 'fiches_techniques', 'fiches_techniques_meta', 'audit_logs', 'notifications'] },
+  ];
+
+  const [wiping, setWiping] = useState<string | null>(null);
+  const [confirmGroup, setConfirmGroup] = useState<typeof WIPE_GROUPS[number] | null>(null);
   const [wipeText, setWipeText] = useState('');
 
-  const WIPE_TABLES = [
-    'bon_transfert_lignes', 'bons_transfert', 'cloture_journaliere',
-    'degustations', 'pertes', 'production_labo', 'stock_tampon',
-    'mouvements_stock', 'inventaire', 'fiches_techniques', 'achats_mp',
-  ] as const;
+  const exportGroupToJSON = async (group: typeof WIPE_GROUPS[number]) => {
+    const snapshot: Record<string, any[]> = {};
+    for (const t of group.tables) {
+      const { data } = await supabase.from(t as any).select('*');
+      snapshot[t] = data || [];
+    }
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `saade_backup_${group.key}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  const wipeAllData = async () => {
-    setWiping(true);
+  const wipeGroup = async (group: typeof WIPE_GROUPS[number]) => {
+    setWiping(group.key);
     try {
-      for (const t of WIPE_TABLES) {
+      // 1) Auto-export snapshot BEFORE delete
+      await exportGroupToJSON(group);
+      // 2) Delete in declared order (respects FK dependencies)
+      for (const t of group.tables) {
         const { error } = await supabase.from(t as any).delete().not('id', 'is', null);
         if (error) throw error;
       }
-      toast.success('Toutes les données opérationnelles ont été effacées');
+      toast.success(`${group.label} : données effacées (sauvegarde téléchargée)`);
       qc.invalidateQueries();
-      setConfirmWipeOpen(false);
+      setConfirmGroup(null);
       setWipeText('');
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de l\'effacement');
     } finally {
-      setWiping(false);
+      setWiping(null);
     }
   };
+
 
   // Allow-list of restorable tables. user_roles, profiles, module_permissions, audit_logs
   // sont volontairement exclues pour empêcher l'escalade de privilèges via un fichier piégé.
