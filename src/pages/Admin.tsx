@@ -16,10 +16,15 @@ import { SecurityTwoFA } from '@/components/SecurityTwoFA';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 
-const MODULES: { key: string; label: string }[] = [
+const MODULES: { key: string; label: string; submodules?: { key: string; label: string }[] }[] = [
   { key: 'dashboard', label: 'Tableau de bord' },
   { key: 'insights', label: 'Assistant IA' },
-  { key: 'admin', label: 'Administration' },
+  { key: 'admin', label: 'Administration', submodules: [
+    { key: 'users', label: 'Utilisateurs' },
+    { key: 'permissions', label: 'Permissions' },
+    { key: 'backup', label: 'Sauvegarde' },
+    { key: 'wipe', label: 'Suppression données' },
+  ]},
   { key: 'achats_mp', label: 'Achats MP' },
   { key: 'fiches_techniques', label: 'Fiches Techniques' },
   { key: 'bons_transfert', label: 'Bons Transfert' },
@@ -31,11 +36,24 @@ const MODULES: { key: string; label: string }[] = [
   { key: 'degustations', label: 'Dégustations' },
   { key: 'catalogue', label: 'Catalogue produits' },
   { key: 'pos', label: 'Caisse / POS' },
-  { key: 'ventes', label: 'Ventes & Rapports' },
-  { key: 'clients', label: 'Clients & Crédits' },
+  { key: 'ventes', label: 'Ventes & Rapports', submodules: [
+    { key: 'evolution', label: 'Évolution CA' },
+    { key: 'top_produits', label: 'Top produits' },
+    { key: 'par_caissier', label: 'Par caissier' },
+    { key: 'export', label: 'Export' },
+  ]},
+  { key: 'clients', label: 'Clients & Crédits', submodules: [
+    { key: 'fiche', label: 'Fiches clients' },
+    { key: 'credits', label: 'Crédits' },
+    { key: 'paiements', label: 'Paiements' },
+  ]},
   { key: 'matieres_premieres', label: 'Matières Premières' },
   { key: 'tables_restaurant', label: 'Tables Restaurant' },
-  { key: 'economat', label: 'Économat' },
+  { key: 'economat', label: 'Économat', submodules: [
+    { key: 'articles', label: 'Articles' },
+    { key: 'mouvements', label: 'Mouvements' },
+    { key: 'inventaire', label: 'Inventaire éco.' },
+  ]},
 ];
 const ACTIONS: { key: 'can_read' | 'can_create' | 'can_update' | 'can_delete'; label: string }[] = [
   { key: 'can_read', label: 'Lire' },
@@ -43,6 +61,7 @@ const ACTIONS: { key: 'can_read' | 'can_create' | 'can_update' | 'can_delete'; l
   { key: 'can_update', label: 'Modifier' },
   { key: 'can_delete', label: 'Supprimer' },
 ];
+
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: 'ceo', label: 'CEO' },
