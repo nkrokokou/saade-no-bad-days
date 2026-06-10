@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, ModuleKey } from '@/hooks/usePermissions';
@@ -8,9 +9,14 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { CommandPalette } from '@/components/CommandPalette';
 import { NotificationBell } from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, ScanLine } from 'lucide-react';
+
+// Timeout d'inactivité (30 min) — déconnecte automatiquement
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const IDLE_WARN_MS = 28 * 60 * 1000;
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Tableau de bord',
