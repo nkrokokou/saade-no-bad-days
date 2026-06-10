@@ -41,10 +41,35 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 export function AppLayout({ module }: { module?: ModuleKey }) {
-  const { profile, loading: authLoading, session } = useAuth();
+  const { profile, loading: authLoading, session, signOut } = useAuth();
   const { canAccess, loading: permLoading, roles } = usePermissions();
   const location = useLocation();
   const navigate = useNavigate();
+  const warnedRef = useRef(false);
+
+  // Auto-déconnexion sur inactivité (30 min)
+  useEffect(() => {
+    if (!session) return;
+    let lastActivity = Date.now();
+    warnedRef.current = false;
+    const markActive = () => { lastActivity = Date.now(); warnedRef.current = false; };
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    events.forEach(e => window.addEventListener(e, markActive, { passive: true }));
+    const interval = setInterval(() => {
+      const idle = Date.now() - lastActivity;
+      if (idle >= IDLE_TIMEOUT_MS) {
+        toast.error('Session expirée pour inactivité — reconnexion requise');
+        signOut();
+      } else if (idle >= IDLE_WARN_MS && !warnedRef.current) {
+        warnedRef.current = true;
+        toast.warning('Vous serez déconnecté dans 2 minutes pour inactivité');
+      }
+    }, 30_000);
+    return () => {
+      clearInterval(interval);
+      events.forEach(e => window.removeEventListener(e, markActive));
+    };
+  }, [session, signOut]);
 
   if (authLoading || permLoading) {
     return (
