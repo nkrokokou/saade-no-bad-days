@@ -154,6 +154,7 @@ export default function FichesTechniques() {
       }
       qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
       qc.invalidateQueries({ queryKey: ['fiches_meta'] });
+      qc.invalidateQueries({ queryKey: ['fiche_excel_view'] });
       qc.invalidateQueries({ queryKey: ['catalogue'] });
       qc.invalidateQueries({ queryKey: ['produits'] });
       toast.success(`Import OK : ${rows.length} ingrédient(s) sur ${selected.length} fiche(s) (anciennes lignes remplacées)`);
