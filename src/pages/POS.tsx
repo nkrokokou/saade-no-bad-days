@@ -20,6 +20,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { queueVente, isOffline } from '@/lib/offlineQueue';
 import { printHtmlOrFallback, isQzAvailable, listPrinters } from '@/lib/qzPrint';
 import { ProductOptionsDialog, fetchProductOptions } from '@/components/ProductOptionsDialog';
+import { escapeHtml, sanitizeCss } from '@/lib/htmlSafe';
 
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
