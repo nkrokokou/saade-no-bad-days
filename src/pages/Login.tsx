@@ -6,6 +6,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { RefreshCw } from 'lucide-react';
+
+async function forceRefreshApp() {
+  toast.info('Mise à jour en cours…');
+  try {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch {}
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations?.();
+    if (regs) await Promise.all(regs.map(r => r.unregister()));
+  } catch {}
+  try {
+    // Préserve la session Supabase, vide le reste
+    const authKeys = Object.keys(localStorage).filter(k => k.includes('supabase.auth'));
+    const saved: Record<string,string> = {};
+    authKeys.forEach(k => { saved[k] = localStorage.getItem(k)!; });
+    localStorage.clear();
+    Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
+    sessionStorage.clear();
+  } catch {}
+  window.location.href = '/login?_v=' + Date.now();
+}
 
 const roleRedirects: Record<string, string> = {
   ceo: '/dashboard',
