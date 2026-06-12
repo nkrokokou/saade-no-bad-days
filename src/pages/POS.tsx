@@ -616,7 +616,10 @@ export default function POS() {
       const c2 = fmt(l.prix_unitaire).padStart(7, ' ') + ' ';
       const c3 = String(l.quantite).padStart(3, ' ') + ' ';
       const c4 = (Number(l.total_ligne) === 0 ? 'offert' : fmt(l.total_ligne)).padStart(8, ' ');
-      return `<div class="mono">${c1}${c2}${c3}${c4}</div>`;
+      const opts = (l.options || l.vente_ligne_options || []).map((o: any) =>
+        `<div class="mono" style="font-size:11px;color:#333;padding-left:4px;">  ↳ ${o.groupe_nom}: ${o.item_libelle}</div>`
+      ).join('');
+      return `<div class="mono">${c1}${c2}${c3}${c4}</div>${opts}`;
     }).join('');
 
     const t = tplCaisse;
