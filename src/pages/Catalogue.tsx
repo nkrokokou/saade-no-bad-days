@@ -10,13 +10,14 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Copy, Upload, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Copy, Upload, Search, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExcelImportWizard, FieldDef } from '@/components/ExcelImportWizard';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { Produit } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
+import { ProductOptionsManager } from '@/components/ProductOptionsManager';
 
 const empty = (): Partial<Produit> => ({
   nom: '', categorie: 'DIVERS', sous_categorie: '', unite: 'pièce',
