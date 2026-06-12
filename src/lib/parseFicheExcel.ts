@@ -182,11 +182,15 @@ export function parseFicheSheet(
       const mp = mps.find(m => norm(m.nom) === norm(nom))
         || mps.find(m => norm(m.nom).includes(norm(nom)) && norm(nom).length > 3)
         || mps.find(m => norm(nom).includes(norm(m.nom)) && norm(m.nom).length > 3);
+      let cout = header.colCout >= 0 ? parseNum(row[header.colCout]) : 0;
+      // Colonne "prix de revient pour une recette" = coût total → ramener au coût unitaire
+      if (cout > 0 && header.coutIsTotal && qte > 0) cout = cout / qte;
+      if (!cout) cout = mp?.prix_unitaire || 0;
       ingredients.push({
         nom,
         quantite: qte,
         unite: String((header.colUnite >= 0 ? row[header.colUnite] : '') || mp?.unite || 'G').trim().toUpperCase(),
-        cout_unitaire: header.colCout >= 0 ? parseNum(row[header.colCout]) || (mp?.prix_unitaire || 0) : (mp?.prix_unitaire || 0),
+        cout_unitaire: cout,
         mp_id: mp?.id || null,
         section: currentSection || undefined,
       });
