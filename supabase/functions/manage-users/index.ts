@@ -59,7 +59,9 @@ Deno.serve(async (req) => {
     if (action === 'list') {
       const { data: profiles } = await adminClient.from('profiles').select('*').order('created_at')
       const { data: roles } = await adminClient.from('user_roles').select('user_id, role')
-      const { data: { users } } = await adminClient.auth.admin.listUsers()
+      const { data: usersData, error: listErr } = await adminClient.auth.admin.listUsers()
+      if (listErr) console.error('listUsers error:', listErr.message)
+      const users = usersData?.users || []
       let result = (profiles || []).map((p: any) => {
         const authUser = users?.find(u => u.id === p.id)
         const userRoles = (roles || []).filter((r: any) => r.user_id === p.id).map((r: any) => r.role)
