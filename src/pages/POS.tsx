@@ -555,22 +555,22 @@ export default function POS() {
 
   const printPrepTicket = (poste: string, lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const t = tplCuisine;
-    const headerTitle = t?.header_title || 'SAADÉ';
-    const subtitle = t?.header_subtitle || POSTE_LABELS[poste] || poste.toUpperCase();
-    const footer = t?.footer_message || '';
-    const fontPx = t?.font_size_px || 13;
-    const paperMm = t?.paper_width_mm || 80;
+    const headerTitle = escapeHtml(t?.header_title || 'SAADÉ');
+    const subtitle = escapeHtml(t?.header_subtitle || POSTE_LABELS[poste] || poste.toUpperCase());
+    const footer = escapeHtml(t?.footer_message || '');
+    const fontPx = Number(t?.font_size_px) || 13;
+    const paperMm = Number(t?.paper_width_mm) || 80;
     const date = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
     const showPrices = !!t?.show_prices;
     const rows = lines.map(l => {
-      const price = showPrices ? ` <span style="float:right;font-weight:normal;">${(l.produit.prix_vente || 0).toLocaleString('fr-FR')} F</span>` : '';
-      const opts = (l.options || []).map(o => `<div style="font-size:12px;font-weight:normal;padding-left:14px;">↳ ${o.groupe_nom}: <b>${o.item_libelle}</b></div>`).join('');
-      return `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}${price}</div>${opts}`;
+      const price = showPrices ? ` <span style="float:right;font-weight:normal;">${escapeHtml((l.produit.prix_vente || 0).toLocaleString('fr-FR'))} F</span>` : '';
+      const opts = (l.options || []).map(o => `<div style="font-size:12px;font-weight:normal;padding-left:14px;">↳ ${escapeHtml(o.groupe_nom)}: <b>${escapeHtml(o.item_libelle)}</b></div>`).join('');
+      return `<div class="big">${l.quantite}× ${escapeHtml(String(l.produit.nom).toUpperCase())}${price}</div>${opts}`;
     }).join('');
     const metaBits: string[] = [];
-    if (t?.show_datetime !== false) metaBits.push(date);
-    if (t?.show_ticket_number !== false) metaBits.push(`N° ${ctx.numero}`);
-    const html = `<html><head><title>BON ${POSTE_LABELS[poste] || poste}</title>
+    if (t?.show_datetime !== false) metaBits.push(escapeHtml(date));
+    if (t?.show_ticket_number !== false) metaBits.push(`N° ${escapeHtml(ctx.numero)}`);
+    const html = `<html><head><title>BON ${escapeHtml(POSTE_LABELS[poste] || poste)}</title>
       <style>
         @page { size: ${paperMm}mm auto; margin: 2mm; }
         body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${paperMm - 4}mm; font-size: ${fontPx}px; color:#000; }
@@ -579,12 +579,12 @@ export default function POS() {
         .info { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
         .big { font-size: 16px; font-weight: bold; padding: 4px 0; border-bottom: 1px dashed #000; }
         hr { border:none; border-top:2px solid #000; margin:6px 0; }
-        ${t?.extra_css || ''}
+        ${sanitizeCss(t?.extra_css)}
       </style></head><body>
       <div class="head">${headerTitle}</div>
       <div class="sub">--- ${subtitle} ---</div>
       ${metaBits.length ? `<div class="info">${metaBits.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
-      ${(t?.show_table !== false || t?.show_serveur !== false) ? `<div class="info">${t?.show_table !== false ? `<span>Table: <b>${ctx.tableNum}</b></span>` : ''}${t?.show_serveur !== false ? `<span>Serveur: ${ctx.serveur || '-'}</span>` : ''}</div>` : ''}
+      ${(t?.show_table !== false || t?.show_serveur !== false) ? `<div class="info">${t?.show_table !== false ? `<span>Table: <b>${escapeHtml(ctx.tableNum)}</b></span>` : ''}${t?.show_serveur !== false ? `<span>Serveur: ${escapeHtml(ctx.serveur || '-')}</span>` : ''}</div>` : ''}
       <hr/>
       ${rows}
       <hr/>
