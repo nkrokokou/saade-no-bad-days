@@ -396,15 +396,20 @@ export default function POS() {
       const payload = buildVentePayload('validee');
       const noteWithServer = serveur ? `[Serveur: ${serveur}] ${notes || ''}`.trim() : (notes || null);
 
-      const buildLignes = (venteId: string | null) => cart.map(l => ({
-        vente_id: venteId,
-        produit_id: l.produit.id,
-        produit_nom: l.produit.nom,
-        quantite: l.quantite,
-        prix_unitaire: l.produit.prix_vente || 0,
-        remise: l.remise,
-        total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
-      }));
+      const buildLignes = (venteId: string | null) => cart.map(l => {
+        const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+        const unit = (l.produit.prix_vente || 0) + supp;
+        return {
+          vente_id: venteId,
+          produit_id: l.produit.id,
+          produit_nom: l.produit.nom,
+          quantite: l.quantite,
+          prix_unitaire: unit,
+          remise: l.remise,
+          total_ligne: unit * l.quantite - l.remise,
+          options: l.options || [],
+        };
+      });
 
       // Mode hors ligne → mise en file d'attente IndexedDB
       if (isOffline() && !currentTabId) {
@@ -413,7 +418,7 @@ export default function POS() {
           : null;
         const pending = await queueVente({
           vente: { ...payload.vente, notes: noteWithServer },
-          lignes: buildLignes(null),
+          lignes: buildLignes(null).map(({ options, ...rest }) => rest),
           credit,
         });
         const fauxVente = { id: pending.id, numero_ticket: '⏳ HORS-LIGNE', total: totalTicket, mode_paiement: paymentMode, date_vente: new Date().toISOString() } as any;
@@ -436,8 +441,19 @@ export default function POS() {
         vente = data;
       }
       const lignes = buildLignes(vente.id);
-      const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
+      const lignesForDb = lignes.map(({ options, ...rest }) => rest);
+      const { data: insertedLignes, error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignesForDb).select('id');
       if (e2) throw e2;
+      // Persister les options par ligne
+      const optionsRows: any[] = [];
+      lignes.forEach((l, idx) => {
+        const lid = insertedLignes?.[idx]?.id;
+        if (!lid || !l.options?.length) return;
+        l.options.forEach((o: any) => optionsRows.push({
+          vente_ligne_id: lid, groupe_nom: o.groupe_nom, item_libelle: o.item_libelle, prix_supplement: o.prix_supplement || 0,
+        }));
+      });
+      if (optionsRows.length) await (supabase.from('vente_ligne_options') as any).insert(optionsRows);
       if (paymentMode === 'credit' && clientNom) {
         await supabase.from('credits_clients').insert({
           client_nom: clientNom, vente_id: vente.id,
