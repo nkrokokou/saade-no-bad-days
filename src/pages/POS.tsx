@@ -215,10 +215,6 @@ export default function POS() {
     setCart(c => [...c, { produit: p, quantite: 1, remise: 0, options }]);
     setOptDialog(null);
   };
-  const updateQty = (id: string, delta: number) => {
-    setCart(c => c.map(l => l.produit.id === id ? { ...l, quantite: Math.max(0, l.quantite + delta) } : l).filter(l => l.quantite > 0));
-  };
-  const removeLine = (id: string) => setCart(c => c.filter(l => l.produit.id !== id));
   const clearCart = () => {
     setCart([]); setRemiseGlobale(0); setClientNom(''); setNotes('');
     setTableId('comptoir'); setServeur(''); setCurrentTabId(null);
