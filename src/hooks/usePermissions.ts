@@ -48,7 +48,7 @@ export function usePermissions() {
 
   useEffect(() => { load(); }, [load]);
 
-  const isCeo = state.roles.includes('ceo');
+  const isCeo = state.roles.includes('ceo') || state.roles.includes('developer' as UserRole);
 
   const can = useCallback((module: ModuleKey, action: Action = 'read'): boolean => {
     if (isCeo) return true;
