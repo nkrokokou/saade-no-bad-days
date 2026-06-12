@@ -19,6 +19,7 @@ import { Produit, useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { queueVente, isOffline } from '@/lib/offlineQueue';
 import { printHtmlOrFallback, isQzAvailable, listPrinters } from '@/lib/qzPrint';
+import { ProductOptionsDialog, fetchProductOptions } from '@/components/ProductOptionsDialog';
 
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
@@ -27,6 +28,7 @@ interface CartLine {
   produit: Produit;
   quantite: number;
   remise: number;
+  options?: { groupe_nom: string; item_libelle: string; prix_supplement: number }[];
 }
 
 const PAYMENT_LABELS: Record<PaymentMode, string> = {
@@ -177,7 +179,10 @@ export default function POS() {
   }, [produits, search, activeCat]);
 
   const totalLignes = useMemo(
-    () => cart.reduce((s, l) => s + (l.produit.prix_vente || 0) * l.quantite - l.remise, 0),
+    () => cart.reduce((s, l) => {
+      const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+      return s + ((l.produit.prix_vente || 0) + supp) * l.quantite - l.remise;
+    }, 0),
     [cart]
   );
   const totalTicket = Math.max(0, totalLignes - remiseGlobale);
@@ -185,17 +190,30 @@ export default function POS() {
 
   useEffect(() => { if (payOpen) setMontantRecu(totalTicket); }, [payOpen, totalTicket]);
 
-  const addToCart = (p: Produit) => {
+  const [optDialog, setOptDialog] = useState<{ produit: Produit; groupes: any[] } | null>(null);
+
+  const addToCart = async (p: Produit) => {
     const dispo = getStockDispo(p.id);
     if (dispo !== null && dispo <= 0) {
       toast.error(`Stock épuisé : ${p.nom}`);
       return;
     }
+    // Vérifier si le produit a des options
+    const groupes = await fetchProductOptions(p.id);
+    if (groupes.length > 0) {
+      setOptDialog({ produit: p, groupes });
+      return;
+    }
     setCart(c => {
-      const i = c.findIndex(l => l.produit.id === p.id);
+      const i = c.findIndex(l => l.produit.id === p.id && !l.options?.length);
       if (i >= 0) { const n = [...c]; n[i] = { ...n[i], quantite: n[i].quantite + 1 }; return n; }
       return [...c, { produit: p, quantite: 1, remise: 0 }];
     });
+  };
+
+  const addWithOptions = (p: Produit, options: { groupe_nom: string; item_libelle: string; prix_supplement: number }[]) => {
+    setCart(c => [...c, { produit: p, quantite: 1, remise: 0, options }]);
+    setOptDialog(null);
   };
   const updateQty = (id: string, delta: number) => {
     setCart(c => c.map(l => l.produit.id === id ? { ...l, quantite: Math.max(0, l.quantite + delta) } : l).filter(l => l.quantite > 0));
@@ -908,6 +926,16 @@ export default function POS() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {optDialog && (
+        <ProductOptionsDialog
+          open={!!optDialog}
+          onOpenChange={(v) => { if (!v) setOptDialog(null); }}
+          produitNom={optDialog.produit.nom}
+          groupes={optDialog.groupes}
+          onConfirm={(choices) => addWithOptions(optDialog.produit, choices)}
+        />
+      )}
 
     </div>
   );

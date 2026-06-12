@@ -1,59 +1,83 @@
-# Plan d'action
+## 1. Synchronisation entre navigateurs (Chrome reste sur l'ancienne UI)
 
-## 1. Comment ça marche actuellement (réponse à ta question)
+**Cause :** le PWA + le cache du navigateur servent l'ancien `index.html` / les anciens bundles JS tant que le service-worker n'a pas relâché sa version. Sur Edge ça marche parce qu'il n'y a pas de SW enregistré ou qu'il a été purgé.
 
-L'app **n'envoie pas directement à 2 imprimantes différentes** — elle ouvre la boîte de dialogue native Chrome (`window.print()`).  
-Le tri "Cuisine vs Caisse" se fait **dans l'app** : on prépare 2 contenus HTML distincts (bon cuisine sans prix/sans boissons, ticket caisse complet). Quand tu cliques sur **"Bon Cuisine"** → la boîte Chrome s'ouvre avec le contenu cuisine, tu choisis l'imprimante cuisine. Quand tu cliques sur **"Ticket Caisse"** → idem avec le contenu caisse, tu choisis l'imprimante caisse.
+**À faire :**
+- Ajouter dans `index.html` des `<meta http-equiv="Cache-Control" content="no-cache">` + version build dans `<title>` pour aider l'utilisateur à voir la version.
+- Créer un petit composant `<VersionGuard />` monté dans `AppLayout` qui :
+  - lit un fichier statique `/version.json` (généré au build avec `VITE_BUILD_ID`)
+  - le compare toutes les 60 s à la version chargée
+  - si différent → toast « Nouvelle version disponible » + bouton **Recharger** qui fait `caches.keys().then(...delete)` puis `location.reload(true)` et `navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()))`.
+- Documenter dans le guide v5 la procédure « forcer la mise à jour » (Ctrl+Shift+R sur Chrome).
 
-Sur la tablette installée comme PWA, Chrome mémorise la dernière imprimante par défaut, ce qui rend le flux rapide.
+## 2. POS — options / modificateurs (Formules, Pain bro, Menu enfant)
 
-## 2. Refonte UI POS (mobile + tablette)
+Aujourd'hui un produit POS est une simple tuile → ajout direct au ticket. Il faut un **système de modificateurs** par produit.
 
-- Layout 2 colonnes sur tablette (≥ md) / 1 colonne sur mobile
-- Catalogue à gauche avec tabs catégories sticky, recherche, vignettes plus tactiles
-- Panier à droite (drawer plein écran sur mobile) avec totaux toujours visibles
-- Boutons d'action proéminents : **Bon Cuisine** / **Ticket Caisse** / **Encaisser**
-- Quick-quantities (+1 / +5) au tap, swipe-to-remove
-- Indicateur visuel du destinataire (badge "Cuisine" / "Bar") par article selon catégorie
+**Schéma DB (migration) :**
+- `produit_options_groupes` (id, produit_id, nom, ordre, min_choix, max_choix, obligatoire)
+- `produit_options_items` (id, groupe_id, libelle, prix_supplement DEFAULT 0, ordre)
+- `vente_ligne_options` (id, vente_ligne_id, groupe_nom, item_libelle, prix_supplement)
 
-## 3. Nouvelle plateforme Admin → "Modèles de tickets"
+**UI POS :**
+- Quand on clique sur un produit qui a au moins un groupe → ouvrir un dialog modale : pour chaque groupe, radio (max=1) ou checkboxes (max>1) listant les items. Validation : impossible de valider si un groupe obligatoire n'a pas le bon nombre d'éléments. À la validation → ajout au ticket avec sous-lignes affichées en italique.
+- Ticket imprimé : afficher les options sous la ligne produit.
 
-Page dédiée dans Administration permettant à la CEO de gérer :
-- En-tête (nom commerce, sous-titre, adresse, téléphone, logo)
-- Pied de page (message remerciement, mentions légales, slogan)
-- Affichage : afficher/masquer numéro de ticket, date/heure, serveur, table, caissier
-- Spécifique cuisine : afficher prix oui/non, regrouper par catégorie, exclure boissons (toggle)
-- Spécifique caisse : afficher TVA, mode de paiement, monnaie rendue
-- Aperçu live du ticket à droite
-- Stockage : nouvelle table `ticket_templates` (clé = `cuisine` / `caisse`) avec JSON config, RLS CEO uniquement
+**UI Catalogue (admin) :**
+- Sur la fiche produit, nouvel onglet « Options » pour créer/éditer les groupes et items.
 
-## 4. Fiche technique — diagnostic
+**Pré-remplissage automatique** via migration (data INSERT) pour les produits demandés :
+- Formule Burger : groupe « Soft » (radio obligatoire) → Ice tea, Tonic, Eau gazeuse, Eau plate, Word cola, Youki orange
+- Formule express : groupe « Boisson chaude » + groupe « Viennoiserie » + groupe « Eau »
+- Formule goûter : groupe « Dessert » (tous les produits catégorie Desserts) + groupe « Boisson » (chaude OU froide)
+- Formule healthy : groupe « Boisson » → Eau / Jus Hugs / Limonade
+- Formule snack : groupe « Plat » (hot dogs + pain bro) + frite incluse + groupe « Boisson »
+- Menu enfant : groupe « Boisson » (Eau, Hugs ananas/bissap/multifruits), groupe « Plat » (Mini croq dog / Mini panini j-f), Frite + Fruits inclus
+- Pain bro : groupe « Suppléments » (multi, prix_supplement=0) → Mayo, Tomate, Oignon, Piment vert
 
-Les boutons **Excel / PDF / Importer** sont déjà dans le code (`FichesTechniques.tsx` lignes ~190-210) mais visibles **uniquement après avoir cliqué sur un produit**. Sur ta capture, tu es resté sur la liste des produits. Je vais :
-- Ajouter aussi les boutons Export/Import **au niveau de la liste** (export global toutes fiches, import multi-produits)
-- Rendre la barre d'actions plus visible quand on ouvre un produit
+## 3. Fiche technique — calcul faux
 
-## 5. Journal d'activité vide — diagnostic + correction
+**Cause confirmée en base** : la colonne `fiches_techniques.cout_unitaire_mp` contient **déjà** la valeur ligne (qté × prix unitaire) au lieu du prix unitaire seul. L'app refait ensuite `qté × cout_unitaire_mp` → résultat × qté.
 
-À vérifier :
-- Le hook `useAuditLog` est-il appelé sur login / création utilisateur / CRUD ?
-- La table `audit_log` reçoit-elle les insertions ? (requête SQL de contrôle)
-- RLS lecture pour le CEO
+Exemple : Pâte à tartiner speculoos, prix MP = 7,5/g, ligne 5 g.
+Stocké : `cout_unitaire_mp = 37,5` au lieu de `7,5` → affiche 5 × 37,5 = **187,5** au lieu de 5 × 7,5 = **37,5**.
 
-Action : brancher les hooks manquants (login, logout, création user, CRUD produits/MP/ventes) + vérifier policy SELECT pour CEO.
+**À faire :**
+1. **Migration data** : pour chaque ligne `fiches_techniques` où `matiere_premiere_id IS NOT NULL`, réécrire `cout_unitaire_mp = matieres_premieres.prix_unitaire`. Pour les lignes sans MP liée (ex « Poudre de Spéculoos » qui n'existe pas), diviser le cout stocké par la quantité **uniquement si quantite > 0 et cout/qte cohérent** — sinon laisser et logger.
+2. **Création / Achats MP → recalcul produits** : déjà OK via `recalc_produit_prix_cout`, qui devient juste après la migration.
+3. **FicheExcelView.tsx** :
+   - Au `pickMP`, recalculer toujours `cout_unitaire_mp = mp.prix_unitaire` (déjà le cas — bug seulement sur la donnée existante).
+   - Ajouter à côté de la colonne « QTE » une mini-étiquette grise montrant `prix MP : 7,5 F/G` pour transparence.
+4. **MP manquantes** : créer `POUDRE DE SPECULOOS` en MP (prix calculé depuis SPECULOOS 1biscuit/donut) pour que le lien MP fonctionne.
 
-## 6. Compte rendu final
+## 4. Permissions — `duplicate key value violates unique constraint "module_permissions_role_module_key"`
 
-À la fin je fournis un récap "état de l'app" : ce qui marche, ce qui manque, priorités suggérées (impression directe sans dialogue via QZ Tray ? notifications cuisine temps réel ? mode offline ? etc.).
+**Cause :** quand on a ajouté la colonne `submodule`, l'ancienne contrainte unique `(role, module)` n'a pas été mise à jour. Toute tentative d'insérer une ligne `(role, module, submodule)` alors qu'il existe déjà `(role, module, NULL)` casse.
 
----
+**Migration :**
+```sql
+ALTER TABLE module_permissions DROP CONSTRAINT module_permissions_role_module_key;
+CREATE UNIQUE INDEX module_permissions_role_module_submodule_key
+  ON module_permissions (role, module, COALESCE(submodule, ''));
+```
++ code Admin.tsx : adapter la requête `findExisting` pour matcher sur `(role, module, submodule)` (déjà fait mais cassait sur l'INSERT à cause de la contrainte).
 
-## Ordre d'exécution proposé
-1. Diagnostic SQL audit_log + correction
-2. Boutons Excel sur liste fiches techniques (visibilité)
-3. Table + page Admin "Modèles de tickets"
-4. Refonte UI POS
-5. Branchement templates dans l'impression POS
-6. Compte rendu
+## 5. Compte développeur totalement invisible
 
-Je commence dès que tu valides — ou dis-moi si tu veux qu'on retire/réordonne des points.
+**Approche :**
+- Nouveau rôle `developer` dans l'enum `app_role`.
+- Flag `is_hidden boolean DEFAULT false` sur `profiles`.
+- Edge function `manage-users` : tout user avec `is_hidden=true` est filtré de la réponse list → invisible dans Admin > Utilisateurs.
+- Trigger `log_audit_change` : `RETURN` immédiat si `auth.uid()` appartient à un user `is_hidden` → aucune trace dans `audit_logs`.
+- Politiques RLS : le rôle `developer` voit tout (équivalent CEO via `is_dev()`), mais aucune table ne filtre par lui dans l'UI.
+- `NotificationBell` / `CaissesLive` / `RapportsCeo` : ignorer les sessions/ventes créées par un user hidden ? **Non** — le dev observe sans polluer. Donc ses propres actions sont taggées mais non loggées.
+- Création initiale via SQL direct (pas d'UI) : un compte `dev@saade.local` créé hors UI, mot de passe transmis hors-bande.
+
+## Ordre d'exécution
+1. Migration permissions (rapide, débloque l'admin)
+2. Migration data fiches techniques (corrige les calculs)
+3. Migration + UI options POS
+4. VersionGuard / cache busting
+5. Compte dev (dernière étape, sensible)
+
+Confirme-moi que je peux lancer dans cet ordre, ou dis-moi par lequel commencer en priorité.
