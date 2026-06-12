@@ -158,7 +158,7 @@ export default function POS() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventes')
-        .select('id, numero_ticket, total, table_id, serveur_id, client_nom, notes, created_at, vente_lignes(*)')
+        .select('id, numero_ticket, total, table_id, serveur_id, client_nom, notes, created_at, vente_lignes(*, vente_ligne_options(*))')
         .eq('session_id', session!.id)
         .eq('statut', 'en_cours')
         .order('created_at', { ascending: false });
@@ -215,10 +215,6 @@ export default function POS() {
     setCart(c => [...c, { produit: p, quantite: 1, remise: 0, options }]);
     setOptDialog(null);
   };
-  const updateQty = (id: string, delta: number) => {
-    setCart(c => c.map(l => l.produit.id === id ? { ...l, quantite: Math.max(0, l.quantite + delta) } : l).filter(l => l.quantite > 0));
-  };
-  const removeLine = (id: string) => setCart(c => c.filter(l => l.produit.id !== id));
   const clearCart = () => {
     setCart([]); setRemiseGlobale(0); setClientNom(''); setNotes('');
     setTableId('comptoir'); setServeur(''); setCurrentTabId(null);
@@ -327,17 +323,31 @@ export default function POS() {
         if (error) throw error;
         venteId = data.id;
       }
-      const lignes = cart.map(l => ({
-        vente_id: venteId,
-        produit_id: l.produit.id,
-        produit_nom: l.produit.nom,
-        quantite: l.quantite,
-        prix_unitaire: l.produit.prix_vente || 0,
-        remise: l.remise,
-        total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
-      }));
-      const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
+      const lignes = cart.map(l => {
+        const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+        const unit = (l.produit.prix_vente || 0) + supp;
+        return {
+          vente_id: venteId,
+          produit_id: l.produit.id,
+          produit_nom: l.produit.nom,
+          quantite: l.quantite,
+          prix_unitaire: unit,
+          remise: l.remise,
+          total_ligne: unit * l.quantite - l.remise,
+        };
+      });
+      const { data: insertedLignes, error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes).select('id');
       if (e2) throw e2;
+      // Persister les options
+      const optionsRows: any[] = [];
+      cart.forEach((l, idx) => {
+        const lid = insertedLignes?.[idx]?.id;
+        if (!lid || !l.options?.length) return;
+        l.options.forEach(o => optionsRows.push({
+          vente_ligne_id: lid, groupe_nom: o.groupe_nom, item_libelle: o.item_libelle, prix_supplement: o.prix_supplement || 0,
+        }));
+      });
+      if (optionsRows.length) await (supabase.from('vente_ligne_options') as any).insert(optionsRows);
       // Plus d'impression auto ici : la cuisine s'imprime via le bouton dédié
       return venteId;
     },
@@ -357,7 +367,12 @@ export default function POS() {
       const p = produits.find(pr => pr.id === l.produit_id) || {
         id: l.produit_id, nom: l.produit_nom, categorie: 'DIVERS', prix_vente: l.prix_unitaire,
       } as Produit;
-      return { produit: p, quantite: Number(l.quantite), remise: Number(l.remise || 0) };
+      const opts = (l.vente_ligne_options || []).map((o: any) => ({
+        groupe_nom: o.groupe_nom, item_libelle: o.item_libelle, prix_supplement: Number(o.prix_supplement) || 0,
+      }));
+      const supp = opts.reduce((a: number, o: any) => a + o.prix_supplement, 0);
+      const basePrice = Math.max(0, Number(l.prix_unitaire) - supp);
+      return { produit: { ...p, prix_vente: basePrice }, quantite: Number(l.quantite), remise: Number(l.remise || 0), options: opts };
     });
     setCart(newCart);
     setCurrentTabId(tab.id);
@@ -386,15 +401,20 @@ export default function POS() {
       const payload = buildVentePayload('validee');
       const noteWithServer = serveur ? `[Serveur: ${serveur}] ${notes || ''}`.trim() : (notes || null);
 
-      const buildLignes = (venteId: string | null) => cart.map(l => ({
-        vente_id: venteId,
-        produit_id: l.produit.id,
-        produit_nom: l.produit.nom,
-        quantite: l.quantite,
-        prix_unitaire: l.produit.prix_vente || 0,
-        remise: l.remise,
-        total_ligne: (l.produit.prix_vente || 0) * l.quantite - l.remise,
-      }));
+      const buildLignes = (venteId: string | null) => cart.map(l => {
+        const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+        const unit = (l.produit.prix_vente || 0) + supp;
+        return {
+          vente_id: venteId,
+          produit_id: l.produit.id,
+          produit_nom: l.produit.nom,
+          quantite: l.quantite,
+          prix_unitaire: unit,
+          remise: l.remise,
+          total_ligne: unit * l.quantite - l.remise,
+          options: l.options || [],
+        };
+      });
 
       // Mode hors ligne → mise en file d'attente IndexedDB
       if (isOffline() && !currentTabId) {
@@ -403,7 +423,7 @@ export default function POS() {
           : null;
         const pending = await queueVente({
           vente: { ...payload.vente, notes: noteWithServer },
-          lignes: buildLignes(null),
+          lignes: buildLignes(null).map(({ options, ...rest }) => rest),
           credit,
         });
         const fauxVente = { id: pending.id, numero_ticket: '⏳ HORS-LIGNE', total: totalTicket, mode_paiement: paymentMode, date_vente: new Date().toISOString() } as any;
@@ -426,8 +446,19 @@ export default function POS() {
         vente = data;
       }
       const lignes = buildLignes(vente.id);
-      const { error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignes);
+      const lignesForDb = lignes.map(({ options, ...rest }) => rest);
+      const { data: insertedLignes, error: e2 } = await (supabase.from('vente_lignes') as any).insert(lignesForDb).select('id');
       if (e2) throw e2;
+      // Persister les options par ligne
+      const optionsRows: any[] = [];
+      lignes.forEach((l, idx) => {
+        const lid = insertedLignes?.[idx]?.id;
+        if (!lid || !l.options?.length) return;
+        l.options.forEach((o: any) => optionsRows.push({
+          vente_ligne_id: lid, groupe_nom: o.groupe_nom, item_libelle: o.item_libelle, prix_supplement: o.prix_supplement || 0,
+        }));
+      });
+      if (optionsRows.length) await (supabase.from('vente_ligne_options') as any).insert(optionsRows);
       if (paymentMode === 'credit' && clientNom) {
         await supabase.from('credits_clients').insert({
           client_nom: clientNom, vente_id: vente.id,
@@ -532,7 +563,8 @@ export default function POS() {
     const showPrices = !!t?.show_prices;
     const rows = lines.map(l => {
       const price = showPrices ? ` <span style="float:right;font-weight:normal;">${(l.produit.prix_vente || 0).toLocaleString('fr-FR')} F</span>` : '';
-      return `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}${price}</div>`;
+      const opts = (l.options || []).map(o => `<div style="font-size:12px;font-weight:normal;padding-left:14px;">↳ ${o.groupe_nom}: <b>${o.item_libelle}</b></div>`).join('');
+      return `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}${price}</div>${opts}`;
     }).join('');
     const metaBits: string[] = [];
     if (t?.show_datetime !== false) metaBits.push(date);
@@ -584,7 +616,10 @@ export default function POS() {
       const c2 = fmt(l.prix_unitaire).padStart(7, ' ') + ' ';
       const c3 = String(l.quantite).padStart(3, ' ') + ' ';
       const c4 = (Number(l.total_ligne) === 0 ? 'offert' : fmt(l.total_ligne)).padStart(8, ' ');
-      return `<div class="mono">${c1}${c2}${c3}${c4}</div>`;
+      const opts = (l.options || l.vente_ligne_options || []).map((o: any) =>
+        `<div class="mono" style="font-size:11px;color:#333;padding-left:4px;">  ↳ ${o.groupe_nom}: ${o.item_libelle}</div>`
+      ).join('');
+      return `<div class="mono">${c1}${c2}${c3}${c4}</div>${opts}`;
     }).join('');
 
     const t = tplCaisse;
@@ -757,20 +792,29 @@ export default function POS() {
           </SheetHeader>
           <ScrollArea className="flex-1 -mx-4 px-4 my-2">
             {cart.length === 0 && <div className="text-center text-muted-foreground py-12 text-sm">Cliquez sur des produits</div>}
-            {cart.map(l => (
-              <div key={l.produit.id} className="flex items-center gap-2 py-3 border-b">
+            {cart.map((l, idx) => {
+              const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+              const unit = (l.produit.prix_vente || 0) + supp;
+              return (
+              <div key={`${l.produit.id}-${idx}`} className="flex items-start gap-2 py-3 border-b">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{l.produit.nom}</div>
-                  <div className="text-xs text-muted-foreground">{(l.produit.prix_vente || 0).toLocaleString()} F × {l.quantite}</div>
+                  <div className="text-xs text-muted-foreground">{unit.toLocaleString()} F × {l.quantite}</div>
+                  {(l.options || []).map((o, i) => (
+                    <div key={i} className="text-xs italic text-muted-foreground pl-2">
+                      ↳ {o.groupe_nom}: {o.item_libelle}{o.prix_supplement ? ` (+${o.prix_supplement.toLocaleString()} F)` : ''}
+                    </div>
+                  ))}
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, -1)}><Minus className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setCart(c => c.map((x, i) => i === idx ? { ...x, quantite: Math.max(0, x.quantite - 1) } : x).filter(x => x.quantite > 0))}><Minus className="h-4 w-4" /></Button>
                   <span className="w-7 text-center font-medium">{l.quantite}</span>
-                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, 1)}><Plus className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeLine(l.produit.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setCart(c => c.map((x, i) => i === idx ? { ...x, quantite: x.quantite + 1 } : x))}><Plus className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCart(c => c.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </ScrollArea>
           <div className="space-y-3 pt-2 border-t">
             <div className="flex items-center gap-2">

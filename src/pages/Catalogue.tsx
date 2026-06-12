@@ -10,13 +10,14 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Copy, Upload, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Copy, Upload, Search, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExcelImportWizard, FieldDef } from '@/components/ExcelImportWizard';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { Produit } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
+import { ProductOptionsManager } from '@/components/ProductOptionsManager';
 
 const empty = (): Partial<Produit> => ({
   nom: '', categorie: 'DIVERS', sous_categorie: '', unite: 'pièce',
@@ -41,6 +42,7 @@ export default function Catalogue() {
   const [editing, setEditing] = useState<Partial<Produit> | null>(null);
   const [toDelete, setToDelete] = useState<Produit | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [optionsFor, setOptionsFor] = useState<Produit | null>(null);
 
   const { data: produits = [], isLoading } = useQuery({
     queryKey: ['catalogue'],
@@ -228,6 +230,7 @@ export default function Catalogue() {
                       <TableCell>{p.actif === false ? <Badge variant="outline">Inactif</Badge> : <Badge>Actif</Badge>}</TableCell>
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => setEditing(p)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" title="Options / formules" onClick={() => setOptionsFor(p)}><Settings2 className="h-4 w-4" /></Button>
                         <Button size="icon" variant="ghost" onClick={() => duplicate(p)}><Copy className="h-4 w-4" /></Button>
                         <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </TableCell>
@@ -296,6 +299,15 @@ export default function Catalogue() {
         fields={importFields}
         onImport={handleImport}
       />
+
+      {optionsFor && (
+        <ProductOptionsManager
+          open={!!optionsFor}
+          onOpenChange={v => !v && setOptionsFor(null)}
+          produitId={optionsFor.id}
+          produitNom={optionsFor.nom}
+        />
+      )}
     </div>
   );
 }
