@@ -367,7 +367,12 @@ export default function POS() {
       const p = produits.find(pr => pr.id === l.produit_id) || {
         id: l.produit_id, nom: l.produit_nom, categorie: 'DIVERS', prix_vente: l.prix_unitaire,
       } as Produit;
-      return { produit: p, quantite: Number(l.quantite), remise: Number(l.remise || 0) };
+      const opts = (l.vente_ligne_options || []).map((o: any) => ({
+        groupe_nom: o.groupe_nom, item_libelle: o.item_libelle, prix_supplement: Number(o.prix_supplement) || 0,
+      }));
+      const supp = opts.reduce((a: number, o: any) => a + o.prix_supplement, 0);
+      const basePrice = Math.max(0, Number(l.prix_unitaire) - supp);
+      return { produit: { ...p, prix_vente: basePrice }, quantite: Number(l.quantite), remise: Number(l.remise || 0), options: opts };
     });
     setCart(newCart);
     setCurrentTabId(tab.id);
