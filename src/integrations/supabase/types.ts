@@ -1083,18 +1083,21 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          is_hidden: boolean
           role: string
         }
         Insert: {
           created_at?: string
           full_name?: string
           id: string
+          is_hidden?: boolean
           role?: string
         }
         Update: {
           created_at?: string
           full_name?: string
           id?: string
+          is_hidden?: boolean
           role?: string
         }
         Relationships: []
@@ -1569,6 +1572,7 @@ export type Database = {
         | "cuisine_salee"
         | "salle"
         | "economat"
+        | "developer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1703,6 +1707,7 @@ export const Constants = {
         "cuisine_salee",
         "salle",
         "economat",
+        "developer",
       ],
     },
   },
