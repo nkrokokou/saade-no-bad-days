@@ -252,9 +252,9 @@ function escapeHtml(s: string) {
 
 function previewPrint(t: Template) {
   const html = `<html><head><title>Aperçu</title><style>
-    @page { size: ${t.paper_width_mm}mm auto; margin: 2mm; }
-    body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${t.paper_width_mm - 4}mm; font-size: ${t.font_size_px}px; color: #000; }
-    ${t.extra_css || ''}
+    @page { size: ${Number(t.paper_width_mm) || 80}mm auto; margin: 2mm; }
+    body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${(Number(t.paper_width_mm) || 80) - 4}mm; font-size: ${Number(t.font_size_px) || 12}px; color: #000; }
+    ${sanitizeCssLocal(t.extra_css)}
   </style></head><body>${renderPreview(t)}</body></html>`;
   const iframe = document.createElement('iframe');
   Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
