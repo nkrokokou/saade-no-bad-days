@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, Printer } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 type MP = { id: string; nom: string; unite: string; prix_unitaire: number };
 type Ing = {
