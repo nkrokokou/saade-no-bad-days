@@ -924,6 +924,16 @@ export default function POS() {
         </DialogContent>
       </Dialog>
 
+      {optDialog && (
+        <ProductOptionsDialog
+          open={!!optDialog}
+          onOpenChange={(v) => { if (!v) setOptDialog(null); }}
+          produitNom={optDialog.produit.nom}
+          groupes={optDialog.groupes}
+          onConfirm={(choices) => addWithOptions(optDialog.produit, choices)}
+        />
+      )}
+
     </div>
   );
 }
