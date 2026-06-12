@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Save, Printer, ChefHat, ReceiptText } from 'lucide-react';
+import { sanitizeCss as sanitizeCssLocal } from '@/lib/htmlSafe';
 
 type Template = {
   id?: string;
