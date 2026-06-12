@@ -757,20 +757,29 @@ export default function POS() {
           </SheetHeader>
           <ScrollArea className="flex-1 -mx-4 px-4 my-2">
             {cart.length === 0 && <div className="text-center text-muted-foreground py-12 text-sm">Cliquez sur des produits</div>}
-            {cart.map(l => (
-              <div key={l.produit.id} className="flex items-center gap-2 py-3 border-b">
+            {cart.map((l, idx) => {
+              const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+              const unit = (l.produit.prix_vente || 0) + supp;
+              return (
+              <div key={`${l.produit.id}-${idx}`} className="flex items-start gap-2 py-3 border-b">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{l.produit.nom}</div>
-                  <div className="text-xs text-muted-foreground">{(l.produit.prix_vente || 0).toLocaleString()} F × {l.quantite}</div>
+                  <div className="text-xs text-muted-foreground">{unit.toLocaleString()} F × {l.quantite}</div>
+                  {(l.options || []).map((o, i) => (
+                    <div key={i} className="text-xs italic text-muted-foreground pl-2">
+                      ↳ {o.groupe_nom}: {o.item_libelle}{o.prix_supplement ? ` (+${o.prix_supplement.toLocaleString()} F)` : ''}
+                    </div>
+                  ))}
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, -1)}><Minus className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setCart(c => c.map((x, i) => i === idx ? { ...x, quantite: Math.max(0, x.quantite - 1) } : x).filter(x => x.quantite > 0))}><Minus className="h-4 w-4" /></Button>
                   <span className="w-7 text-center font-medium">{l.quantite}</span>
-                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => updateQty(l.produit.id, 1)}><Plus className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => removeLine(l.produit.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setCart(c => c.map((x, i) => i === idx ? { ...x, quantite: x.quantite + 1 } : x))}><Plus className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setCart(c => c.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </ScrollArea>
           <div className="space-y-3 pt-2 border-t">
             <div className="flex items-center gap-2">
