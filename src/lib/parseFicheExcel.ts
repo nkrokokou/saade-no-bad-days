@@ -65,12 +65,17 @@ const findIngredientsHeader = (grid: any[][]) => {
     if (ing < 0) continue;
     const qte = row.findIndex(c => c.includes('qte') || c.includes('quantite') || c === 'q');
     if (qte < 0) continue;
+    const colCout = row.findIndex(c => c.includes('prix') || c.includes('cout') || c === 'pu');
+    const coutHeader = colCout >= 0 ? row[colCout] : '';
+    // "PRIX DE REVIENT POUR UNE RECETTE", "COUT TOTAL"… = coût total de la ligne, pas un coût unitaire
+    const coutIsTotal = /revient|total|recette/.test(coutHeader) && !/unitaire|\bpu\b|unite/.test(coutHeader);
     return {
       headerIdx: i,
       colNom: ing,
       colQte: qte,
       colUnite: row.findIndex(c => c.includes('unite') || c === 'u' || c === 'um'),
-      colCout: row.findIndex(c => c.includes('prix') || c.includes('cout') || c === 'pu'),
+      colCout,
+      coutIsTotal,
     };
   }
   return null;
