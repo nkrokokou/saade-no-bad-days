@@ -20,6 +20,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { queueVente, isOffline } from '@/lib/offlineQueue';
 import { printHtmlOrFallback, isQzAvailable, listPrinters } from '@/lib/qzPrint';
 import { ProductOptionsDialog, fetchProductOptions } from '@/components/ProductOptionsDialog';
+import { escapeHtml, sanitizeCss } from '@/lib/htmlSafe';
 
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
@@ -554,22 +555,22 @@ export default function POS() {
 
   const printPrepTicket = (poste: string, lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const t = tplCuisine;
-    const headerTitle = t?.header_title || 'SAADÉ';
-    const subtitle = t?.header_subtitle || POSTE_LABELS[poste] || poste.toUpperCase();
-    const footer = t?.footer_message || '';
-    const fontPx = t?.font_size_px || 13;
-    const paperMm = t?.paper_width_mm || 80;
+    const headerTitle = escapeHtml(t?.header_title || 'SAADÉ');
+    const subtitle = escapeHtml(t?.header_subtitle || POSTE_LABELS[poste] || poste.toUpperCase());
+    const footer = escapeHtml(t?.footer_message || '');
+    const fontPx = Number(t?.font_size_px) || 13;
+    const paperMm = Number(t?.paper_width_mm) || 80;
     const date = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
     const showPrices = !!t?.show_prices;
     const rows = lines.map(l => {
-      const price = showPrices ? ` <span style="float:right;font-weight:normal;">${(l.produit.prix_vente || 0).toLocaleString('fr-FR')} F</span>` : '';
-      const opts = (l.options || []).map(o => `<div style="font-size:12px;font-weight:normal;padding-left:14px;">↳ ${o.groupe_nom}: <b>${o.item_libelle}</b></div>`).join('');
-      return `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}${price}</div>${opts}`;
+      const price = showPrices ? ` <span style="float:right;font-weight:normal;">${escapeHtml((l.produit.prix_vente || 0).toLocaleString('fr-FR'))} F</span>` : '';
+      const opts = (l.options || []).map(o => `<div style="font-size:12px;font-weight:normal;padding-left:14px;">↳ ${escapeHtml(o.groupe_nom)}: <b>${escapeHtml(o.item_libelle)}</b></div>`).join('');
+      return `<div class="big">${l.quantite}× ${escapeHtml(String(l.produit.nom).toUpperCase())}${price}</div>${opts}`;
     }).join('');
     const metaBits: string[] = [];
-    if (t?.show_datetime !== false) metaBits.push(date);
-    if (t?.show_ticket_number !== false) metaBits.push(`N° ${ctx.numero}`);
-    const html = `<html><head><title>BON ${POSTE_LABELS[poste] || poste}</title>
+    if (t?.show_datetime !== false) metaBits.push(escapeHtml(date));
+    if (t?.show_ticket_number !== false) metaBits.push(`N° ${escapeHtml(ctx.numero)}`);
+    const html = `<html><head><title>BON ${escapeHtml(POSTE_LABELS[poste] || poste)}</title>
       <style>
         @page { size: ${paperMm}mm auto; margin: 2mm; }
         body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${paperMm - 4}mm; font-size: ${fontPx}px; color:#000; }
@@ -578,12 +579,12 @@ export default function POS() {
         .info { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
         .big { font-size: 16px; font-weight: bold; padding: 4px 0; border-bottom: 1px dashed #000; }
         hr { border:none; border-top:2px solid #000; margin:6px 0; }
-        ${t?.extra_css || ''}
+        ${sanitizeCss(t?.extra_css)}
       </style></head><body>
       <div class="head">${headerTitle}</div>
       <div class="sub">--- ${subtitle} ---</div>
       ${metaBits.length ? `<div class="info">${metaBits.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
-      ${(t?.show_table !== false || t?.show_serveur !== false) ? `<div class="info">${t?.show_table !== false ? `<span>Table: <b>${ctx.tableNum}</b></span>` : ''}${t?.show_serveur !== false ? `<span>Serveur: ${ctx.serveur || '-'}</span>` : ''}</div>` : ''}
+      ${(t?.show_table !== false || t?.show_serveur !== false) ? `<div class="info">${t?.show_table !== false ? `<span>Table: <b>${escapeHtml(ctx.tableNum)}</b></span>` : ''}${t?.show_serveur !== false ? `<span>Serveur: ${escapeHtml(ctx.serveur || '-')}</span>` : ''}</div>` : ''}
       <hr/>
       ${rows}
       <hr/>
@@ -617,22 +618,22 @@ export default function POS() {
       const c3 = String(l.quantite).padStart(3, ' ') + ' ';
       const c4 = (Number(l.total_ligne) === 0 ? 'offert' : fmt(l.total_ligne)).padStart(8, ' ');
       const opts = (l.options || l.vente_ligne_options || []).map((o: any) =>
-        `<div class="mono" style="font-size:11px;color:#333;padding-left:4px;">  ↳ ${o.groupe_nom}: ${o.item_libelle}</div>`
+        `<div class="mono" style="font-size:11px;color:#333;padding-left:4px;">  ↳ ${escapeHtml(o.groupe_nom)}: ${escapeHtml(o.item_libelle)}</div>`
       ).join('');
-      return `<div class="mono">${c1}${c2}${c3}${c4}</div>${opts}`;
+      return `<div class="mono">${escapeHtml(c1 + c2 + c3 + c4)}</div>${opts}`;
     }).join('');
 
     const t = tplCaisse;
-    const headerTitle = t?.header_title || 'SAADÉ';
-    const subtitle = t?.header_subtitle || 'PÂTISSERIE · SNACK · CONCEPT STORE';
-    const address = t?.header_address || 'Lomé · Togo';
-    const phone = t?.header_phone || '';
-    const footer = t?.footer_message || 'Merci de votre visite';
-    const legal = t?.footer_legal || '';
-    const fontPx = t?.font_size_px || 12;
-    const paperMm = t?.paper_width_mm || 80;
+    const headerTitle = escapeHtml(t?.header_title || 'SAADÉ');
+    const subtitle = escapeHtml(t?.header_subtitle || 'PÂTISSERIE · SNACK · CONCEPT STORE');
+    const address = escapeHtml(t?.header_address || 'Lomé · Togo');
+    const phone = escapeHtml(t?.header_phone || '');
+    const footer = escapeHtml(t?.footer_message || 'Merci de votre visite');
+    const legal = escapeHtml(t?.footer_legal || '');
+    const fontPx = Number(t?.font_size_px) || 12;
+    const paperMm = Number(t?.paper_width_mm) || 80;
 
-    const html = `<html><head><title>Ticket ${v.numero_ticket}</title>
+    const html = `<html><head><title>Ticket ${escapeHtml(v.numero_ticket)}</title>
       <style>
         @page { size: ${paperMm}mm auto; margin: 2mm; }
         body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${paperMm - 4}mm; font-size: ${fontPx}px; line-height: 1.35; color: #000; }
@@ -644,16 +645,16 @@ export default function POS() {
         .mono { white-space: pre; font-size: ${fontPx}px; }
         .total { font-weight: bold; }
         .footer { text-align: center; margin-top: 8px; font-size: 11px; }
-        ${t?.extra_css || ''}
+        ${sanitizeCss(t?.extra_css)}
       </style></head><body>
       <h2>${headerTitle}</h2>
       ${subtitle ? `<div class="sub">${subtitle}</div>` : ''}
       ${address ? `<div class="addr">${address}</div>` : ''}
       ${phone ? `<div class="addr">${phone}</div>` : ''}
-      ${(t?.show_datetime !== false || t?.show_ticket_number !== false) ? `<div class="row" style="font-size:11px;margin-top:2px;">${t?.show_datetime !== false ? `<span>${date}</span>` : '<span></span>'}${t?.show_ticket_number !== false ? `<span>Ticket N° ${v.numero_ticket}</span>` : ''}</div>` : ''}
-      <div style="font-size:11px;">CLIENT : ${(v.client_nom || 'CLIENT CASH').toUpperCase()}</div>
+      ${(t?.show_datetime !== false || t?.show_ticket_number !== false) ? `<div class="row" style="font-size:11px;margin-top:2px;">${t?.show_datetime !== false ? `<span>${escapeHtml(date)}</span>` : '<span></span>'}${t?.show_ticket_number !== false ? `<span>Ticket N° ${escapeHtml(v.numero_ticket)}</span>` : ''}</div>` : ''}
+      <div style="font-size:11px;">CLIENT : ${escapeHtml((v.client_nom || 'CLIENT CASH').toUpperCase())}</div>
       <hr/>
-      <div class="mono">${articlesHeader}</div>
+      <div class="mono">${escapeHtml(articlesHeader)}</div>
       ${articlesRows}
       <hr/>
       ${t?.show_prices !== false ? `
@@ -661,11 +662,11 @@ export default function POS() {
         <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
         <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
       ` : ''}
-      ${t?.show_payment_mode !== false ? `<div class="row"><span>${modeLabel}</span><span>${fmt(v.montant_recu)} CFA</span></div>` : ''}
+      ${t?.show_payment_mode !== false ? `<div class="row"><span>${escapeHtml(modeLabel)}</span><span>${fmt(v.montant_recu)} CFA</span></div>` : ''}
       ${(t?.show_change !== false && Number(v.rendu) > 0) ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
       <hr/>
-      ${(t?.show_serveur !== false || t?.show_table !== false) ? `<div style="font-size:11px;">${t?.show_serveur !== false ? `serveur : ${serveurNom || '....'}   ` : ''}${t?.show_table !== false ? `table : ${tableNum || '....'}` : ''}</div>` : ''}
-      ${t?.show_caissier !== false ? `<div style="font-size:11px;">caissier : ${caissier}</div>` : ''}
+      ${(t?.show_serveur !== false || t?.show_table !== false) ? `<div style="font-size:11px;">${t?.show_serveur !== false ? `serveur : ${escapeHtml(serveurNom || '....')}   ` : ''}${t?.show_table !== false ? `table : ${escapeHtml(tableNum || '....')}` : ''}</div>` : ''}
+      ${t?.show_caissier !== false ? `<div style="font-size:11px;">caissier : ${escapeHtml(caissier)}</div>` : ''}
       <hr/>
       <div class="footer">${footer}</div>
       ${legal ? `<div class="footer" style="font-size:10px;color:#444;">${legal}</div>` : ''}
