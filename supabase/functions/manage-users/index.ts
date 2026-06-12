@@ -13,7 +13,7 @@ function jsonResponse(data: unknown, status = 200) {
   })
 }
 
-// Rate-limit en mémoire (par user_id) : 20 req / minute, 100 / heure
+// Rate-limit en mémoire : 20/min, 100/h
 const rlMap = new Map<string, { minute: number[]; hour: number[] }>()
 function rateLimit(userId: string): { ok: boolean; reason?: string } {
   const now = Date.now()
@@ -42,13 +42,16 @@ Deno.serve(async (req) => {
     const { data: { user: caller }, error: userError } = await adminClient.auth.getUser(token)
     if (userError || !caller) return jsonResponse({ error: 'Non autorisé' }, 401)
 
-    // Rate-limit par utilisateur
     const rl = rateLimit(caller.id)
     if (!rl.ok) return jsonResponse({ error: rl.reason }, 429)
 
-    // CEO check via user_roles
-    const { data: ceoCheck } = await adminClient.from('user_roles').select('role').eq('user_id', caller.id).eq('role', 'ceo').maybeSingle()
-    if (!ceoCheck) return jsonResponse({ error: 'Accès réservé au CEO' }, 403)
+    // Caller doit être CEO OU developer
+    const { data: callerRoles } = await adminClient
+      .from('user_roles').select('role').eq('user_id', caller.id)
+    const callerRoleSet = new Set((callerRoles || []).map((r: any) => r.role))
+    const isCeo = callerRoleSet.has('ceo')
+    const isDev = callerRoleSet.has('developer')
+    if (!isCeo && !isDev) return jsonResponse({ error: 'Accès réservé au CEO' }, 403)
 
     const body = await req.json()
     const { action } = body
@@ -57,44 +60,66 @@ Deno.serve(async (req) => {
       const { data: profiles } = await adminClient.from('profiles').select('*').order('created_at')
       const { data: roles } = await adminClient.from('user_roles').select('user_id, role')
       const { data: { users } } = await adminClient.auth.admin.listUsers()
-      const result = (profiles || []).map(p => {
+      let result = (profiles || []).map((p: any) => {
         const authUser = users?.find(u => u.id === p.id)
-        const userRoles = (roles || []).filter(r => r.user_id === p.id).map(r => r.role)
+        const userRoles = (roles || []).filter((r: any) => r.user_id === p.id).map((r: any) => r.role)
         return { ...p, email: authUser?.email || '', roles: userRoles }
       })
+      // Filtrer les comptes cachés (developer) — sauf si le caller EST developer
+      if (!isDev) {
+        result = result.filter((u: any) => !u.is_hidden && !u.roles.includes('developer'))
+      }
       return jsonResponse(result)
     }
 
     if (action === 'create') {
-      const { email, password, full_name, role } = body
+      const { email, password, full_name, role, is_hidden } = body
       if (!email || !password || !full_name || !role) return jsonResponse({ error: 'Champs requis manquants' }, 400)
+      // Seul un developer peut créer un autre developer ou un user caché
+      if ((role === 'developer' || is_hidden) && !isDev) {
+        return jsonResponse({ error: 'Action réservée au developer' }, 403)
+      }
       const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
         email, password, email_confirm: true, user_metadata: { full_name },
       })
       if (createError) return jsonResponse({ error: createError.message }, 400)
-      await adminClient.from('profiles').update({ full_name, role }).eq('id', newUser.user.id)
-      // Replace default role with chosen role
+      await adminClient.from('profiles').update({
+        full_name, role, is_hidden: !!is_hidden,
+      }).eq('id', newUser.user.id)
       await adminClient.from('user_roles').delete().eq('user_id', newUser.user.id)
       await adminClient.from('user_roles').insert({ user_id: newUser.user.id, role })
       return jsonResponse({ success: true, user: newUser.user })
     }
 
     if (action === 'update') {
-      const { user_id, full_name, role, roles, email, password } = body
+      const { user_id, full_name, role, roles, email, password, is_hidden } = body
       if (!user_id) return jsonResponse({ error: 'user_id requis' }, 400)
-      if (full_name || role) {
-        const updates: Record<string, string> = {}
+      // Protection : un CEO non-dev ne peut pas modifier un compte developer ou caché
+      const { data: target } = await adminClient.from('profiles').select('is_hidden').eq('id', user_id).maybeSingle()
+      const { data: targetRoles } = await adminClient.from('user_roles').select('role').eq('user_id', user_id)
+      const targetIsDev = (targetRoles || []).some((r: any) => r.role === 'developer')
+      if ((target?.is_hidden || targetIsDev) && !isDev) {
+        return jsonResponse({ error: 'Action réservée au developer' }, 403)
+      }
+      if (full_name || role || typeof is_hidden === 'boolean') {
+        const updates: Record<string, any> = {}
         if (full_name) updates.full_name = full_name
         if (role) updates.role = role
+        if (typeof is_hidden === 'boolean' && isDev) updates.is_hidden = is_hidden
         await adminClient.from('profiles').update(updates).eq('id', user_id)
       }
-      // Multi-roles support
       if (Array.isArray(roles)) {
+        if (roles.includes('developer') && !isDev) {
+          return jsonResponse({ error: 'Seul un developer peut accorder ce rôle' }, 403)
+        }
         await adminClient.from('user_roles').delete().eq('user_id', user_id)
         if (roles.length > 0) {
           await adminClient.from('user_roles').insert(roles.map((r: string) => ({ user_id, role: r })))
         }
       } else if (role) {
+        if (role === 'developer' && !isDev) {
+          return jsonResponse({ error: 'Seul un developer peut accorder ce rôle' }, 403)
+        }
         await adminClient.from('user_roles').delete().eq('user_id', user_id)
         await adminClient.from('user_roles').insert({ user_id, role })
       }
@@ -110,6 +135,12 @@ Deno.serve(async (req) => {
     if (action === 'delete') {
       const { user_id } = body
       if (!user_id || user_id === caller.id) return jsonResponse({ error: 'Impossible de supprimer ce compte' }, 400)
+      const { data: target } = await adminClient.from('profiles').select('is_hidden').eq('id', user_id).maybeSingle()
+      const { data: targetRoles } = await adminClient.from('user_roles').select('role').eq('user_id', user_id)
+      const targetIsDev = (targetRoles || []).some((r: any) => r.role === 'developer')
+      if ((target?.is_hidden || targetIsDev) && !isDev) {
+        return jsonResponse({ error: 'Action réservée au developer' }, 403)
+      }
       await adminClient.auth.admin.deleteUser(user_id)
       return jsonResponse({ success: true })
     }
