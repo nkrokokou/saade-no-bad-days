@@ -618,22 +618,22 @@ export default function POS() {
       const c3 = String(l.quantite).padStart(3, ' ') + ' ';
       const c4 = (Number(l.total_ligne) === 0 ? 'offert' : fmt(l.total_ligne)).padStart(8, ' ');
       const opts = (l.options || l.vente_ligne_options || []).map((o: any) =>
-        `<div class="mono" style="font-size:11px;color:#333;padding-left:4px;">  ↳ ${o.groupe_nom}: ${o.item_libelle}</div>`
+        `<div class="mono" style="font-size:11px;color:#333;padding-left:4px;">  ↳ ${escapeHtml(o.groupe_nom)}: ${escapeHtml(o.item_libelle)}</div>`
       ).join('');
-      return `<div class="mono">${c1}${c2}${c3}${c4}</div>${opts}`;
+      return `<div class="mono">${escapeHtml(c1 + c2 + c3 + c4)}</div>${opts}`;
     }).join('');
 
     const t = tplCaisse;
-    const headerTitle = t?.header_title || 'SAADÉ';
-    const subtitle = t?.header_subtitle || 'PÂTISSERIE · SNACK · CONCEPT STORE';
-    const address = t?.header_address || 'Lomé · Togo';
-    const phone = t?.header_phone || '';
-    const footer = t?.footer_message || 'Merci de votre visite';
-    const legal = t?.footer_legal || '';
-    const fontPx = t?.font_size_px || 12;
-    const paperMm = t?.paper_width_mm || 80;
+    const headerTitle = escapeHtml(t?.header_title || 'SAADÉ');
+    const subtitle = escapeHtml(t?.header_subtitle || 'PÂTISSERIE · SNACK · CONCEPT STORE');
+    const address = escapeHtml(t?.header_address || 'Lomé · Togo');
+    const phone = escapeHtml(t?.header_phone || '');
+    const footer = escapeHtml(t?.footer_message || 'Merci de votre visite');
+    const legal = escapeHtml(t?.footer_legal || '');
+    const fontPx = Number(t?.font_size_px) || 12;
+    const paperMm = Number(t?.paper_width_mm) || 80;
 
-    const html = `<html><head><title>Ticket ${v.numero_ticket}</title>
+    const html = `<html><head><title>Ticket ${escapeHtml(v.numero_ticket)}</title>
       <style>
         @page { size: ${paperMm}mm auto; margin: 2mm; }
         body { font-family: 'Courier New', monospace; padding: 0; margin: 0; width: ${paperMm - 4}mm; font-size: ${fontPx}px; line-height: 1.35; color: #000; }
@@ -645,16 +645,16 @@ export default function POS() {
         .mono { white-space: pre; font-size: ${fontPx}px; }
         .total { font-weight: bold; }
         .footer { text-align: center; margin-top: 8px; font-size: 11px; }
-        ${t?.extra_css || ''}
+        ${sanitizeCss(t?.extra_css)}
       </style></head><body>
       <h2>${headerTitle}</h2>
       ${subtitle ? `<div class="sub">${subtitle}</div>` : ''}
       ${address ? `<div class="addr">${address}</div>` : ''}
       ${phone ? `<div class="addr">${phone}</div>` : ''}
-      ${(t?.show_datetime !== false || t?.show_ticket_number !== false) ? `<div class="row" style="font-size:11px;margin-top:2px;">${t?.show_datetime !== false ? `<span>${date}</span>` : '<span></span>'}${t?.show_ticket_number !== false ? `<span>Ticket N° ${v.numero_ticket}</span>` : ''}</div>` : ''}
-      <div style="font-size:11px;">CLIENT : ${(v.client_nom || 'CLIENT CASH').toUpperCase()}</div>
+      ${(t?.show_datetime !== false || t?.show_ticket_number !== false) ? `<div class="row" style="font-size:11px;margin-top:2px;">${t?.show_datetime !== false ? `<span>${escapeHtml(date)}</span>` : '<span></span>'}${t?.show_ticket_number !== false ? `<span>Ticket N° ${escapeHtml(v.numero_ticket)}</span>` : ''}</div>` : ''}
+      <div style="font-size:11px;">CLIENT : ${escapeHtml((v.client_nom || 'CLIENT CASH').toUpperCase())}</div>
       <hr/>
-      <div class="mono">${articlesHeader}</div>
+      <div class="mono">${escapeHtml(articlesHeader)}</div>
       ${articlesRows}
       <hr/>
       ${t?.show_prices !== false ? `
@@ -662,11 +662,11 @@ export default function POS() {
         <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
         <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
       ` : ''}
-      ${t?.show_payment_mode !== false ? `<div class="row"><span>${modeLabel}</span><span>${fmt(v.montant_recu)} CFA</span></div>` : ''}
+      ${t?.show_payment_mode !== false ? `<div class="row"><span>${escapeHtml(modeLabel)}</span><span>${fmt(v.montant_recu)} CFA</span></div>` : ''}
       ${(t?.show_change !== false && Number(v.rendu) > 0) ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
       <hr/>
-      ${(t?.show_serveur !== false || t?.show_table !== false) ? `<div style="font-size:11px;">${t?.show_serveur !== false ? `serveur : ${serveurNom || '....'}   ` : ''}${t?.show_table !== false ? `table : ${tableNum || '....'}` : ''}</div>` : ''}
-      ${t?.show_caissier !== false ? `<div style="font-size:11px;">caissier : ${caissier}</div>` : ''}
+      ${(t?.show_serveur !== false || t?.show_table !== false) ? `<div style="font-size:11px;">${t?.show_serveur !== false ? `serveur : ${escapeHtml(serveurNom || '....')}   ` : ''}${t?.show_table !== false ? `table : ${escapeHtml(tableNum || '....')}` : ''}</div>` : ''}
+      ${t?.show_caissier !== false ? `<div style="font-size:11px;">caissier : ${escapeHtml(caissier)}</div>` : ''}
       <hr/>
       <div class="footer">${footer}</div>
       ${legal ? `<div class="footer" style="font-size:10px;color:#444;">${legal}</div>` : ''}
