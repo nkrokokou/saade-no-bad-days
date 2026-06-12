@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { CommandPalette } from '@/components/CommandPalette';
 import { NotificationBell } from '@/components/NotificationBell';
+import { VersionGuard } from '@/components/VersionGuard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -95,6 +96,7 @@ export function AppLayout({ module }: { module?: ModuleKey }) {
 
   return (
     <SidebarProvider>
+      <VersionGuard />
       <CommandPalette />
       <div className="min-h-screen flex w-full">
         <AppSidebar />
