@@ -1030,6 +1030,88 @@ export type Database = {
           },
         ]
       }
+      produit_options_groupes: {
+        Row: {
+          created_at: string
+          id: string
+          max_choix: number
+          min_choix: number
+          nom: string
+          obligatoire: boolean
+          ordre: number
+          produit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_choix?: number
+          min_choix?: number
+          nom: string
+          obligatoire?: boolean
+          ordre?: number
+          produit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_choix?: number
+          min_choix?: number
+          nom?: string
+          obligatoire?: boolean
+          ordre?: number
+          produit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produit_options_groupes_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produit_options_items: {
+        Row: {
+          actif: boolean
+          created_at: string
+          groupe_id: string
+          id: string
+          libelle: string
+          ordre: number
+          prix_supplement: number
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          groupe_id: string
+          id?: string
+          libelle: string
+          ordre?: number
+          prix_supplement?: number
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          groupe_id?: string
+          id?: string
+          libelle?: string
+          ordre?: number
+          prix_supplement?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produit_options_items_groupe_id_fkey"
+            columns: ["groupe_id"]
+            isOneToOne: false
+            referencedRelation: "produit_options_groupes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produits: {
         Row: {
           actif: boolean
@@ -1379,6 +1461,41 @@ export type Database = {
         }
         Relationships: []
       }
+      vente_ligne_options: {
+        Row: {
+          created_at: string
+          groupe_nom: string
+          id: string
+          item_libelle: string
+          prix_supplement: number
+          vente_ligne_id: string
+        }
+        Insert: {
+          created_at?: string
+          groupe_nom: string
+          id?: string
+          item_libelle: string
+          prix_supplement?: number
+          vente_ligne_id: string
+        }
+        Update: {
+          created_at?: string
+          groupe_nom?: string
+          id?: string
+          item_libelle?: string
+          prix_supplement?: number
+          vente_ligne_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vente_ligne_options_vente_ligne_id_fkey"
+            columns: ["vente_ligne_id"]
+            isOneToOne: false
+            referencedRelation: "vente_lignes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vente_lignes: {
         Row: {
           created_at: string
@@ -1563,6 +1680,7 @@ export type Database = {
         Returns: boolean
       }
       is_ceo: { Args: { _user_id: string }; Returns: boolean }
+      is_user_hidden: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
