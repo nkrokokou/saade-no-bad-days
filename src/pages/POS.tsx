@@ -27,6 +27,7 @@ interface CartLine {
   produit: Produit;
   quantite: number;
   remise: number;
+  options?: { groupe_nom: string; item_libelle: string; prix_supplement: number }[];
 }
 
 const PAYMENT_LABELS: Record<PaymentMode, string> = {
@@ -185,17 +186,30 @@ export default function POS() {
 
   useEffect(() => { if (payOpen) setMontantRecu(totalTicket); }, [payOpen, totalTicket]);
 
-  const addToCart = (p: Produit) => {
+  const [optDialog, setOptDialog] = useState<{ produit: Produit; groupes: any[] } | null>(null);
+
+  const addToCart = async (p: Produit) => {
     const dispo = getStockDispo(p.id);
     if (dispo !== null && dispo <= 0) {
       toast.error(`Stock épuisé : ${p.nom}`);
       return;
     }
+    // Vérifier si le produit a des options
+    const groupes = await fetchProductOptions(p.id);
+    if (groupes.length > 0) {
+      setOptDialog({ produit: p, groupes });
+      return;
+    }
     setCart(c => {
-      const i = c.findIndex(l => l.produit.id === p.id);
+      const i = c.findIndex(l => l.produit.id === p.id && !l.options?.length);
       if (i >= 0) { const n = [...c]; n[i] = { ...n[i], quantite: n[i].quantite + 1 }; return n; }
       return [...c, { produit: p, quantite: 1, remise: 0 }];
     });
+  };
+
+  const addWithOptions = (p: Produit, options: { groupe_nom: string; item_libelle: string; prix_supplement: number }[]) => {
+    setCart(c => [...c, { produit: p, quantite: 1, remise: 0, options }]);
+    setOptDialog(null);
   };
   const updateQty = (id: string, delta: number) => {
     setCart(c => c.map(l => l.produit.id === id ? { ...l, quantite: Math.max(0, l.quantite + delta) } : l).filter(l => l.quantite > 0));
