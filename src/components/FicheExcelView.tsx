@@ -201,16 +201,7 @@ export function FicheExcelView({
       toast.success('Fiche enregistrée');
       qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
       qc.invalidateQueries({ queryKey: ['produits'] });
-      // reload
-      const [{ data: ftRows }] = await Promise.all([
-        supabase.from('fiches_techniques').select('*').eq('produit_id', productId).order('ordre').order('created_at'),
-      ]);
-      setIngs((ftRows || []).map((r: any, i: number) => ({
-        id: r.id, section: r.section || '',
-        matiere_premiere_id: r.matiere_premiere_id, matiere_premiere: r.matiere_premiere,
-        quantite_mp: Number(r.quantite_mp) || 0, unite_mp: r.unite_mp || 'G',
-        cout_unitaire_mp: Number(r.cout_unitaire_mp) || 0, ordre: r.ordre ?? i,
-      })));
+      qc.invalidateQueries({ queryKey: ['fiche_excel_view', productId] });
       setToDelete([]);
     } catch (e: any) {
       toast.error('Erreur : ' + (e.message || ''));
