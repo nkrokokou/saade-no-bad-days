@@ -52,42 +52,47 @@ export function FicheExcelView({
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<string[]>([]);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
+  const { data: loaded, isLoading: loading } = useQuery({
+    queryKey: ['fiche_excel_view', productId],
+    queryFn: async () => {
       const [{ data: ftRows }, { data: m }] = await Promise.all([
         supabase.from('fiches_techniques').select('*').eq('produit_id', productId).order('ordre', { ascending: true, nullsFirst: false }).order('created_at'),
         supabase.from('fiches_techniques_meta').select('*').eq('produit_id', productId).maybeSingle(),
       ]);
-      setIngs((ftRows || []).map((r: any, i: number) => ({
-        id: r.id,
-        section: r.section || '',
-        matiere_premiere_id: r.matiere_premiere_id,
-        matiere_premiere: r.matiere_premiere,
-        quantite_mp: Number(r.quantite_mp) || 0,
-        unite_mp: r.unite_mp || 'G',
-        cout_unitaire_mp: Number(r.cout_unitaire_mp) || 0,
-        ordre: r.ordre ?? i,
-      })));
-      setMeta(m ? {
-        id: m.id,
-        moule: m.moule || '',
-        taille_longueur: m.taille_longueur || '',
-        taille_hauteur: m.taille_hauteur || '',
-        diametre: m.diametre || '',
-        diametre_secondaire: m.diametre_secondaire || '',
-        qte_recette: m.qte_recette,
-        temps_cuisson_min: m.temps_cuisson_min,
-        temperature_cuisson: m.temperature_cuisson,
-        rendement: m.rendement,
-        rendement_unite: m.rendement_unite || 'pièces',
-        etapes: m.etapes || '',
-        conservation: m.conservation || '',
-      } : EMPTY_META);
-      setToDelete([]);
-      setLoading(false);
-    })();
-  }, [productId]);
+      return { ftRows: ftRows || [], m };
+    },
+  });
+
+  useEffect(() => {
+    if (!loaded) return;
+    setIngs(loaded.ftRows.map((r: any, i: number) => ({
+      id: r.id,
+      section: r.section || '',
+      matiere_premiere_id: r.matiere_premiere_id,
+      matiere_premiere: r.matiere_premiere,
+      quantite_mp: Number(r.quantite_mp) || 0,
+      unite_mp: r.unite_mp || 'G',
+      cout_unitaire_mp: Number(r.cout_unitaire_mp) || 0,
+      ordre: r.ordre ?? i,
+    })));
+    const m = loaded.m;
+    setMeta(m ? {
+      id: m.id,
+      moule: m.moule || '',
+      taille_longueur: m.taille_longueur || '',
+      taille_hauteur: m.taille_hauteur || '',
+      diametre: m.diametre || '',
+      diametre_secondaire: m.diametre_secondaire || '',
+      qte_recette: m.qte_recette,
+      temps_cuisson_min: m.temps_cuisson_min,
+      temperature_cuisson: m.temperature_cuisson,
+      rendement: m.rendement,
+      rendement_unite: m.rendement_unite || 'pièces',
+      etapes: m.etapes || '',
+      conservation: m.conservation || '',
+    } : EMPTY_META);
+    setToDelete([]);
+  }, [loaded]);
 
   const etapesArr = useMemo(
     () => (meta.etapes || '').split('\n').map(s => s.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean),
