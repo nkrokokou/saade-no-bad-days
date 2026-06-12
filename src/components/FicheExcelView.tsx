@@ -48,7 +48,6 @@ export function FicheExcelView({
   const qc = useQueryClient();
   const [ings, setIngs] = useState<Ing[]>([]);
   const [meta, setMeta] = useState<Meta>(EMPTY_META);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<string[]>([]);
 
