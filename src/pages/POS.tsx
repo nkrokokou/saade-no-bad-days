@@ -563,7 +563,8 @@ export default function POS() {
     const showPrices = !!t?.show_prices;
     const rows = lines.map(l => {
       const price = showPrices ? ` <span style="float:right;font-weight:normal;">${(l.produit.prix_vente || 0).toLocaleString('fr-FR')} F</span>` : '';
-      return `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}${price}</div>`;
+      const opts = (l.options || []).map(o => `<div style="font-size:12px;font-weight:normal;padding-left:14px;">↳ ${o.groupe_nom}: <b>${o.item_libelle}</b></div>`).join('');
+      return `<div class="big">${l.quantite}× ${l.produit.nom.toUpperCase()}${price}</div>${opts}`;
     }).join('');
     const metaBits: string[] = [];
     if (t?.show_datetime !== false) metaBits.push(date);
