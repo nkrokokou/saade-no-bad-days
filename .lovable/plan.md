@@ -1,43 +1,48 @@
-# Mise à jour automatique sur tous les appareils — fin des caches bloqués
+# Offline qui marche, mises à jour qui passent toujours
 
-## Le problème (confirmé dans le code)
+## Objectif
+Rétablir le mode hors-ligne tout en garantissant que **plus jamais** un appareil ne reste bloqué sur une ancienne version, même sur Chrome/Safari avec cache agressif.
 
-L'application est configurée en PWA avec un **service worker** qui met en cache tous les fichiers de l'app (`vite.config.ts` → `vite-plugin-pwa` avec cache `StaleWhileRevalidate`). Concrètement :
+## Stratégie : NetworkFirst + auto-update strict
 
-- Le navigateur sert **d'abord l'ancienne version** depuis le cache, et ne récupère la nouvelle qu'en arrière-plan — parfois jamais si le service worker est coincé.
-- C'est pour ça qu'en navigation privée (pas de cache) tout marche, mais sur les navigateurs habituels de votre cliente, l'ancienne version reste affichée.
-- Le bouton « Forcer la mise à jour » et le `VersionGuard` sont des pansements : ils exigent une action manuelle sur chaque appareil — exactement ce qui vous fatigue.
+### 1. Phase de nettoyage (kill-switch déjà en place)
+Le `public/sw.js` actuel (kill-switch) reste en place **pour ce déploiement uniquement**. Il sera téléchargé par tous les appareils déjà infectés par l'ancien cache Workbox, nettoiera tout, puis se désinstallera. C'est une étape obligatoire avant de réintroduire un nouveau worker, sinon les anciens caches resteront.
 
-## La solution durable (une seule fois, puis plus jamais)
+### 2. Réintroduction propre de `vite-plugin-pwa`
+Configuration durcie dans `vite.config.ts` :
+- **`registerType: "autoUpdate"`** : le nouveau worker prend la main automatiquement, sans demander à l'utilisateur.
+- **`skipWaiting: true` + `clientsClaim: true`** dans Workbox : la nouvelle version active immédiatement tous les onglets ouverts, pas besoin de fermer/rouvrir.
+- **`navigateFallback` + `NetworkFirst` sur HTML** avec timeout court (3 s) : à chaque navigation, le navigateur tente d'abord le réseau ; il ne sert le cache que si offline ou réseau très lent. Conséquence : la dernière version est servie dès qu'internet répond.
+- **`CacheFirst` uniquement sur les assets hashés** (JS/CSS avec hash dans le nom) — ils sont immutables par construction donc jamais obsolètes.
+- **Exclure `/version.json`, `/~oauth`, `/api`** de tout cache.
+- **Précache de l'app shell** pour démarrage hors-ligne.
 
-### 1. Déployer un service worker « kill-switch »
-Remplacer le service worker actuel par un petit worker spécial (au même chemin `/sw.js`) qui, dès qu'un appareil ouvre l'app :
-- supprime automatiquement tous les anciens caches de l'app,
-- se désinstalle tout seul,
-- recharge la page sur la version fraîche.
+### 3. Bandeau « Nouvelle version » non bloquant
+Remettre un petit `VersionGuard` léger qui écoute l'événement `controllerchange` du service worker. Quand `autoUpdate` installe une nouvelle version :
+- soit elle s'applique silencieusement au prochain rechargement de page (cas normal),
+- soit un toast discret « Nouvelle version chargée » s'affiche 3 s. Aucune action requise.
 
-**Aucune manipulation nécessaire sur les ordis/appareils de votre cliente** : il suffit qu'ils ouvrent l'app une fois avec internet, et le nettoyage se fait tout seul.
+### 4. Bouton « Forcer la mise à jour » sur Login conservé
+En filet de sécurité ultime — désormais quasi jamais utile.
 
-### 2. Supprimer la mise en cache agressive
-- Retirer `vite-plugin-pwa` (le cache offline) de la configuration de build.
-- Conserver le **manifest** (`manifest.json` + icônes) : l'app reste installable sur l'écran d'accueil, mais sans cache problématique.
-- L'hébergement Lovable sert déjà le HTML avec des en-têtes de revalidation : chaque visite charge automatiquement la dernière version publiée.
+### 5. Garde-fous anti-régression
+- Documenter dans `mem://` la règle : « PWA = NetworkFirst sur HTML, jamais StaleWhileRevalidate sur du HTML, jamais de cache sans timeout ».
+- Le `public/sw.js` kill-switch sera remplacé par le SW généré par `vite-plugin-pwa` au build — donc tous les appareils recevront automatiquement le bon worker lors du prochain déploiement.
 
-### 3. Nettoyer les pansements devenus inutiles
-- Supprimer le composant `VersionGuard` et son polling de `version.json`.
-- Supprimer le bouton « Forcer la mise à jour » de la page de login (ou le garder quelque temps par sécurité, à vous de me dire).
-- Simplifier `vite.config.ts` (retrait du plugin PWA et de la génération de `version.json`).
+## Compromis assumés
+- **Première visite hors-ligne** : impossible (normal — il faut au moins un chargement initial avec internet pour installer l'app shell).
+- **Réseau très lent (>3 s)** : sert la version cachée puis met à jour en arrière-plan → l'utilisateur verra la nouvelle version au rechargement suivant. Pas de blocage.
+- **Données dynamiques (Supabase)** : restent en NetworkFirst court — toujours fraîches quand internet est là.
 
-### 4. Publier
-Une fois publié, chaque appareil qui ouvre l'app se nettoie tout seul au premier chargement, puis reçoit toujours la dernière version automatiquement.
+## Fichiers touchés
+- `vite.config.ts` : remettre `VitePWA` avec la config durcie ci-dessus.
+- `public/sw.js` : supprimé (le plugin générera son propre `sw.js` au même chemin, qui remplacera le kill-switch sur les appareils).
+- `src/components/VersionGuard.tsx` : recréé en version légère (écoute `controllerchange`).
+- `src/components/AppLayout.tsx` : remonte `<VersionGuard />`.
+- `src/main.tsx` : registration garde-foue (refus en dev/preview Lovable, support `?sw=off`).
 
-## Compromis à connaître
-- L'app ne fonctionnera plus **hors-ligne** (le cache offline est justement la source du problème). Si le mode hors-ligne est indispensable, dites-le-moi — sinon je le retire.
-- Le worker kill-switch reste en place un cycle de publication pour nettoyer tous les appareils, puis pourra être retiré plus tard.
+## Ordre de déploiement (important)
+1. Le déploiement actuel (kill-switch) doit d'abord atteindre chaque appareil **au moins une fois** — typiquement quelques heures après publication.
+2. Ensuite je peux publier la version « PWA propre ». Les appareils nettoyés recevront le nouveau worker NetworkFirst directement.
 
-## Détails techniques
-- `public/sw.js` : worker kill-switch (suppression des caches Workbox propres à l'app, `unregister()` en `finally`, rechargement des onglets ouverts).
-- `vite.config.ts` : retrait de `VitePWA` et de `emitVersionJson`.
-- `src/components/AppLayout.tsx` : retrait de `<VersionGuard />`.
-- Suppression de `src/components/VersionGuard.tsx`.
-- `src/pages/Login.tsx` : retrait (ou conservation) du bouton de mise à jour forcée.
+Si vous publiez les deux changements trop rapprochés, certains appareils sauteront le nettoyage. Confirmez quand le kill-switch a tourné sur les principaux appareils de votre cliente (ou attendez 24 h) avant que je publie la phase 2.
