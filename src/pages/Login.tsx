@@ -32,6 +32,7 @@ async function forceRefreshApp() {
 
 const roleRedirects: Record<string, string> = {
   ceo: '/dashboard',
+  developer: '/dashboard',
   labo_patisserie: '/bons-transfert',
   labo_viennoiserie: '/bons-transfert',
   cuisine_salee: '/pertes',
