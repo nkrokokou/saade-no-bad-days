@@ -42,6 +42,7 @@ export default function Catalogue() {
   const [editing, setEditing] = useState<Partial<Produit> | null>(null);
   const [toDelete, setToDelete] = useState<Produit | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [optionsFor, setOptionsFor] = useState<Produit | null>(null);
 
   const { data: produits = [], isLoading } = useQuery({
     queryKey: ['catalogue'],
