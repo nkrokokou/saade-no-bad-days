@@ -299,6 +299,15 @@ export default function Catalogue() {
         fields={importFields}
         onImport={handleImport}
       />
+
+      {optionsFor && (
+        <ProductOptionsManager
+          open={!!optionsFor}
+          onOpenChange={v => !v && setOptionsFor(null)}
+          produitId={optionsFor.id}
+          produitNom={optionsFor.nom}
+        />
+      )}
     </div>
   );
 }
