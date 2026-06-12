@@ -6,6 +6,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { RefreshCw } from 'lucide-react';
+
+async function forceRefreshApp() {
+  toast.info('Mise à jour en cours…');
+  try {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch {}
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations?.();
+    if (regs) await Promise.all(regs.map(r => r.unregister()));
+  } catch {}
+  try {
+    // Préserve la session Supabase, vide le reste
+    const authKeys = Object.keys(localStorage).filter(k => k.includes('supabase.auth'));
+    const saved: Record<string,string> = {};
+    authKeys.forEach(k => { saved[k] = localStorage.getItem(k)!; });
+    localStorage.clear();
+    Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
+    sessionStorage.clear();
+  } catch {}
+  window.location.href = '/login?_v=' + Date.now();
+}
 
 const roleRedirects: Record<string, string> = {
   ceo: '/dashboard',
@@ -58,6 +81,21 @@ export default function Login() {
               {submitting ? 'Connexion...' : 'Se connecter'}
             </Button>
           </form>
+          <div className="mt-4 pt-4 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground"
+              onClick={forceRefreshApp}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-2" />
+              Forcer la mise à jour de l'application
+            </Button>
+            <p className="text-[10px] text-muted-foreground text-center mt-1">
+              Vide le cache et recharge la dernière version
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
