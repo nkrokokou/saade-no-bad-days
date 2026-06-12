@@ -179,7 +179,10 @@ export default function POS() {
   }, [produits, search, activeCat]);
 
   const totalLignes = useMemo(
-    () => cart.reduce((s, l) => s + (l.produit.prix_vente || 0) * l.quantite - l.remise, 0),
+    () => cart.reduce((s, l) => {
+      const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+      return s + ((l.produit.prix_vente || 0) + supp) * l.quantite - l.remise;
+    }, 0),
     [cart]
   );
   const totalTicket = Math.max(0, totalLignes - remiseGlobale);
