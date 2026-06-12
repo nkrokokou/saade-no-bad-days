@@ -158,7 +158,7 @@ export default function POS() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventes')
-        .select('id, numero_ticket, total, table_id, serveur_id, client_nom, notes, created_at, vente_lignes(*)')
+        .select('id, numero_ticket, total, table_id, serveur_id, client_nom, notes, created_at, vente_lignes(*, vente_ligne_options(*))')
         .eq('session_id', session!.id)
         .eq('statut', 'en_cours')
         .order('created_at', { ascending: false });
