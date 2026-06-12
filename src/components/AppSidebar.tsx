@@ -15,12 +15,12 @@ import {
 import { Button } from '@/components/ui/button';
 
 const roleIcons: Record<UserRole, React.ElementType> = {
-  ceo: Crown, labo_patisserie: Cake, labo_viennoiserie: Croissant,
+  ceo: Crown, developer: Crown, labo_patisserie: Cake, labo_viennoiserie: Croissant,
   cuisine_salee: UtensilsCrossed, salle: Bell, economat: Warehouse,
 };
 
 const roleLabels: Record<UserRole, string> = {
-  ceo: 'CEO', labo_patisserie: 'Labo Pâtisserie', labo_viennoiserie: 'Labo Viennoiserie',
+  ceo: 'CEO', developer: 'Développeur', labo_patisserie: 'Labo Pâtisserie', labo_viennoiserie: 'Labo Viennoiserie',
   cuisine_salee: 'Cuisine Salée', salle: 'Salle', economat: 'Économat',
 };
 
