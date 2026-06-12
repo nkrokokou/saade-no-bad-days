@@ -81,6 +81,21 @@ export default function Login() {
               {submitting ? 'Connexion...' : 'Se connecter'}
             </Button>
           </form>
+          <div className="mt-4 pt-4 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground"
+              onClick={forceRefreshApp}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-2" />
+              Forcer la mise à jour de l'application
+            </Button>
+            <p className="text-[10px] text-muted-foreground text-center mt-1">
+              Vide le cache et recharge la dernière version
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
