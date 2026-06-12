@@ -230,6 +230,7 @@ export default function Catalogue() {
                       <TableCell>{p.actif === false ? <Badge variant="outline">Inactif</Badge> : <Badge>Actif</Badge>}</TableCell>
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => setEditing(p)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" title="Options / formules" onClick={() => setOptionsFor(p)}><Settings2 className="h-4 w-4" /></Button>
                         <Button size="icon" variant="ghost" onClick={() => duplicate(p)}><Copy className="h-4 w-4" /></Button>
                         <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </TableCell>
