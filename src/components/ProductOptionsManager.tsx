@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
 
 export function ProductOptionsManager({
   open, onOpenChange, produitId, produitNom,
@@ -17,7 +16,6 @@ export function ProductOptionsManager({
   produitId: string;
   produitNom: string;
 }) {
-  const qc = useQueryClient();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const { data: groupes = [], refetch } = useQuery({
