@@ -43,6 +43,18 @@ export default function FichesTechniques() {
     },
   });
 
+  const { data: ficheMeta } = useQuery({
+    queryKey: ['fiches_meta', selectedProduct],
+    enabled: !!selectedProduct,
+    queryFn: async () => {
+      const { data } = await supabase.from('fiches_techniques_meta')
+        .select('qte_recette')
+        .eq('produit_id', selectedProduct!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   const filteredProducts = useMemo(() => {
     if (!search) return products;
     const s = search.toLowerCase();
@@ -170,6 +182,10 @@ export default function FichesTechniques() {
 
   const selectedProd = products.find(p => p.id === selectedProduct);
   const coutTotal = fiches.reduce((s: number, f: any) => s + (f.quantite_mp * f.cout_unitaire_mp), 0);
+  const qteRecette = Number(ficheMeta?.qte_recette || 0);
+  const coutParPiece = qteRecette > 0 ? coutTotal / qteRecette : null;
+  const prixVente = selectedProd?.prix_vente || 0;
+  const margePiece = coutParPiece !== null ? prixVente - coutParPiece : null;
 
   const handleExportExcel = () => {
     if (!selectedProd) return;
