@@ -43,6 +43,18 @@ export default function FichesTechniques() {
     },
   });
 
+  const { data: ficheMeta } = useQuery({
+    queryKey: ['fiches_meta', selectedProduct],
+    enabled: !!selectedProduct,
+    queryFn: async () => {
+      const { data } = await supabase.from('fiches_techniques_meta')
+        .select('qte_recette')
+        .eq('produit_id', selectedProduct!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   const filteredProducts = useMemo(() => {
     if (!search) return products;
     const s = search.toLowerCase();
@@ -170,6 +182,10 @@ export default function FichesTechniques() {
 
   const selectedProd = products.find(p => p.id === selectedProduct);
   const coutTotal = fiches.reduce((s: number, f: any) => s + (f.quantite_mp * f.cout_unitaire_mp), 0);
+  const qteRecette = Number(ficheMeta?.qte_recette || 0);
+  const coutParPiece = qteRecette > 0 ? coutTotal / qteRecette : null;
+  const prixVente = selectedProd?.prix_vente || 0;
+  const margePiece = coutParPiece !== null ? prixVente - coutParPiece : null;
 
   const handleExportExcel = () => {
     if (!selectedProd) return;
@@ -221,18 +237,32 @@ export default function FichesTechniques() {
 
         <div className="grid gap-3 grid-cols-3 print:hidden">
           <Card><CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Coût de revient</p>
-            <p className="text-xl font-bold text-primary">{coutTotal.toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
+            <p className="text-xs text-muted-foreground">Coût de revient / pièce</p>
+            {coutParPiece !== null ? (
+              <>
+                <p className="text-xl font-bold text-primary">{coutParPiece.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} <span className="text-xs">FCFA</span></p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Recette : {coutTotal.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} F / {qteRecette} pièces</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xl font-bold text-muted-foreground">—</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Renseignez « QTE POUR UNE RECETTE »</p>
+              </>
+            )}
           </CardContent></Card>
           <Card><CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Prix de vente</p>
-            <p className="text-xl font-bold">{(selectedProd.prix_vente || 0).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
+            <p className="text-xs text-muted-foreground">Prix de vente / pièce</p>
+            <p className="text-xl font-bold">{prixVente.toLocaleString('fr-FR')} <span className="text-xs">FCFA</span></p>
           </CardContent></Card>
           <Card><CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Marge</p>
-            <p className={`text-xl font-bold ${(selectedProd.prix_vente || 0) - coutTotal > 0 ? 'text-green-600' : 'text-destructive'}`}>
-              {((selectedProd.prix_vente || 0) - coutTotal).toLocaleString('fr-FR')} <span className="text-xs">FCFA</span>
-            </p>
+            <p className="text-xs text-muted-foreground">Marge / pièce</p>
+            {margePiece !== null ? (
+              <p className={`text-xl font-bold ${margePiece > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                {margePiece.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} <span className="text-xs">FCFA</span>
+              </p>
+            ) : (
+              <p className="text-xl font-bold text-muted-foreground">—</p>
+            )}
           </CardContent></Card>
         </div>
 

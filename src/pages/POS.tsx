@@ -75,6 +75,7 @@ export default function POS() {
   const [cartOpen, setCartOpen] = useState(false);
   const [tableId, setTableId] = useState<string>('comptoir');
   const [serveur, setServeur] = useState<string>('');
+  const [tabNom, setTabNom] = useState<string>('');
   const [tabsOpen, setTabsOpen] = useState(false);
   const [currentTabId, setCurrentTabId] = useState<string | null>(null);
   const [qzDialog, setQzDialog] = useState(false);
@@ -218,7 +219,7 @@ export default function POS() {
   };
   const clearCart = () => {
     setCart([]); setRemiseGlobale(0); setClientNom(''); setNotes('');
-    setTableId('comptoir'); setServeur(''); setCurrentTabId(null);
+    setTableId('comptoir'); setServeur(''); setCurrentTabId(null); setTabNom('');
   };
 
   const openSessionMut = useMutation({
@@ -307,8 +308,11 @@ export default function POS() {
       if (!session) throw new Error('Ouvrez la caisse');
       if (cart.length === 0) throw new Error('Panier vide');
       const payload = buildVentePayload('en_cours');
-      // Note serveur in notes field (pas de table profiles cohérente ici)
-      const noteWithServer = serveur ? `[Serveur: ${serveur}] ${notes || ''}`.trim() : (notes || null);
+      // Préfixes [Nom:] et [Serveur:] dans notes pour persistance simple sans changement de schéma
+      const parts: string[] = [];
+      if (tabNom.trim()) parts.push(`[Nom: ${tabNom.trim()}]`);
+      if (serveur.trim()) parts.push(`[Serveur: ${serveur.trim()}]`);
+      const noteWithServer = (parts.join(' ') + ' ' + (notes || '')).trim() || null;
       let venteId = currentTabId;
       if (currentTabId) {
         await supabase.from('vente_lignes').delete().eq('vente_id', currentTabId);
@@ -379,21 +383,31 @@ export default function POS() {
     setCurrentTabId(tab.id);
     setTableId(tab.table_id || 'comptoir');
     setClientNom(tab.client_nom || '');
-    const m = (tab.notes || '').match(/^\[Serveur: ([^\]]+)\]\s*(.*)$/);
-    if (m) { setServeur(m[1]); setNotes(m[2]); } else { setNotes(tab.notes || ''); }
+    const raw = tab.notes || '';
+    const mNom = raw.match(/\[Nom:\s*([^\]]+)\]/);
+    const mSrv = raw.match(/\[Serveur:\s*([^\]]+)\]/);
+    setTabNom(mNom ? mNom[1].trim() : '');
+    setServeur(mSrv ? mSrv[1].trim() : '');
+    const cleaned = raw.replace(/\[Nom:\s*[^\]]+\]\s*/g, '').replace(/\[Serveur:\s*[^\]]+\]\s*/g, '').trim();
+    setNotes(cleaned);
     setTabsOpen(false);
     setCartOpen(true);
   };
 
   const cancelTab = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from('vente_lignes').delete().eq('vente_id', id);
-      const { error } = await supabase.from('ventes').delete().eq('id', id);
-      if (error) throw error;
+      const { error: e1 } = await supabase.from('vente_lignes').delete().eq('vente_id', id);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from('ventes').delete().eq('id', id);
+      if (e2) throw e2;
+      // Vérification : confirmer que le ticket a bien été supprimé (sinon RLS l'a bloqué silencieusement)
+      const { data: stillThere } = await supabase.from('ventes').select('id').eq('id', id).maybeSingle();
+      if (stillThere) throw new Error("Suppression refusée : votre rôle n'a pas le droit « Tickets en attente · Supprimer ». Demandez à un CEO de l'activer.");
     },
     onSuccess: () => { toast.success('Ticket annulé'); refetchTabs(); },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   const validateSale = useMutation({
     mutationFn: async () => {
@@ -819,6 +833,10 @@ export default function POS() {
           </ScrollArea>
           <div className="space-y-3 pt-2 border-t">
             <div className="flex items-center gap-2">
+              <Label className="text-sm whitespace-nowrap">Nom ticket</Label>
+              <Input value={tabNom} onChange={e => setTabNom(e.target.value)} placeholder="ex : Mr Dupont, anniv table 4…" className="h-9" />
+            </div>
+            <div className="flex items-center gap-2">
               <Label className="text-sm">Remise</Label>
               <Input type="number" inputMode="decimal" value={remiseGlobale || ''} placeholder="0" onChange={e => setRemiseGlobale(Number(e.target.value) || 0)} />
             </div>
@@ -852,17 +870,21 @@ export default function POS() {
             {openTabs.map((tab: any) => {
               const t = tables.find(tt => tt.id === tab.table_id);
               const lignesCount = (tab.vente_lignes || []).length;
+              const mNom = (tab.notes || '').match(/\[Nom:\s*([^\]]+)\]/);
+              const customName = mNom ? mNom[1].trim() : '';
+              const baseLabel = `Table ${t?.numero || 'Comptoir'} · #${tab.numero_ticket}`;
               return (
                 <div key={tab.id} className="border rounded-lg p-3 flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium">Table {t?.numero || 'Comptoir'} · #{tab.numero_ticket}</div>
+                    <div className="font-medium truncate">{customName || baseLabel}</div>
                     <div className="text-xs text-muted-foreground">
+                      {customName && <span className="mr-1">{baseLabel} · </span>}
                       {lignesCount} article{lignesCount > 1 ? 's' : ''} · {Number(tab.total).toLocaleString()} F
                       {tab.client_nom && ` · ${tab.client_nom}`}
                     </div>
                   </div>
                   <Button size="sm" onClick={() => resumeTab(tab)}>Reprendre</Button>
-                  <Button size="icon" variant="ghost" onClick={() => cancelTab.mutate(tab.id)}>
+                  <Button size="icon" variant="ghost" onClick={() => cancelTab.mutate(tab.id)} disabled={cancelTab.isPending}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
