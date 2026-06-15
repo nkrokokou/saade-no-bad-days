@@ -870,17 +870,21 @@ export default function POS() {
             {openTabs.map((tab: any) => {
               const t = tables.find(tt => tt.id === tab.table_id);
               const lignesCount = (tab.vente_lignes || []).length;
+              const mNom = (tab.notes || '').match(/\[Nom:\s*([^\]]+)\]/);
+              const customName = mNom ? mNom[1].trim() : '';
+              const baseLabel = `Table ${t?.numero || 'Comptoir'} · #${tab.numero_ticket}`;
               return (
                 <div key={tab.id} className="border rounded-lg p-3 flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium">Table {t?.numero || 'Comptoir'} · #{tab.numero_ticket}</div>
+                    <div className="font-medium truncate">{customName || baseLabel}</div>
                     <div className="text-xs text-muted-foreground">
+                      {customName && <span className="mr-1">{baseLabel} · </span>}
                       {lignesCount} article{lignesCount > 1 ? 's' : ''} · {Number(tab.total).toLocaleString()} F
                       {tab.client_nom && ` · ${tab.client_nom}`}
                     </div>
                   </div>
                   <Button size="sm" onClick={() => resumeTab(tab)}>Reprendre</Button>
-                  <Button size="icon" variant="ghost" onClick={() => cancelTab.mutate(tab.id)}>
+                  <Button size="icon" variant="ghost" onClick={() => cancelTab.mutate(tab.id)} disabled={cancelTab.isPending}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
