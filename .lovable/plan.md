@@ -1,48 +1,57 @@
-# Offline qui marche, mises à jour qui passent toujours
+Beaucoup de choses à toucher, je veux valider l'approche avant de coder.
 
-## Objectif
-Rétablir le mode hors-ligne tout en garantissant que **plus jamais** un appareil ne reste bloqué sur une ancienne version, même sur Chrome/Safari avec cache agressif.
+## 1. Burgers — Soft au choix
+Pour les 3 produits « Burger Créa + Frite + Soft », « Cheese Burger + Frite + Soft », « Chicken Burger + Frite + Soft » : créer un groupe d'options **« Soft » (1 choix obligatoire, +0 F)** avec :
+Ice Tea · Tonic · Eau Gazeuse · Eau Plate · World Cola · Youki Orange
 
-## Stratégie : NetworkFirst + auto-update strict
+## 2. Formule Express
+Sur le produit Formule Express, créer 3 groupes d'options (1 choix obligatoire chacun, +0 F) :
+- **Boisson chaude** : toute la catégorie BOISSONS_CHAUDES
+- **Viennoiserie** : toute la catégorie VIENNOISERIES (toutes celles existantes)
+- **Eau** : Eau Plate · Eau Gazeuse
 
-### 1. Phase de nettoyage (kill-switch déjà en place)
-Le `public/sw.js` actuel (kill-switch) reste en place **pour ce déploiement uniquement**. Il sera téléchargé par tous les appareils déjà infectés par l'ancien cache Workbox, nettoiera tout, puis se désinstallera. C'est une étape obligatoire avant de réintroduire un nouveau worker, sinon les anciens caches resteront.
+## 3. Formule Goûter
+- **Dessert** : toute la catégorie DESSERTS (1 choix)
+- **Boisson (chaude ou froide)** : toutes les boissons chaudes + toutes les boissons froides, **hors BOISSONS_SIGNATURES** (1 choix)
 
-### 2. Réintroduction propre de `vite-plugin-pwa`
-Configuration durcie dans `vite.config.ts` :
-- **`registerType: "autoUpdate"`** : le nouveau worker prend la main automatiquement, sans demander à l'utilisateur.
-- **`skipWaiting: true` + `clientsClaim: true`** dans Workbox : la nouvelle version active immédiatement tous les onglets ouverts, pas besoin de fermer/rouvrir.
-- **`navigateFallback` + `NetworkFirst` sur HTML** avec timeout court (3 s) : à chaque navigation, le navigateur tente d'abord le réseau ; il ne sert le cache que si offline ou réseau très lent. Conséquence : la dernière version est servie dès qu'internet répond.
-- **`CacheFirst` uniquement sur les assets hashés** (JS/CSS avec hash dans le nom) — ils sont immutables par construction donc jamais obsolètes.
-- **Exclure `/version.json`, `/~oauth`, `/api`** de tout cache.
-- **Précache de l'app shell** pour démarrage hors-ligne.
+## 4. Formule Snack
+- **Base** : toute la catégorie HOT_DOG + toute la catégorie PAIN_BRO (1 choix)
+- **Complément** : Frite · Soft au choix (Ice Tea/Tonic/Eau Gaz/Eau Plate/World Cola/Youki) — 2 sous-groupes (Frite incluse + Soft au choix)
 
-### 3. Bandeau « Nouvelle version » non bloquant
-Remettre un petit `VersionGuard` léger qui écoute l'événement `controllerchange` du service worker. Quand `autoUpdate` installe une nouvelle version :
-- soit elle s'applique silencieusement au prochain rechargement de page (cas normal),
-- soit un toast discret « Nouvelle version chargée » s'affiche 3 s. Aucune action requise.
+> Les groupes sont créés en base via INSERT (idempotent : suppression préalable de tout groupe portant le même nom sur le même produit). Si une nouvelle boisson est ajoutée plus tard, il faudra relancer ce seed depuis l'écran Catalogue → Options (déjà existant).
 
-### 4. Bouton « Forcer la mise à jour » sur Login conservé
-En filet de sécurité ultime — désormais quasi jamais utile.
+## 5. Fiche technique — marge par pièce
+Dans la page Fiches Techniques, les 3 cartes du haut (Coût de revient / Prix de vente / Marge) utilisent actuellement le coût **total** de la recette. Je vais :
+- diviser le coût total par `qte_recette` (champ « QTE POUR UNE RECETTE (PIECES) ») pour obtenir le **coût par pièce**
+- afficher « Coût de revient / pièce » et calculer la marge = `prix_vente − coût/pièce`
+- si `qte_recette` est vide ou 0 → afficher « — » sur la carte coût/pièce et désactiver le calcul de marge avec un petit message
 
-### 5. Garde-fous anti-régression
-- Documenter dans `mem://` la règle : « PWA = NetworkFirst sur HTML, jamais StaleWhileRevalidate sur du HTML, jamais de cache sans timeout ».
-- Le `public/sw.js` kill-switch sera remplacé par le SW généré par `vite-plugin-pwa` au build — donc tous les appareils recevront automatiquement le bon worker lors du prochain déploiement.
+## 6. Tickets en attente — permission pour la salle
+Cause racine : la policy RLS DELETE sur `ventes`/`vente_lignes` exige `can_perform(..., 'ventes', 'delete')`. Le rôle salle ne l'a pas → suppression silencieuse côté Postgres mais aucun toast d'erreur (je vais aussi remonter l'erreur dans l'UI).
 
-## Compromis assumés
-- **Première visite hors-ligne** : impossible (normal — il faut au moins un chargement initial avec internet pour installer l'app shell).
-- **Réseau très lent (>3 s)** : sert la version cachée puis met à jour en arrière-plan → l'utilisateur verra la nouvelle version au rechargement suivant. Pas de blocage.
-- **Données dynamiques (Supabase)** : restent en NetworkFirst court — toujours fraîches quand internet est là.
+Migration :
+- Nouveau module de permission `bon_attente` (read/create/update/delete)
+- Nouvelle policy DELETE sur `ventes` et `vente_lignes` : autoriser si `statut = 'en_cours'` ET `can_perform(uid,'bon_attente','delete')` (en plus de la policy existante)
+- Par défaut : grant `delete` à `salle` et `ceo` sur ce module
+
+Côté UI :
+- Ajout du module « Tickets en attente » dans Administration → Permissions
+- Ajout dans `usePermissions.ts`
+- `cancelTab` affiche désormais le message d'erreur RLS si refusé
+
+## 7. Nommer un ticket en attente
+Dans le bouton « En attente » du POS :
+- petit champ texte « Nom du ticket (ex : Mr Dupont, anniv table 4…) » optionnel
+- stocké dans `ventes.client_nom` (déjà existant, libre)
+- dans la liste des tickets en attente : si `client_nom` existe → l'afficher en titre à la place de « Table Comptoir · #27 »; sinon comportement actuel
+- pas de nouvelle colonne en base
 
 ## Fichiers touchés
-- `vite.config.ts` : remettre `VitePWA` avec la config durcie ci-dessus.
-- `public/sw.js` : supprimé (le plugin générera son propre `sw.js` au même chemin, qui remplacera le kill-switch sur les appareils).
-- `src/components/VersionGuard.tsx` : recréé en version légère (écoute `controllerchange`).
-- `src/components/AppLayout.tsx` : remonte `<VersionGuard />`.
-- `src/main.tsx` : registration garde-foue (refus en dev/preview Lovable, support `?sw=off`).
+- `supabase/migrations/...` : module `bon_attente` + policies + seeds permissions
+- `psql INSERT` (data) : groupes d'options burgers + formules
+- `src/pages/FichesTechniques.tsx` : cartes coût/pièce + marge
+- `src/pages/POS.tsx` : champ nom de ticket + affichage + toast d'erreur sur cancel
+- `src/pages/Admin.tsx` : ligne « Tickets en attente » dans la matrice
+- `src/hooks/usePermissions.ts` : type union élargi
 
-## Ordre de déploiement (important)
-1. Le déploiement actuel (kill-switch) doit d'abord atteindre chaque appareil **au moins une fois** — typiquement quelques heures après publication.
-2. Ensuite je peux publier la version « PWA propre ». Les appareils nettoyés recevront le nouveau worker NetworkFirst directement.
-
-Si vous publiez les deux changements trop rapprochés, certains appareils sauteront le nettoyage. Confirmez quand le kill-switch a tourné sur les principaux appareils de votre cliente (ou attendez 24 h) avant que je publie la phase 2.
+Je vous attends pour démarrer.
