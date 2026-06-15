@@ -75,6 +75,7 @@ export default function POS() {
   const [cartOpen, setCartOpen] = useState(false);
   const [tableId, setTableId] = useState<string>('comptoir');
   const [serveur, setServeur] = useState<string>('');
+  const [tabNom, setTabNom] = useState<string>('');
   const [tabsOpen, setTabsOpen] = useState(false);
   const [currentTabId, setCurrentTabId] = useState<string | null>(null);
   const [qzDialog, setQzDialog] = useState(false);
@@ -218,7 +219,7 @@ export default function POS() {
   };
   const clearCart = () => {
     setCart([]); setRemiseGlobale(0); setClientNom(''); setNotes('');
-    setTableId('comptoir'); setServeur(''); setCurrentTabId(null);
+    setTableId('comptoir'); setServeur(''); setCurrentTabId(null); setTabNom('');
   };
 
   const openSessionMut = useMutation({
@@ -307,8 +308,11 @@ export default function POS() {
       if (!session) throw new Error('Ouvrez la caisse');
       if (cart.length === 0) throw new Error('Panier vide');
       const payload = buildVentePayload('en_cours');
-      // Note serveur in notes field (pas de table profiles cohérente ici)
-      const noteWithServer = serveur ? `[Serveur: ${serveur}] ${notes || ''}`.trim() : (notes || null);
+      // Préfixes [Nom:] et [Serveur:] dans notes pour persistance simple sans changement de schéma
+      const parts: string[] = [];
+      if (tabNom.trim()) parts.push(`[Nom: ${tabNom.trim()}]`);
+      if (serveur.trim()) parts.push(`[Serveur: ${serveur.trim()}]`);
+      const noteWithServer = (parts.join(' ') + ' ' + (notes || '')).trim() || null;
       let venteId = currentTabId;
       if (currentTabId) {
         await supabase.from('vente_lignes').delete().eq('vente_id', currentTabId);
@@ -379,11 +383,30 @@ export default function POS() {
     setCurrentTabId(tab.id);
     setTableId(tab.table_id || 'comptoir');
     setClientNom(tab.client_nom || '');
-    const m = (tab.notes || '').match(/^\[Serveur: ([^\]]+)\]\s*(.*)$/);
-    if (m) { setServeur(m[1]); setNotes(m[2]); } else { setNotes(tab.notes || ''); }
+    const raw = tab.notes || '';
+    const mNom = raw.match(/\[Nom:\s*([^\]]+)\]/);
+    const mSrv = raw.match(/\[Serveur:\s*([^\]]+)\]/);
+    setTabNom(mNom ? mNom[1].trim() : '');
+    setServeur(mSrv ? mSrv[1].trim() : '');
+    const cleaned = raw.replace(/\[Nom:\s*[^\]]+\]\s*/g, '').replace(/\[Serveur:\s*[^\]]+\]\s*/g, '').trim();
+    setNotes(cleaned);
     setTabsOpen(false);
     setCartOpen(true);
   };
+
+  const cancelTab = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: e1 } = await supabase.from('vente_lignes').delete().eq('vente_id', id);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from('ventes').delete().eq('id', id);
+      if (e2) throw e2;
+      // Vérification : confirmer que le ticket a bien été supprimé (sinon RLS l'a bloqué silencieusement)
+      const { data: stillThere } = await supabase.from('ventes').select('id').eq('id', id).maybeSingle();
+      if (stillThere) throw new Error("Suppression refusée : votre rôle n'a pas le droit « Tickets en attente · Supprimer ». Demandez à un CEO de l'activer.");
+    },
+    onSuccess: () => { toast.success('Ticket annulé'); refetchTabs(); },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const cancelTab = useMutation({
     mutationFn: async (id: string) => {
