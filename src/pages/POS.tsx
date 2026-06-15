@@ -408,15 +408,6 @@ export default function POS() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const cancelTab = useMutation({
-    mutationFn: async (id: string) => {
-      await supabase.from('vente_lignes').delete().eq('vente_id', id);
-      const { error } = await supabase.from('ventes').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success('Ticket annulé'); refetchTabs(); },
-    onError: (e: any) => toast.error(e.message),
-  });
 
   const validateSale = useMutation({
     mutationFn: async () => {
