@@ -833,6 +833,10 @@ export default function POS() {
           </ScrollArea>
           <div className="space-y-3 pt-2 border-t">
             <div className="flex items-center gap-2">
+              <Label className="text-sm whitespace-nowrap">Nom ticket</Label>
+              <Input value={tabNom} onChange={e => setTabNom(e.target.value)} placeholder="ex : Mr Dupont, anniv table 4…" className="h-9" />
+            </div>
+            <div className="flex items-center gap-2">
               <Label className="text-sm">Remise</Label>
               <Input type="number" inputMode="decimal" value={remiseGlobale || ''} placeholder="0" onChange={e => setRemiseGlobale(Number(e.target.value) || 0)} />
             </div>
