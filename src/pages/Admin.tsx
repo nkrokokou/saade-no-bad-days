@@ -36,6 +36,7 @@ const MODULES: { key: string; label: string; submodules?: { key: string; label: 
   { key: 'degustations', label: 'Dégustations' },
   { key: 'catalogue', label: 'Catalogue produits' },
   { key: 'pos', label: 'Caisse / POS' },
+  { key: 'bon_attente', label: 'Tickets en attente (POS)' },
   { key: 'ventes', label: 'Ventes & Rapports', submodules: [
     { key: 'evolution', label: 'Évolution CA' },
     { key: 'top_produits', label: 'Top produits' },
