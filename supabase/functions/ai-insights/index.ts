@@ -26,6 +26,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // Server-side permission check (don't trust the client-side gate)
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const adminClient = createClient(supabaseUrl, serviceKey)
+    const { data: isCeo } = await adminClient.rpc('is_ceo', { _user_id: userData.user.id })
+    let allowed = !!isCeo
+    if (!allowed) {
+      const { data: canRead } = await adminClient.rpc('can_perform', { _user_id: userData.user.id, _module: 'insights', _action: 'read' })
+      allowed = !!canRead
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     const db = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } })
 
     const today = new Date().toISOString().slice(0, 10)
