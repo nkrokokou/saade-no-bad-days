@@ -162,17 +162,20 @@ function renderHTML(r: any): string {
   const caramel = "#C49A5A";
   const espresso = "#2C1A0E";
 
+  const esc = (s: unknown) =>
+    String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
   const modeRows = Object.entries(r.parMode)
     .map(
       ([m, val]: any) =>
-        `<tr><td style="padding:6px 12px">${m}</td><td style="padding:6px 12px;text-align:right;font-weight:600">${fmtXOF(val)}</td></tr>`,
+        `<tr><td style="padding:6px 12px">${esc(m)}</td><td style="padding:6px 12px;text-align:right;font-weight:600">${fmtXOF(val)}</td></tr>`,
     )
     .join("") || `<tr><td colspan="2" style="padding:6px 12px;color:#888">Aucun paiement</td></tr>`;
 
   const topRows = r.topProduits
     .map(
       (p: any, i: number) =>
-        `<tr><td style="padding:6px 12px">${i + 1}. ${p.nom}</td><td style="padding:6px 12px;text-align:center">${p.qte}</td><td style="padding:6px 12px;text-align:right;font-weight:600">${fmtXOF(p.ca)}</td></tr>`,
+        `<tr><td style="padding:6px 12px">${i + 1}. ${esc(p.nom)}</td><td style="padding:6px 12px;text-align:center">${p.qte}</td><td style="padding:6px 12px;text-align:right;font-weight:600">${fmtXOF(p.ca)}</td></tr>`,
     )
     .join("") || `<tr><td colspan="3" style="padding:6px 12px;color:#888">Aucune vente</td></tr>`;
 
