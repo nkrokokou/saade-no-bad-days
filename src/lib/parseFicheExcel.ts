@@ -39,6 +39,37 @@ const parseNum = (v: any): number => {
   return m ? parseFloat(m[0]) : 0;
 };
 
+const matchMatierePremiere = (
+  nom: string,
+  mps: { id: string; nom: string; unite: string; prix_unitaire: number }[],
+) => {
+  const n = norm(nom);
+  if (!n) return undefined;
+
+  const exact = mps.find(m => norm(m.nom) === n);
+  if (exact) return exact;
+
+  if (n === 'sucre') {
+    const sucrePoudre = mps.find(m => norm(m.nom) === 'sucre en poudre');
+    if (sucrePoudre) return sucrePoudre;
+  }
+
+  const startsWithIngredient = mps.find(m => {
+    const mn = norm(m.nom);
+    return n.length > 3 && (mn.startsWith(`${n} `) || mn.startsWith(`${n}-`));
+  });
+  if (startsWithIngredient) return startsWithIngredient;
+
+  const ingredientStartsWithMp = mps.find(m => {
+    const mn = norm(m.nom);
+    return mn.length > 3 && (n.startsWith(`${mn} `) || n.startsWith(`${mn}-`) || n.includes(` ${mn}`));
+  });
+  if (ingredientStartsWithMp) return ingredientStartsWithMp;
+
+  return mps.find(m => norm(m.nom).includes(n) && n.length > 4)
+    || mps.find(m => n.includes(norm(m.nom)) && norm(m.nom).length > 4);
+};
+
 const findProductName = (grid: any[][]): string => {
   for (let i = 0; i < Math.min(grid.length, 60); i++) {
     const row = grid[i] || [];
@@ -179,9 +210,7 @@ export function parseFicheSheet(
         if (!hasOther && nom.length < 40) { currentSection = nom.toUpperCase(); }
         continue;
       }
-      const mp = mps.find(m => norm(m.nom) === norm(nom))
-        || mps.find(m => norm(m.nom).includes(norm(nom)) && norm(nom).length > 3)
-        || mps.find(m => norm(nom).includes(norm(m.nom)) && norm(m.nom).length > 3);
+      const mp = matchMatierePremiere(nom, mps);
       let cout = header.colCout >= 0 ? parseNum(row[header.colCout]) : 0;
       // Colonne "prix de revient pour une recette" = coût total → ramener au coût unitaire
       if (cout > 0 && header.coutIsTotal && qte > 0) cout = cout / qte;
