@@ -73,7 +73,7 @@ export default function SaadeLive() {
     queryKey: ['live-ventes', date],
     queryFn: async () => {
       const { data } = await supabase.from('ventes')
-        .select('*, vente_lignes(produit_nom, quantite, total_ligne), clients(nom, prenom), tables_restaurant(numero)')
+        .select('*, vente_lignes(produit_nom, quantite, total_ligne), clients(nom), tables_restaurant(numero)')
         .gte('date_vente', start).lte('date_vente', end).order('date_vente', { ascending: true });
       return data || [];
     },
@@ -144,7 +144,7 @@ export default function SaadeLive() {
     queryKey: ['live-credits', date],
     queryFn: async () => {
       const { data } = await supabase.from('credits_clients')
-        .select('*, clients(nom, prenom)').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: true });
+        .select('*, clients(nom)').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: true });
       return data || [];
     },
   });
@@ -153,7 +153,7 @@ export default function SaadeLive() {
     queryKey: ['live-paiements', date],
     queryFn: async () => {
       const { data } = await supabase.from('paiements_credits')
-        .select('*, credits_clients(client_id, clients(nom, prenom))').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: true });
+        .select('*, credits_clients(client_id, clients(nom))').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: true });
       return data || [];
     },
   });
@@ -162,7 +162,7 @@ export default function SaadeLive() {
     const ev: LiveEvent[] = [];
 
     ventes.forEach((v: any) => {
-      const clientName = v.client_nom || (v.clients ? `${v.clients.prenom || ''} ${v.clients.nom || ''}`.trim() : '');
+      const clientName = v.client_nom || v.clients?.nom || '';
       const tableLabel = v.tables_restaurant ? `Table ${v.tables_restaurant.numero}` : '';
       const items = (v.vente_lignes || []).map((l: any) => `${Number(l.quantite)}× ${l.produit_nom}`).join(', ');
       ev.push({
@@ -192,14 +192,14 @@ export default function SaadeLive() {
     bons.forEach((b: any) => ev.push({
       id: 'b-' + b.id, type: 'transfert', ts: b.created_at,
       title: `Bon transfert #${String(b.id).slice(0, 8)}`,
-      detail: `${b.origine || ''} → ${b.destination || ''} · ${b.statut}`,
+      detail: `Statut: ${b.statut}${b.notes ? ' · ' + b.notes : ''}`,
       badge: b.statut, raw: b,
     }));
 
     pertes.forEach((p: any) => ev.push({
       id: 'pt-' + p.id, type: 'perte', ts: p.created_at,
       title: `Perte — ${p.produits?.nom || p.produit_id} (${p.quantite} u.)`,
-      detail: `${p.type_labo || ''} · ${p.motif || ''}`,
+      detail: `${p.type_labo || ''} · ${p.jour || ''}`,
       raw: p,
     }));
 
@@ -235,14 +235,14 @@ export default function SaadeLive() {
     credits.forEach((c: any) => ev.push({
       id: 'cr-' + c.id, type: 'credit', ts: c.created_at,
       title: `Crédit ouvert — ${Number(c.montant_initial).toLocaleString()} F`,
-      detail: c.clients ? `${c.clients.prenom || ''} ${c.clients.nom || ''}`.trim() : '—',
+      detail: c.clients?.nom || '—',
       amount: Number(c.montant_initial), raw: c,
     }));
 
     paiements.forEach((p: any) => ev.push({
       id: 'pc-' + p.id, type: 'paiement_credit', ts: p.created_at,
       title: `Paiement crédit — ${Number(p.montant).toLocaleString()} F`,
-      detail: p.credits_clients?.clients ? `${p.credits_clients.clients.prenom || ''} ${p.credits_clients.clients.nom || ''}`.trim() : '—',
+      detail: p.credits_clients?.clients?.nom || '—',
       amount: Number(p.montant), raw: p,
     }));
 
