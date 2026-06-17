@@ -252,32 +252,35 @@ function TicketDetailDialog({ venteId, onClose }: { venteId: string | null; onCl
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(vente.vente_lignes || []).map((l: any) => (
-                    <>
+                  {(vente.vente_lignes || []).flatMap((l: any) => {
+                    const rows = [
                       <TableRow key={l.id}>
                         <TableCell className="font-medium">{l.produit_nom}</TableCell>
                         <TableCell className="text-right">{Number(l.quantite)}</TableCell>
                         <TableCell className="text-right">{Number(l.prix_unitaire).toLocaleString()} F</TableCell>
                         <TableCell className="text-right font-medium">{Number(l.total_ligne).toLocaleString()} F</TableCell>
-                      </TableRow>
-                      {(l.vente_ligne_options || []).map((o: any) => (
+                      </TableRow>,
+                      ...(l.vente_ligne_options || []).map((o: any) => (
                         <TableRow key={o.id} className="text-xs text-muted-foreground">
                           <TableCell className="pl-6">+ {o.groupe_nom}: {o.item_libelle}</TableCell>
                           <TableCell></TableCell>
                           <TableCell className="text-right">{o.prix_supplement ? `+${Number(o.prix_supplement).toLocaleString()} F` : '—'}</TableCell>
                           <TableCell></TableCell>
                         </TableRow>
-                      ))}
-                      {l.remise > 0 && (
+                      )),
+                    ];
+                    if (Number(l.remise) > 0) {
+                      rows.push(
                         <TableRow key={l.id + '-r'} className="text-xs text-destructive">
                           <TableCell className="pl-6">Remise ligne</TableCell>
                           <TableCell></TableCell>
                           <TableCell className="text-right">−{Number(l.remise).toLocaleString()} F</TableCell>
                           <TableCell></TableCell>
                         </TableRow>
-                      )}
-                    </>
-                  ))}
+                      );
+                    }
+                    return rows;
+                  })}
                 </TableBody>
               </Table>
             </div>
