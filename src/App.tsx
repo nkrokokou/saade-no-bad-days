@@ -39,6 +39,7 @@ const RapportsCeo = lazy(() => import("./pages/RapportsCeo").then(m => ({ defaul
 const AuditsCeo = lazy(() => import("./pages/AuditsCeo").then(m => ({ default: m.default })));
 const TicketTemplates = lazy(() => import("./pages/TicketTemplates").then(m => ({ default: m.default })));
 const CaissesLive = lazy(() => import("./pages/CaissesLive").then(m => ({ default: m.default })));
+const SaadeLive = lazy(() => import("./pages/SaadeLive").then(m => ({ default: m.default })));
 const Unauthorized = lazy(() => import("./pages/Unauthorized").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
 
@@ -71,6 +72,7 @@ const App = () => (
 
               <Route element={<AppLayout module="dashboard" />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/saade-live" element={<SaadeLive />} />
               </Route>
               <Route element={<AppLayout module="insights" />}>
                 <Route path="/insights" element={<InsightsBot />} />
