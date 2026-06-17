@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { exportToExcel, exportToPDF } from '@/hooks/useExcelImportExport';
-import { Download } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
+import { format } from 'date-fns';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const COLORS = ['#C49A5A', '#2C1A0E', '#8B5E3C', '#D4B483', '#5C3A1E', '#A67C52'];
@@ -23,6 +25,7 @@ export default function Ventes() {
   const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const [from, setFrom] = useState(monthAgo);
   const [to, setTo] = useState(today);
+  const [selectedVenteId, setSelectedVenteId] = useState<string | null>(null);
 
   const { data: ventes = [] } = useQuery({
     queryKey: ['ventes', from, to],
@@ -168,20 +171,154 @@ export default function Ventes() {
         <TabsContent value="journal">
           <Card><CardContent>
             <Table>
-              <TableHeader><TableRow><TableHead>Ticket</TableHead><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Paiement</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Ticket</TableHead><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Paiement</TableHead><TableHead className="text-right">Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>{ventes.slice(0, 100).map(v => (
-                <TableRow key={v.id}>
+                <TableRow key={v.id} className="cursor-pointer hover:bg-muted/40" onClick={() => setSelectedVenteId(v.id)}>
                   <TableCell>#{v.numero_ticket}</TableCell>
                   <TableCell>{new Date(v.date_vente).toLocaleString('fr-FR')}</TableCell>
                   <TableCell>{v.client_nom || '-'}</TableCell>
                   <TableCell><Badge variant="secondary">{PAYMENT_LABELS[v.mode_paiement]}</Badge></TableCell>
                   <TableCell className="text-right font-medium">{Number(v.total).toLocaleString()} F</TableCell>
+                  <TableCell><Eye className="h-4 w-4 text-muted-foreground" /></TableCell>
                 </TableRow>
               ))}</TableBody>
             </Table>
           </CardContent></Card>
         </TabsContent>
       </Tabs>
+
+      <TicketDetailDialog venteId={selectedVenteId} onClose={() => setSelectedVenteId(null)} />
+    </div>
+  );
+}
+
+function TicketDetailDialog({ venteId, onClose }: { venteId: string | null; onClose: () => void }) {
+  const { data: vente, isLoading } = useQuery({
+    queryKey: ['vente-detail', venteId],
+    enabled: !!venteId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('ventes')
+        .select('*, vente_lignes(*, vente_ligne_options(*)), clients(nom, telephone), tables_restaurant(numero, zone)')
+        .eq('id', venteId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
+  const exportTicketPDF = () => {
+    if (!vente) return;
+    const rows: (string | number)[][] = [];
+    (vente.vente_lignes || []).forEach((l: any) => {
+      rows.push([l.produit_nom, Number(l.quantite), `${Number(l.prix_unitaire).toLocaleString()} F`, `${Number(l.total_ligne).toLocaleString()} F`]);
+      (l.vente_ligne_options || []).forEach((o: any) => {
+        rows.push([`  + ${o.groupe_nom}: ${o.item_libelle}`, '', o.prix_supplement ? `+${Number(o.prix_supplement).toLocaleString()} F` : '', '']);
+      });
+    });
+    exportToPDF(`Ticket #${vente.numero_ticket}`, ['Produit', 'Qté', 'PU', 'Total'], rows);
+  };
+
+  return (
+    <Dialog open={!!venteId} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {vente ? `Ticket #${vente.numero_ticket}` : 'Détails du ticket'}
+          </DialogTitle>
+        </DialogHeader>
+        {isLoading && <p className="text-sm text-muted-foreground">Chargement...</p>}
+        {vente && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Info label="Date" value={format(new Date(vente.date_vente), 'dd/MM/yyyy HH:mm:ss')} />
+              <Info label="Statut" value={<Badge variant="outline">{vente.statut}</Badge>} />
+              <Info label="Client" value={vente.client_nom || vente.clients?.nom || '—'} />
+              <Info label="Téléphone" value={vente.clients?.telephone || '—'} />
+              <Info label="Table" value={vente.tables_restaurant ? `${vente.tables_restaurant.numero}${vente.tables_restaurant.zone ? ' (' + vente.tables_restaurant.zone + ')' : ''}` : '—'} />
+              <Info label="Mode de paiement" value={<Badge variant="secondary">{PAYMENT_LABELS[vente.mode_paiement] || vente.mode_paiement}</Badge>} />
+              <Info label="Montant reçu" value={`${Number(vente.montant_recu || 0).toLocaleString()} F`} />
+              <Info label="Rendu" value={`${Number(vente.rendu || 0).toLocaleString()} F`} />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Articles</p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produit</TableHead>
+                    <TableHead className="text-right">Qté</TableHead>
+                    <TableHead className="text-right">PU</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(vente.vente_lignes || []).map((l: any) => (
+                    <>
+                      <TableRow key={l.id}>
+                        <TableCell className="font-medium">{l.produit_nom}</TableCell>
+                        <TableCell className="text-right">{Number(l.quantite)}</TableCell>
+                        <TableCell className="text-right">{Number(l.prix_unitaire).toLocaleString()} F</TableCell>
+                        <TableCell className="text-right font-medium">{Number(l.total_ligne).toLocaleString()} F</TableCell>
+                      </TableRow>
+                      {(l.vente_ligne_options || []).map((o: any) => (
+                        <TableRow key={o.id} className="text-xs text-muted-foreground">
+                          <TableCell className="pl-6">+ {o.groupe_nom}: {o.item_libelle}</TableCell>
+                          <TableCell></TableCell>
+                          <TableCell className="text-right">{o.prix_supplement ? `+${Number(o.prix_supplement).toLocaleString()} F` : '—'}</TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      ))}
+                      {l.remise > 0 && (
+                        <TableRow key={l.id + '-r'} className="text-xs text-destructive">
+                          <TableCell className="pl-6">Remise ligne</TableCell>
+                          <TableCell></TableCell>
+                          <TableCell className="text-right">−{Number(l.remise).toLocaleString()} F</TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="border-t pt-3 space-y-1 text-sm">
+              {Number(vente.remise_globale) > 0 && (
+                <div className="flex justify-between text-destructive">
+                  <span>Remise globale</span>
+                  <span>−{Number(vente.remise_globale).toLocaleString()} F</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-bold">
+                <span>Total</span>
+                <span>{Number(vente.total).toLocaleString()} F</span>
+              </div>
+            </div>
+
+            {vente.notes && (
+              <div className="bg-muted/40 rounded p-2 text-xs">
+                <p className="font-semibold mb-1">Notes</p>
+                <p>{vente.notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={exportTicketPDF} disabled={!vente}>
+            <Download className="h-4 w-4 mr-1" />Export PDF
+          </Button>
+          <Button size="sm" onClick={onClose}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Info({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5">{value}</p>
     </div>
   );
 }
