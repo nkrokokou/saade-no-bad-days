@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 
 export type ModuleKey =
-  | 'dashboard' | 'insights' | 'admin' | 'catalogue'
+  | 'dashboard' | 'saade_live' | 'insights' | 'admin' | 'catalogue'
   | 'pos' | 'ventes' | 'clients' | 'bon_attente'
   | 'achats_mp' | 'fiches_techniques' | 'bons_transfert'
   | 'stock_tampon' | 'pertes' | 'production'

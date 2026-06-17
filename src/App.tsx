@@ -72,6 +72,8 @@ const App = () => (
 
               <Route element={<AppLayout module="dashboard" />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+              </Route>
+              <Route element={<AppLayout module="saade_live" />}>
                 <Route path="/saade-live" element={<SaadeLive />} />
               </Route>
               <Route element={<AppLayout module="insights" />}>
