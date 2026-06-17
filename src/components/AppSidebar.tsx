@@ -36,7 +36,7 @@ export function AppSidebar() {
 
   const navItems: NavItem[] = [
     { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
-    { title: 'SAADÉ en live', url: '/saade-live', icon: Activity, module: 'dashboard' },
+    { title: 'SAADÉ en live', url: '/saade-live', icon: Activity, module: 'saade_live' },
     { title: t('nav.insights'), url: '/insights', icon: Bot, module: 'insights' },
     { title: 'Caisse / POS', url: '/pos', icon: ScanLine, module: 'pos' },
     { title: 'Ventes & Rapports', url: '/ventes', icon: BarChart3, module: 'ventes' },

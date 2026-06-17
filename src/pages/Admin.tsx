@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 
 const MODULES: { key: string; label: string; submodules?: { key: string; label: string }[] }[] = [
   { key: 'dashboard', label: 'Tableau de bord' },
+  { key: 'saade_live', label: 'SAADÉ en live' },
   { key: 'insights', label: 'Assistant IA' },
   { key: 'admin', label: 'Administration', submodules: [
     { key: 'users', label: 'Utilisateurs' },
