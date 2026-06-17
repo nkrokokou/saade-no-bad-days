@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Package, TrendingDown,
   ChefHat, ClipboardList, LogOut, Crown, Cake, Croissant, UtensilsCrossed, Bell,
-  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags, Boxes, Armchair, Mail, ClipboardCheck, ReceiptText, Warehouse,
+  DollarSign, Wine, Settings, ShoppingCart, Bot, BookOpen, History, Package2, ScanLine, BarChart3, Users, Tags, Boxes, Armchair, Mail, ClipboardCheck, ReceiptText, Warehouse, Activity,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from '@/components/NavLink';
@@ -36,6 +36,7 @@ export function AppSidebar() {
 
   const navItems: NavItem[] = [
     { title: t('nav.dashboard'), url: '/dashboard', icon: LayoutDashboard, module: 'dashboard' },
+    { title: 'SAADÉ en live', url: '/saade-live', icon: Activity, module: 'dashboard' },
     { title: t('nav.insights'), url: '/insights', icon: Bot, module: 'insights' },
     { title: 'Caisse / POS', url: '/pos', icon: ScanLine, module: 'pos' },
     { title: 'Ventes & Rapports', url: '/ventes', icon: BarChart3, module: 'ventes' },
