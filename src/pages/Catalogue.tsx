@@ -72,6 +72,7 @@ export default function Catalogue() {
         prix_cout: Number(p.prix_cout) || 0, photo_url: p.photo_url || null,
         actif: p.actif !== false,
         poste_preparation: p.poste_preparation || 'salle',
+        type_production: (p as any).type_production || 'labo',
       } as any;
       if (p.id) {
         const { error } = await supabase.from('produits').update(payload).eq('id', p.id);
@@ -265,14 +266,27 @@ export default function Catalogue() {
                 <div><Label>Prix coût (F)</Label><Input type="number" value={editing.prix_cout ?? 0} onChange={e => setEditing({ ...editing, prix_cout: Number(e.target.value) })} /></div>
               </div>
               <div><Label>Photo (URL)</Label><Input value={editing.photo_url || ''} onChange={e => setEditing({ ...editing, photo_url: e.target.value })} placeholder="https://…" /></div>
-              <div>
-                <Label>Poste de préparation</Label>
-                <Select value={editing.poste_preparation || 'salle'} onValueChange={v => setEditing({ ...editing, poste_preparation: v as any })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{POSTES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Détermine où le bon de préparation sera imprimé.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Poste de préparation</Label>
+                  <Select value={editing.poste_preparation || 'salle'} onValueChange={v => setEditing({ ...editing, poste_preparation: v as any })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{POSTES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Type de production</Label>
+                  <Select value={(editing as any).type_production || 'labo'} onValueChange={v => setEditing({ ...editing, type_production: v } as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="labo">Labo (stocké)</SelectItem>
+                      <SelectItem value="minute">Minute (à la commande)</SelectItem>
+                      <SelectItem value="revente">Revente (acheté tel quel)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">Minute = déduit ses MP via fiche technique à la vente.</p>
               <div className="flex items-center gap-2"><Switch checked={editing.actif !== false} onCheckedChange={v => setEditing({ ...editing, actif: v })} /><Label>Produit actif</Label></div>
             </div>
             <DialogFooter>

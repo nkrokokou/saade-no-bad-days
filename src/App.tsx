@@ -40,6 +40,7 @@ const AuditsCeo = lazy(() => import("./pages/AuditsCeo").then(m => ({ default: m
 const TicketTemplates = lazy(() => import("./pages/TicketTemplates").then(m => ({ default: m.default })));
 const CaissesLive = lazy(() => import("./pages/CaissesLive").then(m => ({ default: m.default })));
 const SaadeLive = lazy(() => import("./pages/SaadeLive").then(m => ({ default: m.default })));
+const SuiviStock = lazy(() => import("./pages/SuiviStock").then(m => ({ default: m.default })));
 const Unauthorized = lazy(() => import("./pages/Unauthorized").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
 
@@ -120,6 +121,9 @@ const App = () => (
               </Route>
               <Route element={<AppLayout module="stock_tampon" />}>
                 <Route path="/stock-tampon" element={<StockTampon />} />
+              </Route>
+              <Route element={<AppLayout module="suivi_stock" />}>
+                <Route path="/suivi-stock" element={<SuiviStock />} />
               </Route>
               <Route element={<AppLayout module="pertes" />}>
                 <Route path="/pertes" element={<Pertes />} />
