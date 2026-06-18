@@ -66,6 +66,13 @@ export type Database = {
             foreignKeyName: "achats_mp_matiere_premiere_id_fkey"
             columns: ["matiere_premiere_id"]
             isOneToOne: false
+            referencedRelation: "v_mp_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "achats_mp_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_matieres_premieres"
             referencedColumns: ["id"]
           },
@@ -621,6 +628,13 @@ export type Database = {
             foreignKeyName: "fiches_techniques_matiere_premiere_id_fkey"
             columns: ["matiere_premiere_id"]
             isOneToOne: false
+            referencedRelation: "v_mp_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiches_techniques_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_matieres_premieres"
             referencedColumns: ["id"]
           },
@@ -861,6 +875,82 @@ export type Database = {
             columns: ["produit_id"]
             isOneToOne: false
             referencedRelation: "produits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mp_mouvements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_mouvement: string
+          id: string
+          matiere_premiere_id: string
+          motif: string | null
+          quantite: number
+          regularisation_requise: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          source_id: string | null
+          source_table: string | null
+          stock_apres: number | null
+          stock_avant: number | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_mouvement?: string
+          id?: string
+          matiere_premiere_id: string
+          motif?: string | null
+          quantite: number
+          regularisation_requise?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          stock_apres?: number | null
+          stock_avant?: number | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_mouvement?: string
+          id?: string
+          matiere_premiere_id?: string
+          motif?: string | null
+          quantite?: number
+          regularisation_requise?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          stock_apres?: number | null
+          stock_avant?: number | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mp_mouvements_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
+            referencedRelation: "matieres_premieres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mp_mouvements_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
+            referencedRelation: "v_mp_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mp_mouvements_matiere_premiere_id_fkey"
+            columns: ["matiere_premiere_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_matieres_premieres"
             referencedColumns: ["id"]
           },
         ]
@@ -1125,6 +1215,7 @@ export type Database = {
           prix_cout: number
           prix_vente: number
           sous_categorie: string | null
+          type_production: string
           unite: string | null
           updated_at: string
         }
@@ -1140,6 +1231,7 @@ export type Database = {
           prix_cout?: number
           prix_vente?: number
           sous_categorie?: string | null
+          type_production?: string
           unite?: string | null
           updated_at?: string
         }
@@ -1155,6 +1247,7 @@ export type Database = {
           prix_cout?: number
           prix_vente?: number
           sous_categorie?: string | null
+          type_production?: string
           unite?: string | null
           updated_at?: string
         }
@@ -1649,6 +1742,26 @@ export type Database = {
         }
         Relationships: []
       }
+      v_mp_stock: {
+        Row: {
+          a_anomalies: boolean | null
+          alerte_stock: boolean | null
+          conso_30j: number | null
+          derniere_entree: string | null
+          derniere_sortie: string | null
+          fournisseur: string | null
+          id: string | null
+          nom: string | null
+          prix_unitaire: number | null
+          stock_actuel: number | null
+          stock_min: number | null
+          total_achete: number | null
+          total_consomme: number | null
+          unite: string | null
+          valeur_stock: number | null
+        }
+        Relationships: []
+      }
       v_stock_matieres_premieres: {
         Row: {
           alerte_stock: boolean | null
@@ -1671,6 +1784,18 @@ export type Database = {
         Args: { _action: string; _module: string; _user_id: string }
         Returns: boolean
       }
+      deduire_mps_from_fiche: {
+        Args: {
+          _date: string
+          _produit_id: string
+          _qte_units: number
+          _source_id: string
+          _source_table: string
+          _type: string
+          _user: string
+        }
+        Returns: undefined
+      }
       generer_alertes_systeme: { Args: never; Returns: undefined }
       has_role: {
         Args: {
@@ -1681,6 +1806,7 @@ export type Database = {
       }
       is_ceo: { Args: { _user_id: string }; Returns: boolean }
       is_user_hidden: { Args: { _user_id: string }; Returns: boolean }
+      mp_stock_actuel: { Args: { _mp_id: string }; Returns: number }
     }
     Enums: {
       app_role:

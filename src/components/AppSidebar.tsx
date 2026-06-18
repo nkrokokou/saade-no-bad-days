@@ -50,6 +50,7 @@ export function AppSidebar() {
     { title: 'Tables Restaurant', url: '/tables-restaurant', icon: Armchair, module: 'tables_restaurant' },
     { title: t('nav.bons'), url: '/bons-transfert', icon: FileText, module: 'bons_transfert' },
     { title: t('nav.stock'), url: '/stock-tampon', icon: Package, module: 'stock_tampon' },
+    { title: 'Suivi de Stock', url: '/suivi-stock', icon: Warehouse, module: 'suivi_stock' },
     { title: t('nav.pertes'), url: '/pertes', icon: TrendingDown, module: 'pertes' },
     { title: t('nav.production'), url: '/production', icon: ChefHat, module: 'production' },
     { title: t('nav.inventaire'), url: '/inventaire', icon: ClipboardList, module: 'inventaire' },
