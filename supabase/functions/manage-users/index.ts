@@ -33,14 +33,21 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) return jsonResponse({ error: 'Non autorisé' }, 401)
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user: caller }, error: userError } = await adminClient.auth.getUser(token)
-    if (userError || !caller) return jsonResponse({ error: 'Non autorisé' }, 401)
+    // Use anon-key client with JWKS to verify new signing-key JWTs
+    const authClient = createClient(supabaseUrl, anonKey)
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token)
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error('getClaims error:', claimsError?.message)
+      return jsonResponse({ error: 'Non autorisé' }, 401)
+    }
+    const caller = { id: claimsData.claims.sub as string }
 
     const rl = rateLimit(caller.id)
     if (!rl.ok) return jsonResponse({ error: rl.reason }, 429)
