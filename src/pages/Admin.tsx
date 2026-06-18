@@ -30,6 +30,7 @@ const MODULES: { key: string; label: string; submodules?: { key: string; label: 
   { key: 'fiches_techniques', label: 'Fiches Techniques' },
   { key: 'bons_transfert', label: 'Bons Transfert' },
   { key: 'stock_tampon', label: 'Stock Tampon' },
+  { key: 'suivi_stock', label: 'Suivi de Stock' },
   { key: 'pertes', label: 'Pertes' },
   { key: 'production', label: 'Production' },
   { key: 'inventaire', label: 'Inventaire' },
