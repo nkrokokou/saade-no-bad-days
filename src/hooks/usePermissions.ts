@@ -6,7 +6,7 @@ export type ModuleKey =
   | 'dashboard' | 'saade_live' | 'insights' | 'admin' | 'catalogue'
   | 'pos' | 'ventes' | 'clients' | 'bon_attente'
   | 'achats_mp' | 'fiches_techniques' | 'bons_transfert'
-  | 'stock_tampon' | 'pertes' | 'production'
+  | 'stock_tampon' | 'pertes' | 'production' | 'suivi_stock'
   | 'inventaire' | 'cloture' | 'degustations'
   | 'matieres_premieres' | 'tables_restaurant' | 'economat';
 
