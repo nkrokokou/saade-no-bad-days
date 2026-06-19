@@ -145,12 +145,12 @@ export default function Ventes() {
         </div>
       </div>
 
-      {/* KPI */}
+      {/* KPI cliquables */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi title="Chiffre d'affaires" value={`${stats.totalCA.toLocaleString()} F`} />
-        <Kpi title="Nombre de tickets" value={stats.nbTickets.toLocaleString()} />
-        <Kpi title="Panier moyen" value={`${Math.round(stats.panierMoyen).toLocaleString()} F`} />
-        <Kpi title="Articles vendus" value={stats.qteTotal.toLocaleString()} />
+        <Kpi title="Chiffre d'affaires" value={`${stats.totalCA.toLocaleString()} F`} onClick={() => setKpiDetail('ca')} />
+        <Kpi title="Nombre de tickets" value={stats.nbTickets.toLocaleString()} onClick={() => setKpiDetail('tickets')} />
+        <Kpi title="Panier moyen" value={`${Math.round(stats.panierMoyen).toLocaleString()} F`} onClick={() => setKpiDetail('panier')} />
+        <Kpi title="Articles vendus" value={stats.qteTotal.toLocaleString()} onClick={() => setKpiDetail('articles')} />
       </div>
 
       <Tabs defaultValue="evolution">
@@ -175,15 +175,34 @@ export default function Ventes() {
 
         <TabsContent value="top">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-base">Top 20 produits</CardTitle>
-              <Button size="sm" variant="outline" onClick={exportTopPDF}>Export PDF</Button></CardHeader>
+            <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">{showAllProducts ? 'Tous les produits (du + vendu au jamais vendu)' : 'Top 20 produits'}</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">{visibleTopProducts.length} produits affichés</p>
+              </div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Input value={topSearch} onChange={e => setTopSearch(e.target.value)} placeholder="Rechercher…" className="h-9 w-44" />
+                <Button size="sm" variant="outline" onClick={exportTopExcel}><Download className="h-4 w-4 mr-1" />Excel</Button>
+                <Button size="sm" variant="outline" onClick={exportTopPDF}><Download className="h-4 w-4 mr-1" />PDF</Button>
+              </div>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Produit</TableHead><TableHead className="text-right">Quantité</TableHead><TableHead className="text-right">CA</TableHead></TableRow></TableHeader>
-                <TableBody>{stats.topProduits.map((p, i) => (
-                  <TableRow key={i}><TableCell>{i + 1}</TableCell><TableCell>{p.nom}</TableCell><TableCell className="text-right">{p.qte}</TableCell><TableCell className="text-right">{p.ca.toLocaleString()} F</TableCell></TableRow>
+                <TableBody>{visibleTopProducts.map((p: any, i: number) => (
+                  <TableRow key={p.id || i} className={p.qte === 0 ? 'text-muted-foreground' : ''}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{p.nom} {p.qte === 0 && <Badge variant="outline" className="ml-2 text-[10px]">Jamais vendu</Badge>}</TableCell>
+                    <TableCell className="text-right">{p.qte}</TableCell>
+                    <TableCell className="text-right">{p.ca.toLocaleString()} F</TableCell>
+                  </TableRow>
                 ))}</TableBody>
               </Table>
+              <div className="flex justify-center pt-4">
+                <Button variant="outline" size="sm" onClick={() => setShowAllProducts(v => !v)}>
+                  {showAllProducts ? 'Revenir au Top 20' : `Voir plus (tous les produits, jamais vendus compris)`}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
