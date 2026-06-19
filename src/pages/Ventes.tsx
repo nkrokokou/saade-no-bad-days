@@ -26,6 +26,9 @@ export default function Ventes() {
   const [from, setFrom] = useState(monthAgo);
   const [to, setTo] = useState(today);
   const [selectedVenteId, setSelectedVenteId] = useState<string | null>(null);
+  const [kpiDetail, setKpiDetail] = useState<null | 'ca' | 'tickets' | 'panier' | 'articles'>(null);
+  const [showAllProducts, setShowAllProducts] = useState(false);
+  const [topSearch, setTopSearch] = useState('');
 
   const { data: ventes = [] } = useQuery({
     queryKey: ['ventes', from, to],
@@ -35,6 +38,14 @@ export default function Ventes() {
         .eq('statut', 'validee').order('date_vente', { ascending: false });
       if (error) throw error;
       return data as any[];
+    },
+  });
+
+  const { data: allProduits = [] } = useQuery({
+    queryKey: ['produits-min'],
+    queryFn: async () => {
+      const { data } = await supabase.from('produits').select('id, nom, categorie, prix_vente').order('nom');
+      return data || [];
     },
   });
 
@@ -52,15 +63,24 @@ export default function Ventes() {
       byDay[d] = (byDay[d] || 0) + Number(v.total);
     });
     const dailyChart = Object.entries(byDay).sort().map(([date, total]) => ({ date: date.slice(5), total }));
+    const dailyFull = Object.entries(byDay).sort().map(([date, total]) => ({ date, total }));
 
-    // Par produit
-    const byProd: Record<string, { nom: string; qte: number; ca: number }> = {};
+    // Par produit (vendus seulement)
+    const byProd: Record<string, { id: string; nom: string; qte: number; ca: number }> = {};
     allLines.forEach(l => {
-      if (!byProd[l.produit_id]) byProd[l.produit_id] = { nom: l.produit_nom, qte: 0, ca: 0 };
-      byProd[l.produit_id].qte += Number(l.quantite);
-      byProd[l.produit_id].ca += Number(l.total_ligne);
+      const key = l.produit_id || l.produit_nom;
+      if (!byProd[key]) byProd[key] = { id: l.produit_id, nom: l.produit_nom, qte: 0, ca: 0 };
+      byProd[key].qte += Number(l.quantite);
+      byProd[key].ca += Number(l.total_ligne);
     });
-    const topProduits = Object.values(byProd).sort((a, b) => b.ca - a.ca).slice(0, 20);
+    const sortedSold = Object.values(byProd).sort((a, b) => b.ca - a.ca);
+    const topProduits = sortedSold.slice(0, 20);
+
+    // Tous les produits (catalogue + ventes), jamais vendus inclus
+    const allProductsRanked = allProduits.map((p: any) => {
+      const v = byProd[p.id] || byProd[p.nom];
+      return { id: p.id, nom: p.nom, categorie: p.categorie, qte: v?.qte || 0, ca: v?.ca || 0 };
+    }).sort((a: any, b: any) => b.qte - a.qte || b.ca - a.ca || a.nom.localeCompare(b.nom));
 
     // Par mode paiement
     const byPay: Record<string, number> = {};
@@ -73,8 +93,17 @@ export default function Ventes() {
     ventes.forEach(v => { const h = new Date(v.date_vente).getHours(); byHour[h] = (byHour[h] || 0) + 1; });
     const hourChart = Object.entries(byHour).map(([h, n]) => ({ heure: `${h}h`, nb: n }));
 
-    return { totalCA, nbTickets, panierMoyen, qteTotal, dailyChart, topProduits, paymentChart, hourChart };
-  }, [ventes]);
+    // Par catégorie (depuis allLines + lookup catégorie)
+    const catLookup: Record<string, string> = {};
+    allProduits.forEach((p: any) => { catLookup[p.id] = p.categorie || 'Autre'; });
+    const byCat: Record<string, number> = {};
+    allLines.forEach((l: any) => {
+      const c = catLookup[l.produit_id] || 'Autre';
+      byCat[c] = (byCat[c] || 0) + Number(l.total_ligne);
+    });
+
+    return { totalCA, nbTickets, panierMoyen, qteTotal, dailyChart, dailyFull, topProduits, sortedSold, allProductsRanked, paymentChart, hourChart, byPay, byCat };
+  }, [ventes, allProduits]);
 
   const exportVentes = () => {
     exportToExcel(ventes.map(v => ({
@@ -82,9 +111,24 @@ export default function Ventes() {
       Client: v.client_nom || '', Mode: PAYMENT_LABELS[v.mode_paiement], Total: v.total, Remise: v.remise_globale,
     })), `ventes_${from}_${to}`);
   };
+
+  const visibleTopProducts = useMemo(() => {
+    const base = showAllProducts ? stats.allProductsRanked : stats.topProduits;
+    if (!topSearch) return base;
+    const s = topSearch.toLowerCase();
+    return base.filter((p: any) => p.nom.toLowerCase().includes(s));
+  }, [showAllProducts, stats.topProduits, stats.allProductsRanked, topSearch]);
+
   const exportTopPDF = () => {
-    exportToPDF(`Top produits ${from} → ${to}`, ['Produit', 'Quantité', 'CA (F)'],
-      stats.topProduits.map(p => [p.nom, p.qte, p.ca.toLocaleString()]));
+    const label = showAllProducts ? `Produits ${from} → ${to} (tous)` : `Top 20 produits ${from} → ${to}`;
+    exportToPDF(label, ['#', 'Produit', 'Quantité', 'CA (F)'],
+      visibleTopProducts.map((p: any, i: number) => [i + 1, p.nom, p.qte, p.ca.toLocaleString()]));
+  };
+  const exportTopExcel = () => {
+    exportToExcel(
+      visibleTopProducts.map((p: any, i: number) => ({ Rang: i + 1, Produit: p.nom, Quantité: p.qte, 'CA (F)': p.ca, 'Jamais vendu': p.qte === 0 ? 'OUI' : '' })),
+      showAllProducts ? `produits_complet_${from}_${to}` : `top20_${from}_${to}`
+    );
   };
 
   return (
