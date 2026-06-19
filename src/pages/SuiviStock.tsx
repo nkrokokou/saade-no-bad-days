@@ -54,9 +54,11 @@ export default function SuiviStock() {
   const [tab, setTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [filterFournisseur, setFilterFournisseur] = useState('all');
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [adjustOpen, setAdjustOpen] = useState<MpStock | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustMotif, setAdjustMotif] = useState('');
+  const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
 
   const { data: mps = [] } = useQuery({
     queryKey: ['v_mp_stock'],
