@@ -74,6 +74,9 @@ export default function RapportsCeo() {
         </Button>
       </div>
 
+      <DailyExportCard />
+
+
       <div className="grid lg:grid-cols-[1fr_2fr] gap-6">
         <Card>
           <CardHeader>
