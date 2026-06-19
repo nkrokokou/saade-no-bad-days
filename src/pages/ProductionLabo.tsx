@@ -41,10 +41,15 @@ export default function ProductionLabo() {
     return { ...prev, [pid]: base };
   });
 
+  // Ne montre que les produits réellement issus du Labo (exclut "minute" et "revente")
+  const laboProducts = useMemo(
+    () => products.filter((p: any) => (p.type_production ?? 'labo') === 'labo'),
+    [products]
+  );
   const filteredProducts = useMemo(() => {
-    if (!search) return products;
-    return products.filter(p => p.nom.toLowerCase().includes(search.toLowerCase()));
-  }, [products, search]);
+    if (!search) return laboProducts;
+    return laboProducts.filter(p => p.nom.toLowerCase().includes(search.toLowerCase()));
+  }, [laboProducts, search]);
 
   const save = useMutation({
     mutationFn: async () => {
