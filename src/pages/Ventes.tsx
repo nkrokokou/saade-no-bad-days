@@ -398,11 +398,179 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function Kpi({ title, value }: { title: string; value: string | number }) {
+function Kpi({ title, value, onClick }: { title: string; value: string | number; onClick?: () => void }) {
   return (
-    <Card><CardContent className="p-4">
-      <p className="text-xs text-muted-foreground">{title}</p>
-      <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
-    </CardContent></Card>
+    <button type="button" onClick={onClick} className="text-left group focus:outline-none focus:ring-2 focus:ring-primary rounded-lg" disabled={!onClick}>
+      <Card className={onClick ? 'transition hover:border-primary hover:shadow-md cursor-pointer' : ''}>
+        <CardContent className="p-4">
+          <p className="text-xs text-muted-foreground flex items-center justify-between">
+            {title}
+            {onClick && <Eye className="h-3 w-3 opacity-0 group-hover:opacity-100 transition" />}
+          </p>
+          <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
+        </CardContent>
+      </Card>
+    </button>
+  );
+}
+
+function KpiDetailDialog({ type, onClose, ventes, stats, from, to, onOpenTicket }: {
+  type: 'ca' | 'tickets' | 'panier' | 'articles' | null;
+  onClose: () => void;
+  ventes: any[];
+  stats: any;
+  from: string;
+  to: string;
+  onOpenTicket: (id: string) => void;
+}) {
+  const titles: Record<string, string> = {
+    ca: "Détail du chiffre d'affaires", tickets: 'Liste des tickets',
+    panier: 'Détail du panier moyen', articles: 'Articles vendus',
+  };
+  if (!type) return null;
+
+  const exportCurrent = (kind: 'excel' | 'pdf') => {
+    if (type === 'ca') {
+      const rows = stats.dailyFull.map((d: any) => ({ Date: d.date, 'CA (F)': d.total }));
+      const payRows = Object.entries(stats.byPay).map(([k, v]: any) => ({ Mode: PAYMENT_LABELS[k] || k, 'CA (F)': v }));
+      const catRows = Object.entries(stats.byCat).map(([k, v]: any) => ({ Catégorie: k, 'CA (F)': v }));
+      if (kind === 'excel') {
+        exportToExcel([...rows, {}, ...payRows.map(p => ({ Date: 'Paiement: ' + p.Mode, 'CA (F)': p['CA (F)'] })), {}, ...catRows.map(c => ({ Date: 'Catégorie: ' + c.Catégorie, 'CA (F)': c['CA (F)'] }))], `CA_${from}_${to}`);
+      } else {
+        exportToPDF(`CA du ${from} au ${to}`, ['Détail', 'CA (F)'], [
+          ...rows.map((r: any) => [r.Date, r['CA (F)'].toLocaleString()]),
+          ...payRows.map(p => [`Paiement: ${p.Mode}`, (p['CA (F)'] as number).toLocaleString()]),
+          ...catRows.map(c => [`Catégorie: ${c.Catégorie}`, (c['CA (F)'] as number).toLocaleString()]),
+        ]);
+      }
+    } else if (type === 'tickets') {
+      const rows = ventes.map(v => ({ Ticket: v.numero_ticket, Date: new Date(v.date_vente).toLocaleString('fr-FR'), Client: v.client_nom || '', Paiement: PAYMENT_LABELS[v.mode_paiement] || v.mode_paiement, 'Total (F)': v.total }));
+      if (kind === 'excel') exportToExcel(rows, `tickets_${from}_${to}`);
+      else exportToPDF(`Tickets ${from} → ${to}`, ['Ticket', 'Date', 'Client', 'Paiement', 'Total'], rows.map(r => [`#${r.Ticket}`, r.Date, r.Client, r.Paiement, `${(r['Total (F)'] as number).toLocaleString()} F`]));
+    } else if (type === 'panier') {
+      const sorted = [...ventes].sort((a, b) => Number(b.total) - Number(a.total));
+      const rows = sorted.map(v => ({ Ticket: v.numero_ticket, Date: new Date(v.date_vente).toLocaleString('fr-FR'), 'Total (F)': v.total }));
+      if (kind === 'excel') exportToExcel(rows, `panier_${from}_${to}`);
+      else exportToPDF(`Panier moyen ${from} → ${to}`, ['Ticket', 'Date', 'Total'], rows.map(r => [`#${r.Ticket}`, r.Date, `${(r['Total (F)'] as number).toLocaleString()} F`]));
+    } else if (type === 'articles') {
+      const rows = stats.sortedSold.map((p: any, i: number) => ({ Rang: i + 1, Produit: p.nom, Quantité: p.qte, 'CA (F)': p.ca }));
+      if (kind === 'excel') exportToExcel(rows, `articles_vendus_${from}_${to}`);
+      else exportToPDF(`Articles vendus ${from} → ${to}`, ['#', 'Produit', 'Qté', 'CA'], rows.map((r: any) => [r.Rang, r.Produit, r.Quantité, `${(r['CA (F)'] as number).toLocaleString()} F`]));
+    }
+  };
+
+  // Computed views
+  const sortedByAmount = useMemo(() => [...ventes].sort((a, b) => Number(b.total) - Number(a.total)), [ventes]);
+  const medianTicket = useMemo(() => {
+    if (!ventes.length) return 0;
+    const arr = ventes.map(v => Number(v.total)).sort((a, b) => a - b);
+    return arr[Math.floor(arr.length / 2)];
+  }, [ventes]);
+
+  return (
+    <Dialog open={!!type} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{titles[type]} · {from} → {to}</DialogTitle>
+        </DialogHeader>
+
+        {type === 'ca' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Info label="CA total" value={<span className="text-lg font-bold text-primary">{stats.totalCA.toLocaleString()} F</span>} />
+              <Info label="Période" value={`${stats.dailyFull.length} jours avec ventes`} />
+            </div>
+            <div>
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Par jour</h4>
+              <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">CA</TableHead></TableRow></TableHeader>
+                <TableBody>{stats.dailyFull.map((d: any) => (
+                  <TableRow key={d.date}><TableCell>{d.date}</TableCell><TableCell className="text-right font-medium">{Number(d.total).toLocaleString()} F</TableCell></TableRow>
+                ))}</TableBody>
+              </Table>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Par mode de paiement</h4>
+                <Table><TableBody>{Object.entries(stats.byPay).map(([k, v]: any) => (
+                  <TableRow key={k}><TableCell>{PAYMENT_LABELS[k] || k}</TableCell><TableCell className="text-right">{Number(v).toLocaleString()} F</TableCell></TableRow>
+                ))}</TableBody></Table>
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Par catégorie</h4>
+                <Table><TableBody>{Object.entries(stats.byCat).map(([k, v]: any) => (
+                  <TableRow key={k}><TableCell>{k}</TableCell><TableCell className="text-right">{Number(v).toLocaleString()} F</TableCell></TableRow>
+                ))}</TableBody></Table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {type === 'tickets' && (
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">{ventes.length} tickets · clique sur une ligne pour ouvrir le détail</p>
+            <Table>
+              <TableHeader><TableRow><TableHead>Ticket</TableHead><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Paiement</TableHead><TableHead className="text-right">Total</TableHead></TableRow></TableHeader>
+              <TableBody>{ventes.map(v => (
+                <TableRow key={v.id} className="cursor-pointer hover:bg-muted/40" onClick={() => onOpenTicket(v.id)}>
+                  <TableCell>#{v.numero_ticket}</TableCell>
+                  <TableCell className="text-xs">{new Date(v.date_vente).toLocaleString('fr-FR')}</TableCell>
+                  <TableCell>{v.client_nom || '—'}</TableCell>
+                  <TableCell><Badge variant="secondary" className="text-[10px]">{PAYMENT_LABELS[v.mode_paiement] || v.mode_paiement}</Badge></TableCell>
+                  <TableCell className="text-right font-medium">{Number(v.total).toLocaleString()} F</TableCell>
+                </TableRow>
+              ))}</TableBody>
+            </Table>
+          </div>
+        )}
+
+        {type === 'panier' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3 text-sm">
+              <Info label="Min" value={`${Math.min(...(ventes.length ? ventes.map(v => Number(v.total)) : [0])).toLocaleString()} F`} />
+              <Info label="Médiane" value={`${Math.round(medianTicket).toLocaleString()} F`} />
+              <Info label="Max" value={`${Math.max(...(ventes.length ? ventes.map(v => Number(v.total)) : [0])).toLocaleString()} F`} />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Top 10 plus gros tickets</h4>
+                <Table><TableBody>{sortedByAmount.slice(0, 10).map(v => (
+                  <TableRow key={v.id} className="cursor-pointer" onClick={() => onOpenTicket(v.id)}>
+                    <TableCell>#{v.numero_ticket}</TableCell>
+                    <TableCell className="text-right">{Number(v.total).toLocaleString()} F</TableCell>
+                  </TableRow>
+                ))}</TableBody></Table>
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Top 10 plus petits</h4>
+                <Table><TableBody>{[...sortedByAmount].reverse().slice(0, 10).map(v => (
+                  <TableRow key={v.id} className="cursor-pointer" onClick={() => onOpenTicket(v.id)}>
+                    <TableCell>#{v.numero_ticket}</TableCell>
+                    <TableCell className="text-right">{Number(v.total).toLocaleString()} F</TableCell>
+                  </TableRow>
+                ))}</TableBody></Table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {type === 'articles' && (
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">{stats.qteTotal.toLocaleString()} articles vendus · {stats.sortedSold.length} produits distincts</p>
+            <Table>
+              <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Produit</TableHead><TableHead className="text-right">Qté</TableHead><TableHead className="text-right">CA</TableHead></TableRow></TableHeader>
+              <TableBody>{stats.sortedSold.map((p: any, i: number) => (
+                <TableRow key={p.id || i}><TableCell>{i + 1}</TableCell><TableCell>{p.nom}</TableCell><TableCell className="text-right">{p.qte}</TableCell><TableCell className="text-right">{p.ca.toLocaleString()} F</TableCell></TableRow>
+              ))}</TableBody>
+            </Table>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportCurrent('excel')}><Download className="h-4 w-4 mr-1" />Excel</Button>
+          <Button variant="outline" size="sm" onClick={() => exportCurrent('pdf')}><Download className="h-4 w-4 mr-1" />PDF</Button>
+          <Button size="sm" onClick={onClose}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
