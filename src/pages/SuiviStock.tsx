@@ -98,9 +98,9 @@ export default function SuiviStock() {
   });
 
   const { data: produitsLabo = [] } = useQuery({
-    queryKey: ['produits_labo_stock'],
+    queryKey: ['produits_labo_stock', selectedDate],
     queryFn: async () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
+      const today = selectedDate;
       const [prods, prod, pertes, mvt] = await Promise.all([
         supabase.from('produits').select('id, nom, categorie, type_production, actif').eq('actif', true),
         supabase.from('production_labo').select('produit_id, qte_produite, qte_sortie_en_salle, qte_perte').eq('date_production', today),
