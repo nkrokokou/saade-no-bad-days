@@ -209,9 +209,22 @@ export default function SuiviStock() {
           <Warehouse className="h-6 w-6 text-primary" /> Suivi de Stock
         </h1>
         <Badge variant="outline" className="gap-1">
-          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" /> Temps réel
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" /> Stock & anomalies : temps réel
         </Badge>
       </div>
+
+      <Card className="bg-muted/30">
+        <CardContent className="py-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mr-2">Date du snapshot</span>
+          <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronLeft className="h-4 w-4" /></Button>
+          <Input type="date" className="w-44" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+          <Button variant="ghost" size="icon" disabled={isToday} onClick={() => setSelectedDate(format(addDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronRight className="h-4 w-4" /></Button>
+          <Button size="sm" variant={isToday ? 'default' : 'outline'} onClick={() => setSelectedDate(format(new Date(), 'yyyy-MM-dd'))}>Aujourd'hui</Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedDate(format(subDays(new Date(), 1), 'yyyy-MM-dd'))}>Hier</Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedDate(format(subDays(new Date(), 7), 'yyyy-MM-dd'))}>-7 j</Button>
+          {!isToday && <Badge variant="secondary" className="ml-2 text-[10px]">Onglet Produits Labo basé sur cette date</Badge>}
+        </CardContent>
+      </Card>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto">
