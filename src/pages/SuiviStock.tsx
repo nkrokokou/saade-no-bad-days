@@ -11,9 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Warehouse, AlertTriangle, TrendingUp, Package, History, BarChart3, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Download } from 'lucide-react';
+import { Warehouse, AlertTriangle, TrendingUp, Package, History, BarChart3, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, subDays, addDays, parseISO } from 'date-fns';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { SearchFilter } from '@/components/SearchFilter';
 
