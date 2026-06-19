@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Send, Calendar, CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
+import { Mail, Send, Calendar, CheckCircle2, XCircle, Clock, Loader2, FileDown, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
+import { exportToExcel, exportToPDF } from "@/hooks/useExcelImportExport";
 
 const CEO_EMAIL = "nkro006@gmail.com";
 
