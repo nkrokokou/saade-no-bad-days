@@ -251,6 +251,15 @@ export default function Ventes() {
       </Tabs>
 
       <TicketDetailDialog venteId={selectedVenteId} onClose={() => setSelectedVenteId(null)} />
+      <KpiDetailDialog
+        type={kpiDetail}
+        onClose={() => setKpiDetail(null)}
+        ventes={ventes}
+        stats={stats}
+        from={from}
+        to={to}
+        onOpenTicket={(id) => { setKpiDetail(null); setSelectedVenteId(id); }}
+      />
     </div>
   );
 }
