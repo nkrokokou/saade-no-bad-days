@@ -11,9 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Warehouse, AlertTriangle, TrendingUp, Package, History, BarChart3, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Download } from 'lucide-react';
+import { Warehouse, AlertTriangle, TrendingUp, Package, History, BarChart3, ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, subDays, addDays, parseISO } from 'date-fns';
 import { exportToExcel } from '@/hooks/useExcelImportExport';
 import { SearchFilter } from '@/components/SearchFilter';
 
@@ -54,9 +54,11 @@ export default function SuiviStock() {
   const [tab, setTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [filterFournisseur, setFilterFournisseur] = useState('all');
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [adjustOpen, setAdjustOpen] = useState<MpStock | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustMotif, setAdjustMotif] = useState('');
+  const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
 
   const { data: mps = [] } = useQuery({
     queryKey: ['v_mp_stock'],
@@ -96,9 +98,9 @@ export default function SuiviStock() {
   });
 
   const { data: produitsLabo = [] } = useQuery({
-    queryKey: ['produits_labo_stock'],
+    queryKey: ['produits_labo_stock', selectedDate],
     queryFn: async () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
+      const today = selectedDate;
       const [prods, prod, pertes, mvt] = await Promise.all([
         supabase.from('produits').select('id, nom, categorie, type_production, actif').eq('actif', true),
         supabase.from('production_labo').select('produit_id, qte_produite, qte_sortie_en_salle, qte_perte').eq('date_production', today),
@@ -207,9 +209,22 @@ export default function SuiviStock() {
           <Warehouse className="h-6 w-6 text-primary" /> Suivi de Stock
         </h1>
         <Badge variant="outline" className="gap-1">
-          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" /> Temps réel
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" /> Stock & anomalies : temps réel
         </Badge>
       </div>
+
+      <Card className="bg-muted/30">
+        <CardContent className="py-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mr-2">Date du snapshot</span>
+          <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronLeft className="h-4 w-4" /></Button>
+          <Input type="date" className="w-44" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+          <Button variant="ghost" size="icon" disabled={isToday} onClick={() => setSelectedDate(format(addDays(parseISO(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronRight className="h-4 w-4" /></Button>
+          <Button size="sm" variant={isToday ? 'default' : 'outline'} onClick={() => setSelectedDate(format(new Date(), 'yyyy-MM-dd'))}>Aujourd'hui</Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedDate(format(subDays(new Date(), 1), 'yyyy-MM-dd'))}>Hier</Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedDate(format(subDays(new Date(), 7), 'yyyy-MM-dd'))}>-7 j</Button>
+          {!isToday && <Badge variant="secondary" className="ml-2 text-[10px]">Onglet Produits Labo basé sur cette date</Badge>}
+        </CardContent>
+      </Card>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto">

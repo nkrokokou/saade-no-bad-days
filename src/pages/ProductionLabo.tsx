@@ -41,10 +41,15 @@ export default function ProductionLabo() {
     return { ...prev, [pid]: base };
   });
 
+  // Ne montre que les produits réellement issus du Labo (exclut "minute" et "revente")
+  const laboProducts = useMemo(
+    () => products.filter((p: any) => (p.type_production ?? 'labo') === 'labo'),
+    [products]
+  );
   const filteredProducts = useMemo(() => {
-    if (!search) return products;
-    return products.filter(p => p.nom.toLowerCase().includes(search.toLowerCase()));
-  }, [products, search]);
+    if (!search) return laboProducts;
+    return laboProducts.filter(p => p.nom.toLowerCase().includes(search.toLowerCase()));
+  }, [laboProducts, search]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -102,8 +107,9 @@ export default function ProductionLabo() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-heading font-bold">Production Labo</h1>
-        <div className="flex gap-2 flex-wrap">
-          <SearchFilter value={search} onChange={setSearch} className="w-48" />
+        <div className="flex gap-2 flex-wrap items-center">
+          <SearchFilter value={search} onChange={setSearch} className="w-full sm:w-64" placeholder="Rechercher un produit labo…" />
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{filteredProducts.length}/{laboProducts.length} produits</span>
           <ExcelImportExport onExport={handleExport} onExportPDF={handleExportPDF} onImport={handleImport} />
           <Button onClick={() => save.mutate()} disabled={save.isPending}><Save className="h-4 w-4 mr-1" /> Sauvegarder</Button>
         </div>
