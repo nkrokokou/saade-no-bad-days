@@ -264,13 +264,13 @@ async function buildDailyReportDetailed(date: string) {
   const dayEnd = `${date}T23:59:59.999Z`;
 
   const [ventesRes, sessionsRes, cloturesRes, nouveauxCreditsRes, paiementsCreditsRes, encoursRes, pertesRes] = await Promise.all([
-    supabase.from("ventes").select("id, total, mode_paiement, numero_ticket, client_nom, date_vente, statut, caissier_nom").gte("date_vente", dayStart).lte("date_vente", dayEnd).neq("statut", "annulee"),
-    supabase.from("sessions_caisse").select("id, statut, ecart, ferme_at, ouvert_at, fond_initial, fond_final_attendu, fond_final_compte, caissier_nom, notes").gte("ouvert_at", dayStart).lte("ouvert_at", dayEnd),
-    supabase.from("cloture_journaliere").select("produit, categorie, ouverture, recu, vendu, degustation, invendu, invendu_50, compte, qte_perte, prix_invendu_50, valeur_perte").eq("date_cloture", date),
+    supabase.from("ventes").select("id, total, mode_paiement, numero_ticket, client_nom, date_vente, statut, encaisse_par").gte("date_vente", dayStart).lte("date_vente", dayEnd).neq("statut", "annulee"),
+    supabase.from("sessions_caisse").select("id, statut, ecart, ferme_at, ouvert_at, fond_initial, fond_final_attendu, fond_final_compte, caissier_id, notes").gte("ouvert_at", dayStart).lte("ouvert_at", dayEnd),
+    supabase.from("cloture_journaliere").select("produit_id, stock_ouverture, qte_recue, qte_vendue, qte_degustation, qte_invendu, prix_invendu_50, qte_perte, stock_fin_compte, produits(nom, categories_produits(nom))").eq("date_cloture", date),
     supabase.from("credits_clients").select("client_nom, montant_initial, montant_restant").eq("date_credit", date),
     supabase.from("paiements_credits").select("montant, credit_id, date_paiement").gte("date_paiement", dayStart).lte("date_paiement", dayEnd),
     supabase.from("credits_clients").select("montant_restant").eq("statut", "ouvert"),
-    supabase.from("pertes").select("produit, quantite, valeur, motif").eq("jour", date),
+    supabase.from("pertes").select("quantite, type_labo, jour, produits(nom, prix_vente)").eq("jour", date),
   ]);
 
   const ventes = ventesRes.data || [];
@@ -289,7 +289,7 @@ async function buildDailyReportDetailed(date: string) {
     const ticketByVente = new Map(ventes.map((v: any) => [v.id, v]));
     const { data: rawLignes } = await supabase
       .from("vente_lignes")
-      .select("vente_id, produit_id, produit_nom, quantite, prix_unitaire, total_ligne, produits(nom, categorie_id, categories_produits(nom))")
+      .select("vente_id, produit_id, produit_nom, quantite, prix_unitaire, total_ligne, produits(nom, categories_produits(nom))")
       .in("vente_id", ids);
     lignes = (rawLignes || []).map((l: any) => {
       const v = ticketByVente.get(l.vente_id) as any;
@@ -298,7 +298,6 @@ async function buildDailyReportDetailed(date: string) {
         ticket: v?.numero_ticket || '',
         date: v?.date_vente || '',
         client: v?.client_nom || '',
-        caissier: v?.caissier_nom || '',
         produit: l.produit_nom,
         categorie: cat,
         quantite: l.quantite,
@@ -324,14 +323,19 @@ async function buildDailyReportDetailed(date: string) {
   const ecartTotal = sessionsFermees.reduce((s: number, x: any) => s + Number(x.ecart || 0), 0);
 
   const clotures = cloturesRes.data || [];
-  const valeurInvendus = clotures.reduce((s: number, c: any) => s + Number(c.invendu || 0) * Number(c.prix_invendu_50 || 0), 0);
+  const valeurInvendus = clotures.reduce((s: number, c: any) => s + Number(c.qte_invendu || 0) * Number(c.prix_invendu_50 || 0), 0);
 
   const nouveauxCreditsList = nouveauxCreditsRes.data || [];
   const nouveauxCredits = nouveauxCreditsList.reduce((s: number, c: any) => s + Number(c.montant_initial || 0), 0);
   const paiementsCredits = (paiementsCreditsRes.data || []).reduce((s: number, p: any) => s + Number(p.montant || 0), 0);
   const encours = (encoursRes.data || []).reduce((s: number, c: any) => s + Number(c.montant_restant || 0), 0);
-  const pertes = pertesRes.data || [];
-  const pertesValeur = pertes.reduce((s: number, p: any) => s + Number(p.valeur || 0), 0);
+  const pertes = (pertesRes.data || []).map((p: any) => ({
+    produit: p.produits?.nom || '?',
+    quantite: Number(p.quantite || 0),
+    valeur: Number(p.quantite || 0) * Number(p.produits?.prix_vente || 0),
+    motif: p.type_labo || '',
+  }));
+  const pertesValeur = pertes.reduce((s: number, p: any) => s + p.valeur, 0);
 
   return {
     date, ca, nbTickets, panierMoyen, parMode, ventes, lignes, parProduit,
