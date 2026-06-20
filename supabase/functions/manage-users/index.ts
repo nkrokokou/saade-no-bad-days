@@ -40,14 +40,22 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) return jsonResponse({ error: 'Non autorisé' }, 401)
 
     const token = authHeader.replace('Bearer ', '')
-    // Use anon-key client with JWKS to verify new signing-key JWTs
+    // Try getClaims (new signing keys) — fallback to getUser (legacy) if it fails.
     const authClient = createClient(supabaseUrl, anonKey)
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token)
-    if (claimsError || !claimsData?.claims?.sub) {
-      console.error('getClaims error:', claimsError?.message)
-      return jsonResponse({ error: 'Non autorisé' }, 401)
+    let callerId: string | null = null
+    try {
+      const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token)
+      if (!claimsError && claimsData?.claims?.sub) callerId = claimsData.claims.sub as string
+    } catch (e) { console.warn('getClaims threw:', (e as Error).message) }
+    if (!callerId) {
+      const { data: userData, error: userErr } = await authClient.auth.getUser(token)
+      if (userErr || !userData?.user) {
+        console.error('Auth failed (getClaims+getUser):', userErr?.message)
+        return jsonResponse({ error: 'Non autorisé (token invalide)' }, 401)
+      }
+      callerId = userData.user.id
     }
-    const caller = { id: claimsData.claims.sub as string }
+    const caller = { id: callerId }
 
     const rl = rateLimit(caller.id)
     if (!rl.ok) return jsonResponse({ error: rl.reason }, 429)
