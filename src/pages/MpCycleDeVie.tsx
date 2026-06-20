@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, FileDown, FileSpreadsheet, Activity, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
-import { exportToExcelMulti, exportToPDFSections, fmtMoneyPdf } from '@/hooks/useExcelImportExport';
+import { exportToExcelMulti, exportToPDFSections } from '@/hooks/useExcelImportExport';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -39,7 +39,7 @@ export default function MpCycleDeVie() {
   const { data: mp } = useQuery({
     queryKey: ['mp', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('matieres_premieres').select('*').eq('id', id).maybeSingle();
+      const { data, error } = await supabase.from('matieres_premieres').select('*').eq('id', id!).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -52,7 +52,7 @@ export default function MpCycleDeVie() {
       const { data, error } = await supabase
         .from('mp_mouvements')
         .select('*')
-        .eq('matiere_premiere_id', id)
+        .eq('matiere_premiere_id', id!)
         .order('date_mouvement', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
