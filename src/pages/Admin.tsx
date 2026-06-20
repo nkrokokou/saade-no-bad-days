@@ -337,7 +337,10 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               {usersError && (
-                <p className="text-sm text-destructive mb-4">Erreur de chargement des utilisateurs. Vérifiez votre connexion.</p>
+                <p className="text-sm text-destructive mb-4">
+                  Erreur de chargement : {(usersError as any)?.message || 'erreur inconnue'}.
+                  <br/><span className="text-xs text-muted-foreground">Vérifiez que vous êtes connecté en CEO/Developer et réessayez.</span>
+                </p>
               )}
               <div className="overflow-x-auto">
                 <Table>
