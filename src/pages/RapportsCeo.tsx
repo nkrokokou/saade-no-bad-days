@@ -460,14 +460,14 @@ function DailyExportCard() {
           },
           {
             heading: `Sessions caisse (${r.sessions.total})`,
-            headers: ['Caissier', 'Ouvert', 'Fermé', 'Attendu', 'Compté', 'Écart'],
+            headers: ['Ouvert', 'Fermé', 'Attendu', 'Compté', 'Écart', 'Statut'],
             rows: r.sessions.all.map((s: any) => [
-              s.caissier_nom || '-',
               s.ouvert_at ? format(new Date(s.ouvert_at), 'HH:mm') : '',
               s.ferme_at ? format(new Date(s.ferme_at), 'HH:mm') : '-',
               fmtMoneyPdf(s.fond_final_attendu),
               fmtMoneyPdf(s.fond_final_compte),
               fmtMoneyPdf(s.ecart),
+              s.statut || '',
             ]),
           },
         ].filter(s => s.rows.length > 0);
