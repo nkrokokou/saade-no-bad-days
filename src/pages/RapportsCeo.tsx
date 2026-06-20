@@ -9,7 +9,7 @@ import { Mail, Send, Calendar, CheckCircle2, XCircle, Clock, Loader2, FileDown, 
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { exportToExcel, exportToPDF, exportToExcelMulti, exportToPDFSections, fmtMoneyPdf } from "@/hooks/useExcelImportExport";
+import { exportToExcelMulti, exportToPDFSections, fmtMoneyPdf } from "@/hooks/useExcelImportExport";
 
 const CEO_EMAIL = "nkro006@gmail.com";
 
