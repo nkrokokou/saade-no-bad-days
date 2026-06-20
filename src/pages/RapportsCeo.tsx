@@ -265,8 +265,8 @@ async function buildDailyReportDetailed(date: string) {
 
   const [ventesRes, sessionsRes, cloturesRes, nouveauxCreditsRes, paiementsCreditsRes, encoursRes, pertesRes] = await Promise.all([
     supabase.from("ventes").select("id, total, mode_paiement, numero_ticket, client_nom, date_vente, statut, encaisse_par").gte("date_vente", dayStart).lte("date_vente", dayEnd).neq("statut", "annulee"),
-    supabase.from("sessions_caisse").select("id, statut, ecart, ferme_at, ouvert_at, fond_initial, fond_final_attendu, fond_final_compte, caissier_id, notes").gte("ouvert_at", dayStart).lte("ouvert_at", dayEnd),
-    supabase.from("cloture_journaliere").select("produit_id, stock_ouverture, qte_recue, qte_vendue, qte_degustation, qte_invendu, prix_invendu_50, qte_perte, stock_fin_compte, produits(nom, categories_produits(nom))").eq("date_cloture", date),
+    supabase.from("sessions_caisse").select("id, statut, ecart, ferme_at, ouvert_at, fond_initial, fond_final_attendu, fond_final_compte, notes, ouvert_par, ferme_par").gte("ouvert_at", dayStart).lte("ouvert_at", dayEnd),
+    supabase.from("cloture_journaliere").select("produit_id, stock_ouverture, qte_recue, qte_vendue, qte_degustation, qte_invendu, prix_invendu_50, qte_perte, stock_fin_compte, produits(nom, categorie)").eq("date_cloture", date),
     supabase.from("credits_clients").select("client_nom, montant_initial, montant_restant").eq("date_credit", date),
     supabase.from("paiements_credits").select("montant, credit_id, date_paiement").gte("date_paiement", dayStart).lte("date_paiement", dayEnd),
     supabase.from("credits_clients").select("montant_restant").eq("statut", "ouvert"),
@@ -289,11 +289,11 @@ async function buildDailyReportDetailed(date: string) {
     const ticketByVente = new Map(ventes.map((v: any) => [v.id, v]));
     const { data: rawLignes } = await supabase
       .from("vente_lignes")
-      .select("vente_id, produit_id, produit_nom, quantite, prix_unitaire, total_ligne, produits(nom, categories_produits(nom))")
+      .select("vente_id, produit_id, produit_nom, quantite, prix_unitaire, total_ligne, produits(nom, categorie)")
       .in("vente_id", ids);
     lignes = (rawLignes || []).map((l: any) => {
       const v = ticketByVente.get(l.vente_id) as any;
-      const cat = l.produits?.categories_produits?.nom || '';
+      const cat = l.produits?.categorie || '';
       return {
         ticket: v?.numero_ticket || '',
         date: v?.date_vente || '',
@@ -391,7 +391,7 @@ function DailyExportCard() {
 
         const cloture = r.cloture.lignes.map((c: any) => ({
           Produit: c.produits?.nom || c.produit_id,
-          Catégorie: c.produits?.categories_produits?.nom || '',
+          Catégorie: c.produits?.categorie || '',
           'Stock ouverture': c.stock_ouverture, Reçu: c.qte_recue, Vendu: c.qte_vendue,
           Dégustation: c.qte_degustation, Invendu: c.qte_invendu, 'Prix -50%': c.prix_invendu_50,
           'Qté perte': c.qte_perte, 'Stock fin compté': c.stock_fin_compte,
