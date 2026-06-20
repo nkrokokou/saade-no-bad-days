@@ -1,44 +1,130 @@
-## Plan approuvé + ajouts Ventes & Rapports
 
-### 1. Suivi de Stock — sélecteur de date
-Barre `[<] [date] [>]  [Aujourd'hui] [Hier] [-7j]` en haut de `/suivi-stock`. La date pilote le snapshot Produits Labo du jour, la conso N jours, et le filtre par défaut de l'historique. KPIs valeur stock / anomalies restent temps réel (badge "live").
+## Objectif
 
-### 2. Production Labo — Pain Bro + recherche
-- Filtrer la saisie sur `type_production = 'labo'` uniquement → Pain Bro, formules, boissons et autres "minute/revente" disparaissent de l'écran Production.
-- Recherche déjà présente, rendue plus visible (pleine largeur mobile, placeholder explicite, compteur "X/Y produits").
-- **Aucune donnée modifiée** : la CEO reclassera Pain Bro depuis Catalogue (minute si préparé, revente si acheté, et le pain "matière" reste géré par Matières Premières / Achats MP).
+Sept chantiers liés, livrés ensemble, sans casser l'existant.
 
-### 3. Rapports CEO — gros bouton "Rapport journalier"
-Encart en haut de `/rapports-ceo` avec sélecteur de date + raccourcis Hier/-7j + deux gros boutons **Télécharger PDF** et **Télécharger Excel**. Données 100 % cohérentes avec l'email automatique (mêmes requêtes : CA, tickets, top produits, écarts caisse, crédits, pertes, MP critiques, anomalies). Génération côté client, fonctionne même si Resend est en panne.
+---
 
-### 4. Ventes & Rapports — KPIs cliquables + Top produits étendu (ajout de cette itération)
+### 1. Cycle de vie complet de chaque Matière Première
 
-**KPI cards cliquables** (CA, Tickets, Panier moyen, Articles vendus) :
-- Chaque carte ouvre une **modale de détail** sur la période sélectionnée, exportable Excel + PDF.
-  - **Chiffre d'affaires** → ventilation par jour + par mode de paiement + par catégorie.
-  - **Tickets** → liste paginée de tous les tickets (date/heure, n°, mode paiement, total, statut). Clic ticket = même drawer "détail ticket" que celui du Journal.
-  - **Panier moyen** → distribution (min / médiane / max), top 10 plus gros tickets, top 10 plus petits.
-  - **Articles vendus** → liste complète des produits avec quantité (équivalent du Top produits étendu — lien direct vers l'onglet Top produits).
+Nouvelle page **"Cycle de vie MP"** (route `/mp/:id/cycle`) accessible :
+- depuis chaque ligne de **Matières Premières** (bouton "Voir cycle"),
+- depuis **Suivi de Stock → onglet MP** (clic sur une MP),
+- depuis l'**Économat / Achats MP / Pertes** (lien sur le nom MP).
 
-**Top produits étendu** :
-- Bouton **"Voir plus"** sous le Top 20 → bascule en mode "tous les produits du catalogue", triés du plus vendu au jamais vendu (les jamais vendus apparaissent en bas avec quantité 0 et un badge "Jamais vendu").
-- Recherche + tri (quantité / CA / nom) + filtre catégorie.
-- Export **Excel ET PDF** de la liste complète affichée (pas seulement le top 20).
+Contenu (timeline + tableaux filtrables par date) :
+- **Entrées** : achats (`achats_mp`), bons de transfert entrants.
+- **Sorties** : conso production labo (`production_labo` × fiche technique), conso ventes minute (vente_lignes × fiche), bons de transfert sortants, pertes (`pertes`).
+- **Ajustements** : inventaire (`inventaire`), corrections manuelles.
+- **Solde courant** + **graphique d'évolution 30/90j**.
+- **Anomalies** (consommation négative, ruptures, mouvements sans source).
 
-### Audit de cohérence
-Avant de coder, je revérifie que :
-- `v_mp_stock` est bien la seule source pour les MP.
-- Produits Labo dans Suivi Stock = uniquement `type_production='labo'`.
-- Ticket modal Ventes utilise le même composant `TicketDetailDialog` créé précédemment dans le Journal.
-- Aucune donnée inventée, aucune migration SQL dans cette itération.
+Tout est exportable PDF + Excel (avec libellé MP, période, lignes complètes).
 
-### Problèmes constatés (rappel) + propositions pour la CEO
-**Problèmes** : ProductionLabo pollué par non-labo, SuiviStock figé sur aujourd'hui, RapportsCEO dépendant de l'email, pas de détail-par-MP, sidebar dense.
-**Propositions (à valider après)** : sidebar regroupée en 4 sections (Pilotage / Ventes / Stocks / Admin), Cockpit CEO fusionné, détail MP cliquable avec courbe 30j, cloche notifications, recherche globale ⌘K.
+---
 
-### Détails techniques
-- `SuiviStock.tsx` : `useState selectedDate`, propagation dans queries.
-- `ProductionLabo.tsx` : `products.filter(p => p.type_production === 'labo')`.
-- `RapportsCeo.tsx` : nouveau composant `RapportJournalierExport` (jsPDF + autoTable, ajout dep si absent ; Excel via `exportToExcel`).
-- `Ventes.tsx` : wrapping des `<Card>` KPI en boutons accessibles, 4 modales `Dialog` (CADetailDialog, TicketsListDialog, PanierMoyenDialog, ArticlesVendusDialog) ; bouton "Voir plus" qui bascule la query `top_produits` vers un mode `all_with_zero` (LEFT JOIN `produits` ← `vente_lignes` agrégé). Export PDF + Excel sur chaque vue.
-- Aucun changement DB, aucune donnée modifiée.
+### 2. Toutes les cartes KPI cliquables (drill-down universel)
+
+Étendre le `KpiDetailDialog` déjà créé pour Ventes à :
+- **Tableau de bord** : CA jour, tickets, panier moyen, top vendeurs, alertes stock, pertes du jour.
+- **SAADÉ en live** : CA live, sessions ouvertes, ticket courant.
+- **Clients & Crédits** : Clients, Ardoises ouvertes, Total dû, Crédits soldés → liste détaillée + export.
+- **Économat**, **Stock Tampon**, **Pertes**, **Achats MP**, **Inventaire**, **Production Labo** : chaque carte ouvre la liste complète filtrée + export PDF/Excel.
+
+Composant générique `<KpiCard onClick clickable detail={...}/>` partagé pour garantir un comportement uniforme.
+
+---
+
+### 3. Assistant IA gratuit illimité pour la CEO
+
+Le crédit Lovable AI est consommable → remplacement par un **Assistant local intelligent**, gratuit et sans limite, basé sur les données de l'app :
+
+- Nouveau moteur `localCeoAssistant.ts` :
+  - **Intent router** par mots-clés / regex FR (écart caisse, stock, top produits, MP en rupture, marge, pertes, clients en retard, CA jour/semaine/mois, etc.).
+  - Chaque intent exécute des **requêtes Supabase paramétrées** (RLS CEO) et renvoie une réponse formatée Markdown avec chiffres, tableaux et liens vers la page concernée.
+  - **Suggestions cliquables** mises à jour (15 questions clés CEO).
+- Fallback : si aucun intent ne matche, propose 3 reformulations basées sur les intents disponibles (pas d'appel LLM payant).
+- Le bandeau "Crédits IA épuisés" disparaît ; remplacé par "Assistant SAADÉ (local, gratuit)".
+- Option future (désactivée par défaut) : brancher Lovable AI uniquement pour les questions "ouvertes" si la CEO active un toggle.
+
+---
+
+### 4. Export PDF — fin des caractères illisibles (`&1 /&5&0&0& &F`)
+
+Cause identifiée : jsPDF avec police par défaut ne supporte pas certains caractères + le format `Intl.NumberFormat('fr-FR')` insère des **espaces insécables U+202F** qui jsPDF rend en `&xxxx`.
+
+Corrections :
+- Embarquer une police Unicode (Roboto / DejaVu) via `jspdf` `addFileToVFS` + `addFont` une fois pour toute l'app (`src/lib/pdfFont.ts`).
+- Helper `fmtPdf(n)` qui formate sans espaces insécables (`String(n).replace(/\u202F|\u00A0/g, ' ')`) et applique `F` sans casse.
+- Toutes les exports PDF (Rapports CEO, Ventes, Audit, KpiDetail, Cycle MP, Clôture, Fiches Techniques) passent par un wrapper unique `createPdf()` qui :
+  - charge la police Unicode,
+  - utilise `jspdf-autotable` avec `styles: { font: 'Roboto' }`,
+  - applique le pattern "smart page break" par section (data-pdf-section) pour ne plus couper les blocs.
+
+---
+
+### 5. Export Excel rapports journaliers — détaillé, pas un résumé
+
+Nouvelle structure multi-feuilles dans **Rapports CEO** et **Clôture/Ventes** :
+- `Résumé` : les KPIs actuels.
+- `Tickets` : **chaque ticket** de la période (numéro, date, mode paiement, total, caissier, statut).
+- `Lignes` : **chaque ligne** de vente (ticket, produit, catégorie, qté, PU, total, options).
+- `Produits` : agrégat par produit (qté, CA, marge si dispo) — **tous les produits vendus**, pas le top 20.
+- `Paiements` : par mode et par session.
+- `Crédits` : nouveaux crédits, paiements reçus, encours.
+- `Pertes` : lignes pertes de la période.
+- `Clôture` : ouverture / reçu / vendu / invendu / -50% / compté / perte par produit.
+- `Sessions caisse` : ouverture/fermeture/écart par session.
+
+Côté code : `exportRapportJournalierDetaille(date|range)` factorisé, réutilisé par le bouton existant et le nouveau "Rapport détaillé".
+
+---
+
+### 6. Bug Admin "Erreur de chargement des utilisateurs"
+
+Inspecter l'edge function `manage-users` (action `list`) :
+- Vérifier la présence des secrets, le retour JWKS (`getClaims`) et les logs Edge.
+- Côté front : afficher l'erreur réelle (message backend) au lieu du texte générique pour pouvoir diagnostiquer.
+- Si l'erreur est due à `auth.admin.listUsers()` paginé : passer en `perPage: 1000` + boucle.
+- Re-déployer la function après correctifs.
+
+---
+
+### 7. Ré-import propre des Fiches Techniques (FT MAI 2026.xlsx)
+
+Le fichier contient **134 feuilles** : `LISTE MP`, `LISTING PR-PV-MARGE`, stocks, puis **une feuille par produit** (CAKE MARBRE, BROWNIE, COOKIE…).
+
+Process :
+- Script d'import contrôlé `importFichesFromFTMai2026.ts` (admin only) :
+  1. Charge le xlsx, ignore les feuilles "système" (LISTE MP, LISTING…, STOCK…).
+  2. Pour chaque feuille produit : utilise `parseFicheExcel.ts` existant (déjà robuste, déjà debuggé pour marges).
+  3. **Matche le produit** par nom normalisé (existant dans `produits`). Si introuvable → log dans rapport, pas de création auto.
+  4. **Remplace** (DELETE + INSERT) les `fiches_techniques` du produit pour cohérence stricte avec le fichier.
+  5. Met à jour `fiches_techniques_meta` (rendement, temps, conservation, etc.) sans toucher PR/PV manuels.
+  6. Recalcule le coût matière via prix MP courants + tolère prix surchargés du fichier en source secondaire.
+- **Aperçu obligatoire** avant validation (réutilise `FicheImportPreviewDialog`) : la CEO voit exactement ce qui sera écrit, ligne par ligne, marges incluses.
+- Rapport final téléchargeable (Excel) : produits importés, produits non trouvés, ingrédients non matchés aux MP.
+
+Aucune marge "inventée" : la marge affichée = (PV catalogue − coût matière calculé), strictement.
+
+---
+
+### 8. Audit bugs transverses
+
+Passe finale sur :
+- Notifications & realtime (vérifier les channels, doublons).
+- Permissions (`usePermissions`) : ajouter clé `suivi-stock`, `mp-cycle`.
+- Sidebar : ajouter "Cycle MP" sous Stocks, regrouper visuellement (Pilotage / Ventes / Stocks / Admin) — cohérent avec l'ancienne suggestion.
+- Cohérence dates (UTC vs Lomé) sur Clôture, Rapports, Suivi Stock.
+- Tests build + lint, correctifs des warnings TypeScript bloquants éventuels.
+
+---
+
+## Détails techniques (résumé)
+
+- **Nouveaux fichiers** : `src/pages/MpCycleDeVie.tsx`, `src/components/KpiCard.tsx`, `src/components/KpiDetailDialog.tsx` (étendu), `src/lib/localCeoAssistant.ts`, `src/lib/pdfFont.ts`, `src/lib/exportRapportDetaille.ts`, `src/lib/importFichesFTMai2026.ts`.
+- **Migrations** : ajouter clé permission `suivi-stock` + `mp-cycle` (`module_permissions`).
+- **Edge function** : patch `manage-users` (`list` action) + redeploy.
+- **Aucune suppression** de données existantes hors fiches techniques remplacées via aperçu validé.
+
+Risques : import des 134 feuilles long → exécuter en batches de 20 avec barre de progression. PDF font ajoute ~150 Ko au bundle (acceptable).

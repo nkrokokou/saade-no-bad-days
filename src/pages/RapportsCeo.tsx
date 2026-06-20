@@ -9,7 +9,7 @@ import { Mail, Send, Calendar, CheckCircle2, XCircle, Clock, Loader2, FileDown, 
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { exportToExcel, exportToPDF } from "@/hooks/useExcelImportExport";
+import { exportToExcelMulti, exportToPDFSections, fmtMoneyPdf } from "@/hooks/useExcelImportExport";
 
 const CEO_EMAIL = "nkro006@gmail.com";
 
@@ -257,20 +257,20 @@ function Row({ label, value, highlight, warn }: any) {
 }
 
 // =====================================================
-// Export rapport journalier (PDF / Excel) côté client
+// Export rapport journalier DÉTAILLÉ (PDF / Excel multi-feuilles)
 // =====================================================
-async function buildDailyReport(date: string) {
+async function buildDailyReportDetailed(date: string) {
   const dayStart = `${date}T00:00:00.000Z`;
   const dayEnd = `${date}T23:59:59.999Z`;
 
   const [ventesRes, sessionsRes, cloturesRes, nouveauxCreditsRes, paiementsCreditsRes, encoursRes, pertesRes] = await Promise.all([
-    supabase.from("ventes").select("id, total, mode_paiement, numero_ticket, client_nom").gte("date_vente", dayStart).lte("date_vente", dayEnd).neq("statut", "annulee"),
-    supabase.from("sessions_caisse").select("statut, ecart, ferme_at, ouvert_at, fond_final_attendu, fond_final_compte").gte("ouvert_at", dayStart).lte("ouvert_at", dayEnd),
-    supabase.from("cloture_journaliere").select("qte_perte, qte_invendu, prix_invendu_50").eq("date_cloture", date),
-    supabase.from("credits_clients").select("montant_initial").eq("date_credit", date),
-    supabase.from("paiements_credits").select("montant").gte("date_paiement", dayStart).lte("date_paiement", dayEnd),
+    supabase.from("ventes").select("id, total, mode_paiement, numero_ticket, client_nom, date_vente, statut, encaisse_par").gte("date_vente", dayStart).lte("date_vente", dayEnd).neq("statut", "annulee"),
+    supabase.from("sessions_caisse").select("id, statut, ecart, ferme_at, ouvert_at, fond_initial, fond_final_attendu, fond_final_compte, notes, ouvert_par, ferme_par").gte("ouvert_at", dayStart).lte("ouvert_at", dayEnd),
+    supabase.from("cloture_journaliere").select("produit_id, stock_ouverture, qte_recue, qte_vendue, qte_degustation, qte_invendu, prix_invendu_50, qte_perte, stock_fin_compte, produits(nom, categorie)").eq("date_cloture", date),
+    supabase.from("credits_clients").select("client_nom, montant_initial, montant_restant").eq("date_credit", date),
+    supabase.from("paiements_credits").select("montant, credit_id, date_paiement").gte("date_paiement", dayStart).lte("date_paiement", dayEnd),
     supabase.from("credits_clients").select("montant_restant").eq("statut", "ouvert"),
-    supabase.from("pertes").select("quantite, valeur").eq("jour", date),
+    supabase.from("pertes").select("quantite, type_labo, jour, produits(nom, prix_vente)").eq("jour", date),
   ]);
 
   const ventes = ventesRes.data || [];
@@ -281,13 +281,40 @@ async function buildDailyReport(date: string) {
   const parMode: Record<string, number> = {};
   ventes.forEach((v: any) => { const m = v.mode_paiement || "autre"; parMode[m] = (parMode[m] || 0) + Number(v.total || 0); });
 
-  let topProduits: any[] = [];
+  // Lignes de ventes détaillées
+  let lignes: any[] = [];
+  let parProduit: { nom: string; categorie: string; qte: number; ca: number }[] = [];
   if (ventes.length) {
     const ids = ventes.map((v: any) => v.id);
-    const { data: lignes } = await supabase.from("vente_lignes").select("produit_nom, quantite, total_ligne").in("vente_id", ids);
-    const map: Record<string, { qte: number; ca: number }> = {};
-    (lignes || []).forEach((l: any) => { const n = l.produit_nom || "?"; if (!map[n]) map[n] = { qte: 0, ca: 0 }; map[n].qte += Number(l.quantite || 0); map[n].ca += Number(l.total_ligne || 0); });
-    topProduits = Object.entries(map).map(([nom, v]) => ({ nom, qte: v.qte, ca: v.ca })).sort((a, b) => b.ca - a.ca);
+    const ticketByVente = new Map(ventes.map((v: any) => [v.id, v]));
+    const { data: rawLignes } = await supabase
+      .from("vente_lignes")
+      .select("vente_id, produit_id, produit_nom, quantite, prix_unitaire, total_ligne, produits(nom, categorie)")
+      .in("vente_id", ids);
+    lignes = (rawLignes || []).map((l: any) => {
+      const v = ticketByVente.get(l.vente_id) as any;
+      const cat = l.produits?.categorie || '';
+      return {
+        ticket: v?.numero_ticket || '',
+        date: v?.date_vente || '',
+        client: v?.client_nom || '',
+        produit: l.produit_nom,
+        categorie: cat,
+        quantite: l.quantite,
+        prix_unitaire: l.prix_unitaire,
+        total: l.total_ligne,
+        mode: v?.mode_paiement || '',
+      };
+    });
+    const map = new Map<string, { nom: string; categorie: string; qte: number; ca: number }>();
+    lignes.forEach(l => {
+      const key = l.produit;
+      if (!map.has(key)) map.set(key, { nom: l.produit, categorie: l.categorie, qte: 0, ca: 0 });
+      const cur = map.get(key)!;
+      cur.qte += Number(l.quantite || 0);
+      cur.ca += Number(l.total || 0);
+    });
+    parProduit = Array.from(map.values()).sort((a, b) => b.ca - a.ca);
   }
 
   const sessions = sessionsRes.data || [];
@@ -298,12 +325,25 @@ async function buildDailyReport(date: string) {
   const clotures = cloturesRes.data || [];
   const valeurInvendus = clotures.reduce((s: number, c: any) => s + Number(c.qte_invendu || 0) * Number(c.prix_invendu_50 || 0), 0);
 
-  const nouveauxCredits = (nouveauxCreditsRes.data || []).reduce((s: number, c: any) => s + Number(c.montant_initial || 0), 0);
+  const nouveauxCreditsList = nouveauxCreditsRes.data || [];
+  const nouveauxCredits = nouveauxCreditsList.reduce((s: number, c: any) => s + Number(c.montant_initial || 0), 0);
   const paiementsCredits = (paiementsCreditsRes.data || []).reduce((s: number, p: any) => s + Number(p.montant || 0), 0);
   const encours = (encoursRes.data || []).reduce((s: number, c: any) => s + Number(c.montant_restant || 0), 0);
-  const pertesValeur = (pertesRes.data || []).reduce((s: number, p: any) => s + Number(p.valeur || 0), 0);
+  const pertes = (pertesRes.data || []).map((p: any) => ({
+    produit: p.produits?.nom || '?',
+    quantite: Number(p.quantite || 0),
+    valeur: Number(p.quantite || 0) * Number(p.produits?.prix_vente || 0),
+    motif: p.type_labo || '',
+  }));
+  const pertesValeur = pertes.reduce((s: number, p: any) => s + p.valeur, 0);
 
-  return { date, ca, nbTickets, panierMoyen, parMode, topProduits, sessions: { total: sessions.length, fermees: sessionsFermees.length, ouvertes: sessionsOuvertes.length, ecartTotal }, cloture: { nbProduits: clotures.length, valeurInvendus }, credits: { nouveaux: nouveauxCredits, paiements: paiementsCredits, encours }, pertesValeur };
+  return {
+    date, ca, nbTickets, panierMoyen, parMode, ventes, lignes, parProduit,
+    sessions: { total: sessions.length, fermees: sessionsFermees.length, ouvertes: sessionsOuvertes.length, ecartTotal, all: sessions },
+    cloture: { lignes: clotures, nbProduits: clotures.length, valeurInvendus },
+    credits: { nouveaux: nouveauxCredits, nouveauxList: nouveauxCreditsList, paiements: paiementsCredits, encours },
+    pertes, pertesValeur,
+  };
 }
 
 function DailyExportCard() {
@@ -313,43 +353,126 @@ function DailyExportCard() {
   const handleExport = async (kind: "pdf" | "excel") => {
     setBusy(kind);
     try {
-      const r = await buildDailyReport(date);
+      const r = await buildDailyReportDetailed(date);
       const dayLbl = format(new Date(date + "T12:00:00"), "EEEE d MMMM yyyy", { locale: fr });
-      const fName = `rapport_${date}`;
+      const fName = `rapport_journalier_${date}`;
 
       if (kind === "excel") {
-        const rows: any[] = [];
-        rows.push({ Section: "Date", Libellé: dayLbl, Valeur: "" });
-        rows.push({ Section: "CA", Libellé: "Chiffre d'affaires", Valeur: r.ca });
-        rows.push({ Section: "CA", Libellé: "Nombre de tickets", Valeur: r.nbTickets });
-        rows.push({ Section: "CA", Libellé: "Panier moyen", Valeur: Math.round(r.panierMoyen) });
-        Object.entries(r.parMode).forEach(([m, v]) => rows.push({ Section: "Paiement", Libellé: m, Valeur: v }));
-        rows.push({ Section: "Caisse", Libellé: "Sessions ouvertes", Valeur: r.sessions.ouvertes });
-        rows.push({ Section: "Caisse", Libellé: "Sessions fermées", Valeur: r.sessions.fermees });
-        rows.push({ Section: "Caisse", Libellé: "Écart total (F)", Valeur: r.sessions.ecartTotal });
-        rows.push({ Section: "Crédits", Libellé: "Nouveaux", Valeur: r.credits.nouveaux });
-        rows.push({ Section: "Crédits", Libellé: "Paiements reçus", Valeur: r.credits.paiements });
-        rows.push({ Section: "Crédits", Libellé: "Encours total", Valeur: r.credits.encours });
-        rows.push({ Section: "Pertes", Libellé: "Valeur pertes (F)", Valeur: r.pertesValeur });
-        rows.push({ Section: "Clôture", Libellé: "Valeur invendus -50%", Valeur: r.cloture.valeurInvendus });
-        r.topProduits.slice(0, 20).forEach((p, i) => rows.push({ Section: "Top produit", Libellé: `${i + 1}. ${p.nom} (×${p.qte})`, Valeur: p.ca }));
-        exportToExcel(rows, fName);
+        // ── Multi-feuilles ────────────────────────
+        const resume: any[] = [
+          { Section: "Date", Libellé: dayLbl, Valeur: "" },
+          { Section: "CA", Libellé: "Chiffre d'affaires (F)", Valeur: Math.round(r.ca) },
+          { Section: "CA", Libellé: "Nombre de tickets", Valeur: r.nbTickets },
+          { Section: "CA", Libellé: "Panier moyen (F)", Valeur: Math.round(r.panierMoyen) },
+          ...Object.entries(r.parMode).map(([m, v]) => ({ Section: "Paiement", Libellé: m, Valeur: Math.round(v as number) })),
+          { Section: "Caisse", Libellé: "Sessions ouvertes", Valeur: r.sessions.ouvertes },
+          { Section: "Caisse", Libellé: "Sessions fermées", Valeur: r.sessions.fermees },
+          { Section: "Caisse", Libellé: "Écart total (F)", Valeur: Math.round(r.sessions.ecartTotal) },
+          { Section: "Crédits", Libellé: "Nouveaux crédits (F)", Valeur: Math.round(r.credits.nouveaux) },
+          { Section: "Crédits", Libellé: "Paiements reçus (F)", Valeur: Math.round(r.credits.paiements) },
+          { Section: "Crédits", Libellé: "Encours total (F)", Valeur: Math.round(r.credits.encours) },
+          { Section: "Pertes", Libellé: "Valeur pertes (F)", Valeur: Math.round(r.pertesValeur) },
+          { Section: "Clôture", Libellé: "Valeur invendus -50% (F)", Valeur: Math.round(r.cloture.valeurInvendus) },
+        ];
+
+        const tickets = r.ventes.map((v: any) => ({
+          Ticket: v.numero_ticket, Date: v.date_vente,
+          Client: v.client_nom || '', Mode: v.mode_paiement, Total: Math.round(Number(v.total || 0)), Statut: v.statut,
+        }));
+
+        const lignes = r.lignes.map((l: any) => ({
+          Ticket: l.ticket, Date: l.date, Produit: l.produit, Catégorie: l.categorie,
+          Quantité: l.quantite, 'Prix unitaire': l.prix_unitaire, Total: l.total, Mode: l.mode,
+        }));
+
+        const produits = r.parProduit.map(p => ({
+          Produit: p.nom, Catégorie: p.categorie, Quantité: p.qte, CA: Math.round(p.ca),
+        }));
+
+        const cloture = r.cloture.lignes.map((c: any) => ({
+          Produit: c.produits?.nom || c.produit_id,
+          Catégorie: c.produits?.categorie || '',
+          'Stock ouverture': c.stock_ouverture, Reçu: c.qte_recue, Vendu: c.qte_vendue,
+          Dégustation: c.qte_degustation, Invendu: c.qte_invendu, 'Prix -50%': c.prix_invendu_50,
+          'Qté perte': c.qte_perte, 'Stock fin compté': c.stock_fin_compte,
+        }));
+
+        const sessions = r.sessions.all.map((s: any) => ({
+          Ouverture: s.ouvert_at, Fermeture: s.ferme_at || '',
+          'Fond initial': s.fond_initial, 'Attendu': s.fond_final_attendu, 'Compté': s.fond_final_compte,
+          Écart: s.ecart, Statut: s.statut, Notes: s.notes || '',
+        }));
+
+        const credits = r.credits.nouveauxList.map((c: any) => ({
+          Client: c.client_nom, 'Montant initial': c.montant_initial, 'Restant': c.montant_restant,
+        }));
+
+        const pertes = r.pertes.map((p: any) => ({
+          Produit: p.produit, Quantité: p.quantite, 'Valeur estimée': p.valeur, Motif: p.motif || '',
+        }));
+
+        exportToExcelMulti([
+          { name: 'Résumé', rows: resume },
+          { name: 'Tickets', rows: tickets },
+          { name: 'Lignes de vente', rows: lignes },
+          { name: 'Produits', rows: produits },
+          { name: 'Clôture', rows: cloture },
+          { name: 'Sessions caisse', rows: sessions },
+          { name: 'Nouveaux crédits', rows: credits },
+          { name: 'Pertes', rows: pertes },
+        ], fName);
       } else {
-        const rows: (string | number)[][] = [];
-        rows.push(["Chiffre d'affaires", `${r.ca.toLocaleString()} F`]);
-        rows.push(["Nombre de tickets", String(r.nbTickets)]);
-        rows.push(["Panier moyen", `${Math.round(r.panierMoyen).toLocaleString()} F`]);
-        Object.entries(r.parMode).forEach(([m, v]) => rows.push([`Paiement: ${m}`, `${Number(v).toLocaleString()} F`]));
-        rows.push(["Sessions caisse ouvertes", String(r.sessions.ouvertes)]);
-        rows.push(["Sessions caisse fermées", String(r.sessions.fermees)]);
-        rows.push(["Écart caisse total", `${r.sessions.ecartTotal.toLocaleString()} F`]);
-        rows.push(["Nouveaux crédits", `${r.credits.nouveaux.toLocaleString()} F`]);
-        rows.push(["Paiements crédits reçus", `${r.credits.paiements.toLocaleString()} F`]);
-        rows.push(["Encours crédits total", `${r.credits.encours.toLocaleString()} F`]);
-        rows.push(["Valeur pertes", `${r.pertesValeur.toLocaleString()} F`]);
-        rows.push(["Valeur invendus -50%", `${r.cloture.valeurInvendus.toLocaleString()} F`]);
-        r.topProduits.slice(0, 20).forEach((p, i) => rows.push([`Top ${i + 1}: ${p.nom}`, `${p.qte} · ${p.ca.toLocaleString()} F`]));
-        exportToPDF(`Rapport journalier — ${dayLbl}`, ["Indicateur", "Valeur"], rows);
+        // ── PDF multi-sections ─────────────────────
+        const sections = [
+          {
+            heading: 'Résumé',
+            headers: ['Indicateur', 'Valeur'],
+            rows: [
+              ["Chiffre d'affaires", fmtMoneyPdf(r.ca)],
+              ['Nombre de tickets', String(r.nbTickets)],
+              ['Panier moyen', fmtMoneyPdf(r.panierMoyen)],
+              ...Object.entries(r.parMode).map(([m, v]) => [`Paiement: ${m}`, fmtMoneyPdf(Number(v))] as [string, string]),
+              ['Sessions ouvertes', String(r.sessions.ouvertes)],
+              ['Sessions fermées', String(r.sessions.fermees)],
+              ['Écart caisse total', fmtMoneyPdf(r.sessions.ecartTotal)],
+              ['Nouveaux crédits', fmtMoneyPdf(r.credits.nouveaux)],
+              ['Paiements reçus', fmtMoneyPdf(r.credits.paiements)],
+              ['Encours total', fmtMoneyPdf(r.credits.encours)],
+              ['Valeur pertes', fmtMoneyPdf(r.pertesValeur)],
+              ['Valeur invendus -50%', fmtMoneyPdf(r.cloture.valeurInvendus)],
+            ],
+          },
+          {
+            heading: `Produits vendus (${r.parProduit.length})`,
+            headers: ['Produit', 'Catégorie', 'Qté', 'CA'],
+            rows: r.parProduit.map(p => [p.nom, p.categorie, String(p.qte), fmtMoneyPdf(p.ca)]),
+          },
+          {
+            heading: `Tickets (${r.ventes.length})`,
+            headers: ['#', 'Heure', 'Client', 'Mode', 'Total'],
+            rows: r.ventes.map((v: any) => [
+              v.numero_ticket || '',
+              v.date_vente ? format(new Date(v.date_vente), 'HH:mm') : '',
+              v.client_nom || '-',
+              v.mode_paiement || '',
+              fmtMoneyPdf(v.total),
+            ]),
+          },
+          {
+            heading: `Sessions caisse (${r.sessions.total})`,
+            headers: ['Ouvert', 'Fermé', 'Attendu', 'Compté', 'Écart', 'Statut'],
+            rows: r.sessions.all.map((s: any) => [
+              s.ouvert_at ? format(new Date(s.ouvert_at), 'HH:mm') : '',
+              s.ferme_at ? format(new Date(s.ferme_at), 'HH:mm') : '-',
+              fmtMoneyPdf(s.fond_final_attendu),
+              fmtMoneyPdf(s.fond_final_compte),
+              fmtMoneyPdf(s.ecart),
+              s.statut || '',
+            ]),
+          },
+        ].filter(s => s.rows.length > 0);
+
+        exportToPDFSections(`Rapport journalier - ${dayLbl}`, sections, fName);
       }
     } catch (e: any) {
       toast.error(e?.message || "Erreur génération rapport");
@@ -361,7 +484,7 @@ function DailyExportCard() {
   return (
     <Card className="border-primary/40 bg-gradient-to-br from-primary/5 to-transparent">
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2"><FileDown className="h-5 w-5 text-primary" /> Exporter un rapport journalier</CardTitle>
+        <CardTitle className="text-base flex items-center gap-2"><FileDown className="h-5 w-5 text-primary" /> Exporter un rapport journalier détaillé</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap items-end gap-3">
@@ -386,9 +509,10 @@ function DailyExportCard() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Mêmes données que le rapport email — disponible immédiatement, sans dépendre de l'envoi automatique.
+          Excel : <strong>8 feuilles</strong> (Résumé, Tickets, Lignes de vente, Produits, Clôture, Sessions caisse, Crédits, Pertes). PDF : Résumé + Produits vendus + Tickets + Sessions.
         </p>
       </CardContent>
     </Card>
   );
 }
+

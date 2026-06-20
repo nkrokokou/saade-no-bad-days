@@ -41,6 +41,7 @@ const TicketTemplates = lazy(() => import("./pages/TicketTemplates").then(m => (
 const CaissesLive = lazy(() => import("./pages/CaissesLive").then(m => ({ default: m.default })));
 const SaadeLive = lazy(() => import("./pages/SaadeLive").then(m => ({ default: m.default })));
 const SuiviStock = lazy(() => import("./pages/SuiviStock").then(m => ({ default: m.default })));
+const MpCycleDeVie = lazy(() => import("./pages/MpCycleDeVie").then(m => ({ default: m.default })));
 const Unauthorized = lazy(() => import("./pages/Unauthorized").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
 
@@ -106,6 +107,7 @@ const App = () => (
               </Route>
               <Route element={<AppLayout module="matieres_premieres" />}>
                 <Route path="/matieres-premieres" element={<MatieresPremieres />} />
+                <Route path="/mp/:id/cycle" element={<MpCycleDeVie />} />
               </Route>
               <Route element={<AppLayout module="economat" />}>
                 <Route path="/economat" element={<Economat />} />

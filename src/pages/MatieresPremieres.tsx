@@ -9,7 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Boxes } from 'lucide-react';
+import { Plus, Pencil, Trash2, Boxes, Activity } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExcelImportExport } from '@/components/ExcelImportExport';
@@ -191,6 +192,9 @@ export default function MatieresPremieres() {
                     {alerte && <span className="ml-1 text-[10px]">⚠</span>}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Link to={`/mp/${m.id}/cycle`}>
+                      <Button size="icon" variant="ghost" title="Cycle de vie"><Activity className="h-4 w-4 text-primary" /></Button>
+                    </Link>
                     {canUpdate && <Button size="icon" variant="ghost" onClick={() => setEditing(m)}><Pencil className="h-4 w-4" /></Button>}
                     {canDelete && <Button size="icon" variant="ghost" onClick={() => setToDelete(m)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
