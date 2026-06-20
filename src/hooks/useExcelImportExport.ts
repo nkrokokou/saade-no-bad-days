@@ -179,7 +179,7 @@ export function exportToPDFSections(
         headStyles: { fillColor: [196, 154, 90], textColor: 255, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [250, 246, 240] },
         margin: { left: 30, right: 30 },
-        didDrawPage: (data) => {
+        didDrawPage: () => {
           const pageH = doc.internal.pageSize.getHeight();
           doc.setFontSize(8); doc.setTextColor(150);
           doc.text(pdfSafe('SAADE - Lome, Togo'), pageW / 2, pageH - 15, { align: 'center' });
