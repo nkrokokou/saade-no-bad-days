@@ -376,13 +376,13 @@ function DailyExportCard() {
         ];
 
         const tickets = r.ventes.map((v: any) => ({
-          Ticket: v.numero_ticket, Date: v.date_vente, Caissier: v.caissier_nom || '',
+          Ticket: v.numero_ticket, Date: v.date_vente,
           Client: v.client_nom || '', Mode: v.mode_paiement, Total: Math.round(Number(v.total || 0)), Statut: v.statut,
         }));
 
         const lignes = r.lignes.map((l: any) => ({
           Ticket: l.ticket, Date: l.date, Produit: l.produit, Catégorie: l.categorie,
-          Quantité: l.quantite, 'Prix unitaire': l.prix_unitaire, Total: l.total, Mode: l.mode, Caissier: l.caissier,
+          Quantité: l.quantite, 'Prix unitaire': l.prix_unitaire, Total: l.total, Mode: l.mode,
         }));
 
         const produits = r.parProduit.map(p => ({
@@ -390,13 +390,15 @@ function DailyExportCard() {
         }));
 
         const cloture = r.cloture.lignes.map((c: any) => ({
-          Produit: c.produit, Catégorie: c.categorie, Ouverture: c.ouverture, Reçu: c.recu,
-          Vendu: c.vendu, Dégustation: c.degustation, Invendu: c.invendu, 'Invendu -50%': c.invendu_50,
-          Compté: c.compte, 'Qté perte': c.qte_perte, 'Valeur perte': c.valeur_perte,
+          Produit: c.produits?.nom || c.produit_id,
+          Catégorie: c.produits?.categories_produits?.nom || '',
+          'Stock ouverture': c.stock_ouverture, Reçu: c.qte_recue, Vendu: c.qte_vendue,
+          Dégustation: c.qte_degustation, Invendu: c.qte_invendu, 'Prix -50%': c.prix_invendu_50,
+          'Qté perte': c.qte_perte, 'Stock fin compté': c.stock_fin_compte,
         }));
 
         const sessions = r.sessions.all.map((s: any) => ({
-          Caissier: s.caissier_nom || '', Ouverture: s.ouvert_at, Fermeture: s.ferme_at || '',
+          Ouverture: s.ouvert_at, Fermeture: s.ferme_at || '',
           'Fond initial': s.fond_initial, 'Attendu': s.fond_final_attendu, 'Compté': s.fond_final_compte,
           Écart: s.ecart, Statut: s.statut, Notes: s.notes || '',
         }));
@@ -406,7 +408,7 @@ function DailyExportCard() {
         }));
 
         const pertes = r.pertes.map((p: any) => ({
-          Produit: p.produit, Quantité: p.quantite, Valeur: p.valeur, Motif: p.motif || '',
+          Produit: p.produit, Quantité: p.quantite, 'Valeur estimée': p.valeur, Motif: p.motif || '',
         }));
 
         exportToExcelMulti([
