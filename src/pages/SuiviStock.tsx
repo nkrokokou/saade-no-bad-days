@@ -317,7 +317,10 @@ export default function SuiviStock() {
                       {m.a_anomalies && <Badge variant="destructive" className="text-[10px] ml-1">Anomalie</Badge>}
                       {!m.alerte_stock && !m.a_anomalies && m.stock_actuel > 0 && <Badge variant="outline" className="text-[10px]">OK</Badge>}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
+                      <a href={`/mp/${m.id}/cycle`} title="Cycle de vie complet">
+                        <Button size="sm" variant="ghost" className="text-primary">📈 Cycle</Button>
+                      </a>
                       <Button size="sm" variant="ghost" onClick={() => { setAdjustOpen(m); setAdjustQty(Number(m.stock_actuel)); }}>Ajuster</Button>
                     </TableCell>
                   </TableRow>
