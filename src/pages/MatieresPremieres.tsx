@@ -160,6 +160,13 @@ export default function MatieresPremieres() {
         </div>
       </div>
 
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+        <Activity className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+        <div>
+          <strong>📈 Cycle de vie de chaque matière première</strong> — cliquez sur l'icône <Activity className="inline h-3 w-3 text-primary" /> dans la colonne <em>Actions</em> ci-dessous pour voir tous les achats, consommations, ajustements et anomalies d'une MP.
+        </div>
+      </div>
+
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{filtered.length} / {mps.length} matière(s)</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
