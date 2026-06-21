@@ -1,130 +1,67 @@
+# Plan — Finitions avant présentation
 
-## Objectif
+## 1. Sidebar regroupée par pôles
+Réorganiser `AppSidebar.tsx` en groupes (collapsibles) :
+- **Pilotage** : Tableau de bord, SAADÉ Live, Assistant IA, Rapports CEO, Audits CEO
+- **Ventes** : Caisse/POS, Ventes & Rapports, Tables Restaurant, Clients & Crédits, Clôture journalière, Caisses Live
+- **Production** : Production Labo, Fiches Techniques, Dégustations
+- **Stocks** : Suivi Stock, Matières Premières, Économat, Stock Tampon, Bons de Transfert, Inventaire, Pertes, Achats MP
+- **Catalogue** : Catalogue, Catégories, Templates Ticket
+- **Admin** : Admin, Audit Log
 
-Sept chantiers liés, livrés ensemble, sans casser l'existant.
+## 2. Cycle de vie MP — accès visible
+Ajouter bouton "📈 Cycle de vie" sur chaque ligne de `MatieresPremieres.tsx`, `Economat.tsx`, `SuiviStock.tsx` (onglet MP) → ouvre `/mp/:id/cycle`. Plus une bannière d'aide en haut de la page MP.
 
----
+## 3. Assistant IA — switch + recherche approfondie
+- Toggle en haut : **🆓 Local** ↔ **✨ Lovable AI** (persisté localStorage).
+- Mode Lovable AI : appelle l'edge function `ai-insights` existante avec contexte enrichi (CA, top produits, ruptures, écarts du jour).
+- Mode Local : étendre `ceoAssistantLocal.ts` pour :
+  - Comprendre dates relatives ET absolues ("vente du 18/06/2026", "semaine dernière", "mois")
+  - Conserver contexte de la conversation précédente (date sélectionnée)
+  - Nouveaux intents : écarts caisse détaillés, ventes par caissier, ventes par catégorie, stock critique, marges, ruptures à venir
+  - Réponses avec liens cliquables vers pages détails
 
-### 1. Cycle de vie complet de chaque Matière Première
+## 4. KPI cliquables — généralisation
+Étendre le pattern `KpiDetailDialog` aux pages : Tableau de bord, Clients, Économat, SuiviStock, Pertes, AchatsMP, Inventaire, ProductionLabo. Composant générique `<KpiCardClickable />` partagé.
 
-Nouvelle page **"Cycle de vie MP"** (route `/mp/:id/cycle`) accessible :
-- depuis chaque ligne de **Matières Premières** (bouton "Voir cycle"),
-- depuis **Suivi de Stock → onglet MP** (clic sur une MP),
-- depuis l'**Économat / Achats MP / Pertes** (lien sur le nom MP).
+## 5. Écarts de caisse — explication + affichage
+Documenter et afficher dans `ClotureJournaliere.tsx` + nouvelle modale d'aide :
 
-Contenu (timeline + tableaux filtrables par date) :
-- **Entrées** : achats (`achats_mp`), bons de transfert entrants.
-- **Sorties** : conso production labo (`production_labo` × fiche technique), conso ventes minute (vente_lignes × fiche), bons de transfert sortants, pertes (`pertes`).
-- **Ajustements** : inventaire (`inventaire`), corrections manuelles.
-- **Solde courant** + **graphique d'évolution 30/90j**.
-- **Anomalies** (consommation négative, ruptures, mouvements sans source).
+**Formule** : `écart = (fond_ouverture + ventes_espèces_session) − fond_fermeture_compté`
 
-Tout est exportable PDF + Excel (avec libellé MP, période, lignes complètes).
+Causes possibles :
+- Fond d'ouverture non renseigné → traité comme 0
+- Session non clôturée manuellement → auto-clôture sans comptage physique (donc 0 espèces comptées)
+- Crédits encaissés en espèces non rattachés à la session
+- Remboursements non saisis
 
----
+Actions :
+- Ajouter colonne "Origine" dans tableau écarts (manuel / auto / fond manquant)
+- Bannière d'alerte si sessions auto-clôturées sans comptage
+- Tooltip ❓ avec formule sur chaque écart
 
-### 2. Toutes les cartes KPI cliquables (drill-down universel)
+## 6. Reporté précédemment — Ré-import 134 fiches
+Page admin `/fiches/import-mai-2026` avec :
+- Upload XLSX (ou chargement du fichier joint)
+- Aperçu obligatoire (diff par produit : qtés, coûts, marge avant/après)
+- Validation case par case OU tout-en-un
+- Rapport final Excel téléchargeable
 
-Étendre le `KpiDetailDialog` déjà créé pour Ventes à :
-- **Tableau de bord** : CA jour, tickets, panier moyen, top vendeurs, alertes stock, pertes du jour.
-- **SAADÉ en live** : CA live, sessions ouvertes, ticket courant.
-- **Clients & Crédits** : Clients, Ardoises ouvertes, Total dû, Crédits soldés → liste détaillée + export.
-- **Économat**, **Stock Tampon**, **Pertes**, **Achats MP**, **Inventaire**, **Production Labo** : chaque carte ouvre la liste complète filtrée + export PDF/Excel.
+## Détails techniques
 
-Composant générique `<KpiCard onClick clickable detail={...}/>` partagé pour garantir un comportement uniforme.
+**Fichiers à modifier** :
+- `src/components/AppSidebar.tsx` (groupes)
+- `src/pages/MatieresPremieres.tsx`, `Economat.tsx`, `SuiviStock.tsx` (bouton cycle)
+- `src/pages/InsightsBot.tsx` (toggle + UI)
+- `src/lib/ceoAssistantLocal.ts` (intents étendus, contexte)
+- `src/pages/ClotureJournaliere.tsx` (écarts détaillés)
+- `src/components/KpiCardClickable.tsx` (nouveau)
+- 8 pages dashboards (intégration KPI cliquables)
 
----
+**Fichiers à créer** :
+- `src/pages/FichesImportMai2026.tsx`
+- `src/components/EcartCaisseHelpDialog.tsx`
 
-### 3. Assistant IA gratuit illimité pour la CEO
+Aucune migration DB, aucune suppression de données. Tout est additif/UI.
 
-Le crédit Lovable AI est consommable → remplacement par un **Assistant local intelligent**, gratuit et sans limite, basé sur les données de l'app :
-
-- Nouveau moteur `localCeoAssistant.ts` :
-  - **Intent router** par mots-clés / regex FR (écart caisse, stock, top produits, MP en rupture, marge, pertes, clients en retard, CA jour/semaine/mois, etc.).
-  - Chaque intent exécute des **requêtes Supabase paramétrées** (RLS CEO) et renvoie une réponse formatée Markdown avec chiffres, tableaux et liens vers la page concernée.
-  - **Suggestions cliquables** mises à jour (15 questions clés CEO).
-- Fallback : si aucun intent ne matche, propose 3 reformulations basées sur les intents disponibles (pas d'appel LLM payant).
-- Le bandeau "Crédits IA épuisés" disparaît ; remplacé par "Assistant SAADÉ (local, gratuit)".
-- Option future (désactivée par défaut) : brancher Lovable AI uniquement pour les questions "ouvertes" si la CEO active un toggle.
-
----
-
-### 4. Export PDF — fin des caractères illisibles (`&1 /&5&0&0& &F`)
-
-Cause identifiée : jsPDF avec police par défaut ne supporte pas certains caractères + le format `Intl.NumberFormat('fr-FR')` insère des **espaces insécables U+202F** qui jsPDF rend en `&xxxx`.
-
-Corrections :
-- Embarquer une police Unicode (Roboto / DejaVu) via `jspdf` `addFileToVFS` + `addFont` une fois pour toute l'app (`src/lib/pdfFont.ts`).
-- Helper `fmtPdf(n)` qui formate sans espaces insécables (`String(n).replace(/\u202F|\u00A0/g, ' ')`) et applique `F` sans casse.
-- Toutes les exports PDF (Rapports CEO, Ventes, Audit, KpiDetail, Cycle MP, Clôture, Fiches Techniques) passent par un wrapper unique `createPdf()` qui :
-  - charge la police Unicode,
-  - utilise `jspdf-autotable` avec `styles: { font: 'Roboto' }`,
-  - applique le pattern "smart page break" par section (data-pdf-section) pour ne plus couper les blocs.
-
----
-
-### 5. Export Excel rapports journaliers — détaillé, pas un résumé
-
-Nouvelle structure multi-feuilles dans **Rapports CEO** et **Clôture/Ventes** :
-- `Résumé` : les KPIs actuels.
-- `Tickets` : **chaque ticket** de la période (numéro, date, mode paiement, total, caissier, statut).
-- `Lignes` : **chaque ligne** de vente (ticket, produit, catégorie, qté, PU, total, options).
-- `Produits` : agrégat par produit (qté, CA, marge si dispo) — **tous les produits vendus**, pas le top 20.
-- `Paiements` : par mode et par session.
-- `Crédits` : nouveaux crédits, paiements reçus, encours.
-- `Pertes` : lignes pertes de la période.
-- `Clôture` : ouverture / reçu / vendu / invendu / -50% / compté / perte par produit.
-- `Sessions caisse` : ouverture/fermeture/écart par session.
-
-Côté code : `exportRapportJournalierDetaille(date|range)` factorisé, réutilisé par le bouton existant et le nouveau "Rapport détaillé".
-
----
-
-### 6. Bug Admin "Erreur de chargement des utilisateurs"
-
-Inspecter l'edge function `manage-users` (action `list`) :
-- Vérifier la présence des secrets, le retour JWKS (`getClaims`) et les logs Edge.
-- Côté front : afficher l'erreur réelle (message backend) au lieu du texte générique pour pouvoir diagnostiquer.
-- Si l'erreur est due à `auth.admin.listUsers()` paginé : passer en `perPage: 1000` + boucle.
-- Re-déployer la function après correctifs.
-
----
-
-### 7. Ré-import propre des Fiches Techniques (FT MAI 2026.xlsx)
-
-Le fichier contient **134 feuilles** : `LISTE MP`, `LISTING PR-PV-MARGE`, stocks, puis **une feuille par produit** (CAKE MARBRE, BROWNIE, COOKIE…).
-
-Process :
-- Script d'import contrôlé `importFichesFromFTMai2026.ts` (admin only) :
-  1. Charge le xlsx, ignore les feuilles "système" (LISTE MP, LISTING…, STOCK…).
-  2. Pour chaque feuille produit : utilise `parseFicheExcel.ts` existant (déjà robuste, déjà debuggé pour marges).
-  3. **Matche le produit** par nom normalisé (existant dans `produits`). Si introuvable → log dans rapport, pas de création auto.
-  4. **Remplace** (DELETE + INSERT) les `fiches_techniques` du produit pour cohérence stricte avec le fichier.
-  5. Met à jour `fiches_techniques_meta` (rendement, temps, conservation, etc.) sans toucher PR/PV manuels.
-  6. Recalcule le coût matière via prix MP courants + tolère prix surchargés du fichier en source secondaire.
-- **Aperçu obligatoire** avant validation (réutilise `FicheImportPreviewDialog`) : la CEO voit exactement ce qui sera écrit, ligne par ligne, marges incluses.
-- Rapport final téléchargeable (Excel) : produits importés, produits non trouvés, ingrédients non matchés aux MP.
-
-Aucune marge "inventée" : la marge affichée = (PV catalogue − coût matière calculé), strictement.
-
----
-
-### 8. Audit bugs transverses
-
-Passe finale sur :
-- Notifications & realtime (vérifier les channels, doublons).
-- Permissions (`usePermissions`) : ajouter clé `suivi-stock`, `mp-cycle`.
-- Sidebar : ajouter "Cycle MP" sous Stocks, regrouper visuellement (Pilotage / Ventes / Stocks / Admin) — cohérent avec l'ancienne suggestion.
-- Cohérence dates (UTC vs Lomé) sur Clôture, Rapports, Suivi Stock.
-- Tests build + lint, correctifs des warnings TypeScript bloquants éventuels.
-
----
-
-## Détails techniques (résumé)
-
-- **Nouveaux fichiers** : `src/pages/MpCycleDeVie.tsx`, `src/components/KpiCard.tsx`, `src/components/KpiDetailDialog.tsx` (étendu), `src/lib/localCeoAssistant.ts`, `src/lib/pdfFont.ts`, `src/lib/exportRapportDetaille.ts`, `src/lib/importFichesFTMai2026.ts`.
-- **Migrations** : ajouter clé permission `suivi-stock` + `mp-cycle` (`module_permissions`).
-- **Edge function** : patch `manage-users` (`list` action) + redeploy.
-- **Aucune suppression** de données existantes hors fiches techniques remplacées via aperçu validé.
-
-Risques : import des 134 feuilles long → exécuter en batches de 20 avec barre de progression. PDF font ajoute ~150 Ko au bundle (acceptable).
+Confirme et je lance l'implémentation en parallèle.
