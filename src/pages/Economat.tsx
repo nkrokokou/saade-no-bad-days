@@ -286,10 +286,66 @@ export default function Economat() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Articles</p><p className="text-xl font-bold">{totals.nb}</p></div><Boxes className="h-5 w-5 text-primary" /></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Valeur stock</p><p className="text-xl font-bold">{totals.valeur.toLocaleString('fr-FR')} F</p></div><Package className="h-5 w-5 text-primary" /></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Pertes (FCFA)</p><p className="text-xl font-bold text-destructive">{totals.pertes.toLocaleString('fr-FR')}</p></div><TrendingDown className="h-5 w-5 text-destructive" /></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Alertes stock</p><p className="text-xl font-bold text-orange-600">{totals.alertes}</p></div><AlertTriangle className="h-5 w-5 text-orange-600" /></div></CardContent></Card>
+        <KpiCardClickable
+          title="Articles"
+          value={totals.nb}
+          icon={<Boxes className="h-5 w-5 text-primary" />}
+          detailTitle="Tous les articles d'économat"
+          exportFilename="economat-articles"
+          columns={[
+            { key: 'categorie', label: 'Catégorie' },
+            { key: 'nom', label: 'Nom' },
+            { key: 'unite', label: 'Unité' },
+            { key: 'stock_courant', label: 'Stock', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+            { key: 'valeur_stock', label: 'Valeur (F)', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+          ]}
+          rows={stock as any[]}
+        />
+        <KpiCardClickable
+          title="Valeur stock"
+          value={<>{totals.valeur.toLocaleString('fr-FR')} F</>}
+          icon={<Package className="h-5 w-5 text-primary" />}
+          detailTitle="Valorisation par article"
+          exportFilename="economat-valorisation"
+          columns={[
+            { key: 'nom', label: 'Article' },
+            { key: 'stock_courant', label: 'Stock', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+            { key: 'prix_unitaire', label: 'PU (F)', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+            { key: 'valeur_stock', label: 'Valeur (F)', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+          ]}
+          rows={(stock as any[]).slice().sort((a, b) => Number(b.valeur_stock || 0) - Number(a.valeur_stock || 0))}
+        />
+        <KpiCardClickable
+          title="Pertes (FCFA)"
+          value={<span className="text-destructive">{totals.pertes.toLocaleString('fr-FR')}</span>}
+          icon={<TrendingDown className="h-5 w-5 text-destructive" />}
+          detailTitle="Mouvements de type perte"
+          exportFilename="economat-pertes"
+          columns={[
+            { key: 'date_mouvement', label: 'Date' },
+            { key: 'article', label: 'Article' },
+            { key: 'quantite', label: 'Qté', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+            { key: 'motif', label: 'Motif' },
+          ]}
+          rows={(mouvements as any[]).filter((m: any) => m.type === 'perte').map((m: any) => ({
+            ...m, article: m.economat_articles?.nom || '·',
+          }))}
+        />
+        <KpiCardClickable
+          title="Alertes stock"
+          value={<span className="text-orange-600">{totals.alertes}</span>}
+          icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
+          detailTitle="Articles en alerte (stock ≤ seuil)"
+          exportFilename="economat-alertes"
+          columns={[
+            { key: 'nom', label: 'Article' },
+            { key: 'stock_courant', label: 'Stock', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+            { key: 'stock_min', label: 'Seuil', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+            { key: 'unite', label: 'Unité' },
+          ]}
+          rows={(stock as any[]).filter((r: any) => Number(r.stock_courant) <= Number(r.stock_min) && Number(r.stock_min) > 0)}
+        />
+
       </div>
 
       <Tabs defaultValue="stock">
