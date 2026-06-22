@@ -1,6 +1,8 @@
 import useSupabaseRealtime from '@/hooks/useSupabaseRealtime';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCardClickable } from '@/components/KpiCardClickable';
+
 import { FileText, TrendingDown, ChefHat, ShoppingCart, AlertTriangle, ArrowRight, TrendingUp, Minus, DollarSign, Receipt, Target } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart, CartesianGrid, Legend } from 'recharts';
 import { format, startOfWeek, endOfWeek, subDays, subWeeks, startOfMonth, endOfMonth, subMonths } from 'date-fns';
