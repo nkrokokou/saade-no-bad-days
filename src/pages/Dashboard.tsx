@@ -315,7 +315,7 @@ function CeoDashboard() {
               { key: 'date', label: 'Date' },
               { key: 'heure', label: 'Heure' },
               { key: 'mode', label: 'Paiement' },
-              { key: 'total', label: 'Total (F)', format: v => Number(v).toLocaleString('fr-FR') },
+              { key: 'total', label: 'Total (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
             ]}
             rows={ventesPeriode.map((v: any) => ({
               date: format(new Date(v.created_at), 'dd/MM/yyyy'),
@@ -334,7 +334,7 @@ function CeoDashboard() {
             columns={[
               { key: 'date', label: 'Date' },
               { key: 'tickets', label: 'Tickets' },
-              { key: 'ca', label: 'CA (F)', format: v => Number(v).toLocaleString('fr-FR') },
+              { key: 'ca', label: 'CA (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
             ]}
             rows={caParJour.map((d: any) => ({ date: d.date, tickets: d.tickets, ca: d.ca }))}
           />
@@ -347,7 +347,7 @@ function CeoDashboard() {
             columns={[
               { key: 'date', label: 'Date' },
               { key: 'tickets', label: 'Tickets' },
-              { key: 'panier', label: 'Panier moyen (F)', format: v => Number(v).toLocaleString('fr-FR') },
+              { key: 'panier', label: 'Panier moyen (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
             ]}
             rows={caParJour.map((d: any) => ({ date: d.date, tickets: d.tickets, panier: d.tickets ? Math.round(d.ca / d.tickets) : 0 }))}
           />
@@ -361,7 +361,7 @@ function CeoDashboard() {
             columns={[
               { key: 'nom', label: 'Produit' },
               { key: 'qte', label: 'Qté' },
-              { key: 'ca', label: 'CA (F)', format: v => Number(v).toLocaleString('fr-FR') },
+              { key: 'ca', label: 'CA (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
             ]}
             rows={Object.values(produitStats).sort((a: any, b: any) => b.ca - a.ca)}
           />
