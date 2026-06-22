@@ -128,21 +128,36 @@ export default function FichesTechniques() {
         if (delErr) throw delErr;
       }
 
-      const rows = selected.flatMap(r => r.ingredients.map((ing, idx) => ({
-        produit_id: r.productId,
-        section: ing.section || null,
-        ordre: idx,
-        matiere_premiere_id: ing.mp_id || null,
-        matiere_premiere: ing.nom,
-        quantite_mp: ing.quantite,
-        unite_mp: ing.unite,
-        cout_unitaire_mp: ing.cout_unitaire,
-        created_by: user?.id,
-      })));
+      // Dédupe par (produit_id, nom MP normalisé) — l'index unique de la DB l'exige
+      const rows = selected.flatMap(r => {
+        const dedup = new Map<string, any>();
+        r.ingredients.forEach((ing, idx) => {
+          const key = (ing.nom || '').trim().toLowerCase();
+          if (!key) return;
+          const existing = dedup.get(key);
+          if (existing) {
+            existing.quantite_mp = (Number(existing.quantite_mp) || 0) + (Number(ing.quantite) || 0);
+          } else {
+            dedup.set(key, {
+              produit_id: r.productId,
+              section: ing.section || null,
+              ordre: idx,
+              matiere_premiere_id: ing.mp_id || null,
+              matiere_premiere: ing.nom,
+              quantite_mp: ing.quantite,
+              unite_mp: ing.unite,
+              cout_unitaire_mp: ing.cout_unitaire,
+              created_by: user?.id,
+            });
+          }
+        });
+        return Array.from(dedup.values());
+      });
       if (rows.length > 0) {
         const { error } = await supabase.from('fiches_techniques').insert(rows);
         if (error) throw error;
       }
+
       // Upsert meta complète par produit
       for (const r of selected) {
         const payload: any = {

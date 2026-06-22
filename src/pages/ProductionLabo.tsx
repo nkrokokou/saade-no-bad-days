@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
 import { Card, CardContent } from '@/components/ui/card';
+import { KpiCardClickable } from '@/components/KpiCardClickable';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -120,6 +122,56 @@ export default function ProductionLabo() {
         <Input type="date" className="w-44" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
         <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronRight className="h-4 w-4" /></Button>
       </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCardClickable
+          title="Total produit"
+          value={(entries as any[]).reduce((s: number, e: any) => s + Number(e.qte_produite || 0), 0)}
+          detailTitle={`Productions du ${selectedDate}`}
+          exportFilename={`production-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'qte_produite', label: 'Produite' },
+            { key: 'qte_sortie_en_salle', label: 'Sortie salle' },
+            { key: 'qte_perte', label: 'Perte' },
+          ]}
+          rows={(entries as any[]).map((e: any) => ({ ...e, produit: e.produits?.nom || '·' }))}
+        />
+        <KpiCardClickable
+          title="Total sortie salle"
+          value={(entries as any[]).reduce((s: number, e: any) => s + Number(e.qte_sortie_en_salle || 0), 0)}
+          detailTitle="Sorties vers la salle"
+          exportFilename={`sorties-salle-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'qte_sortie_en_salle', label: 'Sortie salle' },
+          ]}
+          rows={(entries as any[]).filter((e: any) => Number(e.qte_sortie_en_salle || 0) > 0).map((e: any) => ({ ...e, produit: e.produits?.nom || '·' }))}
+        />
+        <KpiCardClickable
+          title="Total pertes"
+          value={<span className="text-destructive">{(entries as any[]).reduce((s: number, e: any) => s + Number(e.qte_perte || 0), 0)}</span>}
+          detailTitle="Pertes par produit"
+          exportFilename={`pertes-prod-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'qte_perte', label: 'Perte' },
+          ]}
+          rows={(entries as any[]).filter((e: any) => Number(e.qte_perte || 0) > 0).map((e: any) => ({ ...e, produit: e.produits?.nom || '·' }))}
+        />
+        <KpiCardClickable
+          title="Produits saisis"
+          value={`${entries.length}/${laboProducts.length}`}
+          detailTitle="Couverture produits labo"
+          exportFilename={`couverture-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'saisi', label: 'Saisi' },
+          ]}
+          rows={laboProducts.map((p: any) => ({ produit: p.nom, saisi: (entries as any[]).find((e: any) => e.produit_id === p.id) ? 'Oui' : 'Non' }))}
+        />
+      </div>
+
 
       {/* Mobile cards */}
       <div className="block md:hidden space-y-3">

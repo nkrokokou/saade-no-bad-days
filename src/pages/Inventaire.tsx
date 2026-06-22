@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
+import { KpiCardClickable } from '@/components/KpiCardClickable';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -147,6 +149,55 @@ export default function Inventaire() {
       </div>
 
       <Input type="date" className="w-44" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <KpiCardClickable
+          title={`Lignes (${activeSection === 'mise_en_place' ? 'Mise en place' : 'Nouvelle carte'})`}
+          value={entries.length}
+          detailTitle={`Inventaire ${activeSection} — ${selectedDate}`}
+          exportFilename={`inventaire-${activeSection}-${selectedDate}`}
+          columns={[
+            { key: 'nom_produit', label: 'Produit' },
+            { key: 'quantite', label: 'Quantité' },
+            { key: 'unite', label: 'Unité' },
+          ]}
+          rows={entries as any[]}
+        />
+        <KpiCardClickable
+          title="Produits distincts"
+          value={new Set((entries as any[]).map((e: any) => e.nom_produit)).size}
+          detailTitle="Produits inventoriés (cumul qté)"
+          exportFilename={`inventaire-produits-${selectedDate}`}
+          columns={[
+            { key: 'nom_produit', label: 'Produit' },
+            { key: 'quantite', label: 'Quantité totale' },
+            { key: 'unite', label: 'Unité' },
+          ]}
+          rows={Object.values((entries as any[]).reduce((acc: any, e: any) => {
+            const k = e.nom_produit;
+            if (!acc[k]) acc[k] = { nom_produit: k, quantite: 0, unite: e.unite };
+            acc[k].quantite += Number(e.quantite || 0);
+            return acc;
+          }, {} as any))}
+        />
+        <KpiCardClickable
+          title="Unités utilisées"
+          value={new Set((entries as any[]).map((e: any) => e.unite)).size}
+          detailTitle="Répartition par unité"
+          exportFilename={`inventaire-unites-${selectedDate}`}
+          columns={[
+            { key: 'unite', label: 'Unité' },
+            { key: 'nb', label: 'Nb lignes' },
+          ]}
+          rows={Object.values((entries as any[]).reduce((acc: any, e: any) => {
+            const k = e.unite || '·';
+            if (!acc[k]) acc[k] = { unite: k, nb: 0 };
+            acc[k].nb += 1;
+            return acc;
+          }, {} as any))}
+        />
+      </div>
+
 
       <Tabs value={activeSection} onValueChange={setActiveSection}>
         <TabsList>
