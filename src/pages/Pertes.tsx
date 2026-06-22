@@ -108,6 +108,57 @@ export default function Pertes() {
         <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronRight className="h-4 w-4" /></Button>
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCardClickable
+          title="Total pertes du jour"
+          value={<span className="text-destructive">{grandTotal}</span>}
+          detailTitle={`Détail pertes — ${selectedDate}`}
+          exportFilename={`pertes-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'categorie', label: 'Catégorie' },
+            { key: 'cloture', label: 'Clôture' },
+            { key: 'production', label: 'Production' },
+            { key: 'total', label: 'Total' },
+          ]}
+          rows={rows.map(r => ({ produit: r.p.nom, categorie: r.p.categorie, cloture: r.c ?? '·', production: r.prod, total: r.total }))}
+        />
+        <KpiCardClickable
+          title="Pertes Clôture"
+          value={rows.reduce((s, r) => s + (r.c || 0), 0)}
+          detailTitle="Pertes calculées en clôture (par produit)"
+          exportFilename={`pertes-cloture-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'cloture', label: 'Perte clôture' },
+          ]}
+          rows={rows.filter(r => (r.c || 0) > 0).map(r => ({ produit: r.p.nom, cloture: r.c }))}
+        />
+        <KpiCardClickable
+          title="Pertes Production"
+          value={rows.reduce((s, r) => s + r.prod, 0)}
+          detailTitle="Pertes saisies en production labo"
+          exportFilename={`pertes-prod-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'production', label: 'Perte production' },
+          ]}
+          rows={rows.filter(r => r.prod > 0).map(r => ({ produit: r.p.nom, production: r.prod }))}
+        />
+        <KpiCardClickable
+          title="Produits impactés"
+          value={rows.filter(r => r.total > 0).length}
+          detailTitle="Produits avec au moins une perte"
+          exportFilename={`pertes-produits-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'total', label: 'Total perte' },
+          ]}
+          rows={rows.filter(r => r.total > 0).map(r => ({ produit: r.p.nom, total: r.total }))}
+        />
+      </div>
+
+
       <Card>
         <CardHeader className="pb-2 flex-row justify-between items-center">
           <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground">Pertes du jour</CardTitle>
