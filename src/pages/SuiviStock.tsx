@@ -244,23 +244,59 @@ export default function SuiviStock() {
         {/* OVERVIEW */}
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-3 md:grid-cols-4">
-            <Card><CardContent className="pt-6">
-              <p className="text-xs text-muted-foreground">Valeur stock MP</p>
-              <p className="text-2xl font-bold">{totalValeur.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F</p>
-            </CardContent></Card>
-            <Card><CardContent className="pt-6">
-              <p className="text-xs text-muted-foreground">MP en alerte</p>
-              <p className="text-2xl font-bold text-orange-600">{nbAlertes}</p>
-            </CardContent></Card>
-            <Card><CardContent className="pt-6">
-              <p className="text-xs text-muted-foreground">Anomalies à régulariser</p>
-              <p className="text-2xl font-bold text-destructive">{nbAnomalies}</p>
-            </CardContent></Card>
-            <Card><CardContent className="pt-6">
-              <p className="text-xs text-muted-foreground">MP dormantes (30j)</p>
-              <p className="text-2xl font-bold">{dormantes.length}</p>
-            </CardContent></Card>
+            <KpiCardClickable
+              title="Valeur stock MP"
+              value={<>{totalValeur.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F</>}
+              detailTitle="Valorisation par MP"
+              exportFilename="mp-valorisation"
+              columns={[
+                { key: 'nom', label: 'MP' },
+                { key: 'stock_actuel', label: 'Stock', format: (v: any) => Number(v || 0).toFixed(2) },
+                { key: 'unite', label: 'Unité' },
+                { key: 'valeur_stock', label: 'Valeur (F)', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') },
+              ]}
+              rows={[...mps].sort((a: any, b: any) => Number(b.valeur_stock || 0) - Number(a.valeur_stock || 0))}
+            />
+            <KpiCardClickable
+              title="MP en alerte"
+              value={<span className="text-orange-600">{nbAlertes}</span>}
+              detailTitle="MP en dessous du seuil"
+              exportFilename="mp-alertes"
+              columns={[
+                { key: 'nom', label: 'MP' },
+                { key: 'stock_actuel', label: 'Stock', format: (v: any) => Number(v || 0).toFixed(2) },
+                { key: 'seuil_alerte', label: 'Seuil', format: (v: any) => Number(v || 0).toFixed(2) },
+                { key: 'unite', label: 'Unité' },
+              ]}
+              rows={mps.filter((m: any) => m.alerte_stock)}
+            />
+            <KpiCardClickable
+              title="Anomalies à régulariser"
+              value={<span className="text-destructive">{nbAnomalies}</span>}
+              detailTitle="Mouvements négatifs à régulariser"
+              exportFilename="mp-anomalies"
+              columns={[
+                { key: 'matiere_premiere', label: 'MP' },
+                { key: 'date_mouvement', label: 'Date' },
+                { key: 'quantite', label: 'Qté', format: (v: any) => Number(v || 0).toFixed(2) },
+                { key: 'motif', label: 'Motif' },
+              ]}
+              rows={anomalies as any[]}
+            />
+            <KpiCardClickable
+              title="MP dormantes (30j)"
+              value={dormantes.length}
+              detailTitle="MP sans consommation sur 30 jours"
+              exportFilename="mp-dormantes"
+              columns={[
+                { key: 'nom', label: 'MP' },
+                { key: 'stock_actuel', label: 'Stock', format: (v: any) => Number(v || 0).toFixed(2) },
+                { key: 'unite', label: 'Unité' },
+              ]}
+              rows={dormantes as any[]}
+            />
           </div>
+
 
           {top5Ruptures.length > 0 && (
             <Card>
