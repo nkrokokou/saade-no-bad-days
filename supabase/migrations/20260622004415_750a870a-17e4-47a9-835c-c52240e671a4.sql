@@ -1,0 +1,1 @@
+CREATE POLICY "rapports_journaliers_delete_ceo" ON public.rapports_journaliers FOR DELETE TO authenticated USING (public.is_ceo(auth.uid()));
