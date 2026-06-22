@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCardClickable } from '@/components/KpiCardClickable';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -117,10 +119,59 @@ export default function Clients() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" />Clients</div><div className="text-2xl font-bold">{clients.length}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground flex items-center gap-1"><Wallet className="h-3 w-3" />Ardoises ouvertes</div><div className="text-2xl font-bold">{creditsOuverts.length}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total dû</div><div className="text-2xl font-bold text-destructive">{totalDu.toLocaleString()} F</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Crédits soldés (30j)</div><div className="text-2xl font-bold text-primary">{credits.filter(c => c.statut === 'solde').length}</div></CardContent></Card>
+        <KpiCardClickable
+          title="Clients"
+          value={clients.length}
+          icon={<Users className="h-4 w-4 text-primary" />}
+          detailTitle="Liste des clients"
+          exportFilename="clients"
+          columns={[
+            { key: 'nom', label: 'Nom' },
+            { key: 'telephone', label: 'Téléphone' },
+            { key: 'email', label: 'Email' },
+            { key: 'plafond_credit', label: 'Plafond crédit', format: (v: any) => Number(v || 0).toLocaleString('fr-FR') + ' F' },
+          ]}
+          rows={clients}
+        />
+        <KpiCardClickable
+          title="Ardoises ouvertes"
+          value={creditsOuverts.length}
+          icon={<Wallet className="h-4 w-4 text-primary" />}
+          detailTitle="Ardoises en cours"
+          exportFilename="ardoises-ouvertes"
+          columns={[
+            { key: 'client_nom', label: 'Client' },
+            { key: 'date_credit', label: 'Date' },
+            { key: 'montant_initial', label: 'Initial (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+            { key: 'montant_restant', label: 'Restant (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+          ]}
+          rows={creditsOuverts}
+        />
+        <KpiCardClickable
+          title="Total dû"
+          value={<span className="text-destructive">{totalDu.toLocaleString()} F</span>}
+          detailTitle="Détail des montants dus"
+          exportFilename="total-du"
+          columns={[
+            { key: 'client_nom', label: 'Client' },
+            { key: 'date_credit', label: 'Date' },
+            { key: 'montant_restant', label: 'Restant (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+          ]}
+          rows={creditsOuverts.slice().sort((a, b) => Number(b.montant_restant) - Number(a.montant_restant))}
+        />
+        <KpiCardClickable
+          title="Crédits soldés"
+          value={<span className="text-primary">{credits.filter(c => c.statut === 'solde').length}</span>}
+          detailTitle="Crédits soldés (historique)"
+          exportFilename="credits-soldes"
+          columns={[
+            { key: 'client_nom', label: 'Client' },
+            { key: 'date_credit', label: 'Date' },
+            { key: 'montant_initial', label: 'Montant (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+          ]}
+          rows={credits.filter(c => c.statut === 'solde')}
+        />
+
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
