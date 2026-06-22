@@ -144,6 +144,71 @@ export default function AchatsMP() {
         <Button variant="ghost" size="icon" onClick={() => setSelectedDate(format(addDays(new Date(selectedDate), 1), 'yyyy-MM-dd'))}><ChevronRight className="h-4 w-4" /></Button>
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCardClickable
+          title="Total achats du jour"
+          value={<>{totalJour.toLocaleString('fr-FR')} F</>}
+          detailTitle={`Achats du ${selectedDate}`}
+          exportFilename={`achats-${selectedDate}`}
+          columns={[
+            { key: 'fournisseur', label: 'Fournisseur' },
+            { key: 'produit', label: 'Produit' },
+            { key: 'quantite', label: 'Qté' },
+            { key: 'unite', label: 'Unité' },
+            { key: 'prix_unitaire', label: 'PU (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+            { key: 'prix_total', label: 'Total (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+          ]}
+          rows={achats as any[]}
+        />
+        <KpiCardClickable
+          title="Nombre d'achats"
+          value={achats.length}
+          detailTitle="Liste des achats"
+          exportFilename={`achats-list-${selectedDate}`}
+          columns={[
+            { key: 'fournisseur', label: 'Fournisseur' },
+            { key: 'produit', label: 'Produit' },
+            { key: 'prix_total', label: 'Total (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+          ]}
+          rows={achats as any[]}
+        />
+        <KpiCardClickable
+          title="Fournisseurs distincts"
+          value={new Set((achats as any[]).map((a: any) => a.fournisseur)).size}
+          detailTitle="Total par fournisseur"
+          exportFilename={`achats-fournisseurs-${selectedDate}`}
+          columns={[
+            { key: 'fournisseur', label: 'Fournisseur' },
+            { key: 'nb', label: 'Nb achats' },
+            { key: 'total', label: 'Total (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+          ]}
+          rows={Object.values((achats as any[]).reduce((acc: any, a: any) => {
+            const k = a.fournisseur || '·';
+            if (!acc[k]) acc[k] = { fournisseur: k, nb: 0, total: 0 };
+            acc[k].nb += 1; acc[k].total += Number(a.prix_total || 0);
+            return acc;
+          }, {} as any))}
+        />
+        <KpiCardClickable
+          title="Produits distincts"
+          value={new Set((achats as any[]).map((a: any) => a.produit)).size}
+          detailTitle="Total par produit"
+          exportFilename={`achats-produits-${selectedDate}`}
+          columns={[
+            { key: 'produit', label: 'Produit' },
+            { key: 'qte', label: 'Qté totale' },
+            { key: 'total', label: 'Total (F)', format: (v: any) => Number(v).toLocaleString('fr-FR') },
+          ]}
+          rows={Object.values((achats as any[]).reduce((acc: any, a: any) => {
+            const k = a.produit || '·';
+            if (!acc[k]) acc[k] = { produit: k, qte: 0, total: 0 };
+            acc[k].qte += Number(a.quantite || 0); acc[k].total += Number(a.prix_total || 0);
+            return acc;
+          }, {} as any))}
+        />
+      </div>
+
+
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm flex justify-between"><span>Achats du jour</span><span className="text-primary font-bold">{totalJour.toLocaleString('fr-FR')} FCFA</span></CardTitle></CardHeader>
         <CardContent>
