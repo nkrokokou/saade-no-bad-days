@@ -299,51 +299,73 @@ function CeoDashboard() {
         </div>
       )}
 
-      {/* KPIs stratégiques (CEO) */}
+      {/* KPIs stratégiques (CEO) — cliquables */}
       {isCeo && (
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">CA ({period})</CardTitle>
-              <DollarSign className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{fmt(Math.round(caTotal))} <span className="text-xs text-muted-foreground">FCFA</span></p>
-              <Trend value={evolCa} />
-              <p className="text-[10px] text-muted-foreground mt-1">vs mois précédent</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">Tickets</CardTitle>
-              <Receipt className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{nbTickets}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">{(nbTickets / days).toFixed(1)} / jour</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">Panier moyen</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{fmt(Math.round(panierMoyen))} <span className="text-xs text-muted-foreground">FCFA</span></p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">Marge brute</CardTitle>
-              <Target className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{tauxMarge.toFixed(0)}%</p>
-              <p className="text-[10px] text-muted-foreground mt-1">{fmt(Math.round(margeBrute))} FCFA</p>
-            </CardContent>
-          </Card>
+          <KpiCardClickable
+            title={`CA (${period})`}
+            value={<>{fmt(Math.round(caTotal))} <span className="text-xs text-muted-foreground">FCFA</span></>}
+            icon={<DollarSign className="h-4 w-4 text-primary" />}
+            subtitle={<><Trend value={evolCa} /> vs mois précédent</>}
+            detailTitle={`Tickets de la période — ${ventesPeriode.length} tickets`}
+            exportFilename={`ca-${period}`}
+            columns={[
+              { key: 'date', label: 'Date' },
+              { key: 'heure', label: 'Heure' },
+              { key: 'mode', label: 'Paiement' },
+              { key: 'total', label: 'Total (F)', format: v => Number(v).toLocaleString('fr-FR') },
+            ]}
+            rows={ventesPeriode.map((v: any) => ({
+              date: format(new Date(v.created_at), 'dd/MM/yyyy'),
+              heure: format(new Date(v.created_at), 'HH:mm'),
+              mode: v.mode_paiement,
+              total: Number(v.total || 0),
+            }))}
+          />
+          <KpiCardClickable
+            title="Tickets"
+            value={nbTickets}
+            icon={<Receipt className="h-4 w-4 text-primary" />}
+            subtitle={`${(nbTickets / days).toFixed(1)} / jour`}
+            detailTitle="Tickets par jour"
+            exportFilename={`tickets-${period}`}
+            columns={[
+              { key: 'date', label: 'Date' },
+              { key: 'tickets', label: 'Tickets' },
+              { key: 'ca', label: 'CA (F)', format: v => Number(v).toLocaleString('fr-FR') },
+            ]}
+            rows={caParJour.map((d: any) => ({ date: d.date, tickets: d.tickets, ca: d.ca }))}
+          />
+          <KpiCardClickable
+            title="Panier moyen"
+            value={<>{fmt(Math.round(panierMoyen))} <span className="text-xs text-muted-foreground">FCFA</span></>}
+            icon={<ShoppingCart className="h-4 w-4 text-primary" />}
+            detailTitle="Panier moyen par jour"
+            exportFilename={`panier-${period}`}
+            columns={[
+              { key: 'date', label: 'Date' },
+              { key: 'tickets', label: 'Tickets' },
+              { key: 'panier', label: 'Panier moyen (F)', format: v => Number(v).toLocaleString('fr-FR') },
+            ]}
+            rows={caParJour.map((d: any) => ({ date: d.date, tickets: d.tickets, panier: d.tickets ? Math.round(d.ca / d.tickets) : 0 }))}
+          />
+          <KpiCardClickable
+            title="Marge brute"
+            value={`${tauxMarge.toFixed(0)}%`}
+            icon={<Target className="h-4 w-4 text-primary" />}
+            subtitle={`${fmt(Math.round(margeBrute))} FCFA`}
+            detailTitle="Marge par produit (période)"
+            exportFilename={`marge-${period}`}
+            columns={[
+              { key: 'nom', label: 'Produit' },
+              { key: 'qte', label: 'Qté' },
+              { key: 'ca', label: 'CA (F)', format: v => Number(v).toLocaleString('fr-FR') },
+            ]}
+            rows={Object.values(produitStats).sort((a: any, b: any) => b.ca - a.ca)}
+          />
         </div>
       )}
+
 
       {/* CA évolution + mix paiement */}
       {isCeo && (
