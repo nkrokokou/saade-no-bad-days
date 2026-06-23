@@ -79,9 +79,48 @@ export default function FichesTechniques() {
     try {
       const buf = await file.arrayBuffer();
       let results = parseFicheWorkbook(buf, products as any, mps);
+
       if (restrictToSelected && selectedProduct) {
-        results = results.map(r => ({ ...r, productId: selectedProduct }));
+        // En upload par-produit : on ne garde QUE la feuille qui correspond
+        // au mieux au produit sélectionné. Sans ce filtre, importer un
+        // workbook complet (ex : FT MAI 2026, 134 onglets) fusionnerait
+        // tous les ingrédients dans une seule fiche → import refusé.
+        const target = products.find(p => p.id === selectedProduct);
+        if (target) {
+          const nrm = (s: string) =>
+            s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const tn = nrm(target.nom);
+          const score = (r: ParsedFiche) => {
+            const cands = [r.productName, r.sheetName].map(nrm).filter(Boolean);
+            let best = 0;
+            for (const c of cands) {
+              if (c === tn) best = Math.max(best, 1000);
+              else if (c.includes(tn) || tn.includes(c)) {
+                best = Math.max(best, 100 + Math.min(c.length, tn.length));
+              }
+            }
+            return best;
+          };
+          const scored = results
+            .map(r => ({ r, s: score(r) }))
+            .filter(x => x.s > 0)
+            .sort((a, b) => b.s - a.s);
+          if (scored.length > 0) {
+            results = [{ ...scored[0].r, productId: selectedProduct }];
+          } else if (results.length === 1) {
+            results = [{ ...results[0], productId: selectedProduct }];
+          } else {
+            toast.warning(
+              `Aucun onglet du fichier ne correspond à "${target.nom}". ` +
+              `Renommez l'onglet ou utilisez l'import global depuis la liste des fiches.`,
+            );
+            return;
+          }
+        } else {
+          results = results.map(r => ({ ...r, productId: selectedProduct }));
+        }
       }
+
       if (results.length === 0) {
         toast.warning('Aucune fiche détectée. Vérifiez : nom du produit + en-tête INGREDIENT / QTE / UNITE.');
         return;
