@@ -169,34 +169,37 @@ export default function FichesTechniques() {
         }
       }
 
-      // 2) Dédupe par (produit_id, nom MP normalisé) — l'index unique de la DB l'exige
-      //    On reproduit lower(trim(matiere_premiere)) côté Postgres en JS.
-      const normKey = (s: string) =>
-        String(s ?? '').trim().toLowerCase();
-      const rows = selected.flatMap(r => {
-        const dedup = new Map<string, any>();
-        r.ingredients.forEach((ing, idx) => {
-          const key = normKey(ing.nom);
-          if (!key) return;
-          const existing = dedup.get(key);
+      // 2) Dédupe GLOBALE par (produit_id, nom MP normalisé) — c'est exactement
+      //    l'index unique DB : lower(trim(matiere_premiere)). L'erreur venait des
+      //    imports globaux où plusieurs onglets pouvaient pointer vers le même produit.
+      const normKey = (s: string) => String(s ?? '').trim().toLowerCase();
+      const dedupRows = new Map<string, any>();
+      selected.forEach((r, ficheIdx) => {
+        r.ingredients.forEach((ing, ingIdx) => {
+          const mpKey = normKey(ing.nom);
+          if (!mpKey) return;
+          const key = `${r.productId}::${mpKey}`;
+          const existing = dedupRows.get(key);
           if (existing) {
             existing.quantite_mp = (Number(existing.quantite_mp) || 0) + (Number(ing.quantite) || 0);
+            if (!existing.matiere_premiere_id && ing.mp_id) existing.matiere_premiere_id = ing.mp_id;
+            if ((!existing.cout_unitaire_mp || existing.cout_unitaire_mp <= 0) && ing.cout_unitaire) existing.cout_unitaire_mp = ing.cout_unitaire;
           } else {
-            dedup.set(key, {
+            dedupRows.set(key, {
               produit_id: r.productId,
               section: ing.section || null,
-              ordre: idx,
+              ordre: ficheIdx * 1000 + ingIdx,
               matiere_premiere_id: ing.mp_id || null,
               matiere_premiere: ing.nom.trim(),
-              quantite_mp: ing.quantite,
+              quantite_mp: Number(ing.quantite) || 0,
               unite_mp: ing.unite,
-              cout_unitaire_mp: ing.cout_unitaire,
+              cout_unitaire_mp: Number(ing.cout_unitaire) || 0,
               created_by: user?.id,
             });
           }
         });
-        return Array.from(dedup.values());
       });
+      const rows = Array.from(dedupRows.values());
 
       if (rows.length > 0) {
         // Insert par lots de 200 pour éviter les payloads géants
