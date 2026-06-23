@@ -34,6 +34,13 @@ export function FicheImportPreviewDialog({ open, onOpenChange, results, products
   };
 
   const validCount = results.filter((r, i) => !skipped[i] && (overrides[i] ?? r.productId)).length;
+  const productCounts = results.reduce((acc, r, i) => {
+    if (skipped[i]) return acc;
+    const pid = overrides[i] ?? r.productId ?? '';
+    if (!pid) return acc;
+    acc[pid] = (acc[pid] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,6 +60,7 @@ export function FicheImportPreviewDialog({ open, onOpenChange, results, products
             {results.map((r, i) => {
               const pid = overrides[i] ?? r.productId ?? '';
               const isSkipped = skipped[i];
+              const hasProductConflict = !!pid && productCounts[pid] > 1;
               return (
                 <div key={i} className={`border rounded-lg p-3 space-y-2 ${isSkipped ? 'opacity-40' : ''}`}>
                   <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -65,7 +73,9 @@ export function FicheImportPreviewDialog({ open, onOpenChange, results, products
                     </div>
                     <div className="flex items-center gap-2">
                       {pid ? (
-                        <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" />Produit lié</Badge>
+                        <Badge variant={hasProductConflict ? 'secondary' : 'default'} className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" />{hasProductConflict ? 'Produit répété' : 'Produit lié'}
+                        </Badge>
                       ) : (
                         <Badge variant="destructive" className="gap-1"><AlertCircle className="h-3 w-3" />À assigner</Badge>
                       )}
@@ -81,6 +91,11 @@ export function FicheImportPreviewDialog({ open, onOpenChange, results, products
                         {products.map(p => <SelectItem key={p.id} value={p.id}>{p.nom}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    {hasProductConflict && (
+                      <p className="mt-1 text-[10px] text-amber-600">
+                        Plusieurs onglets ciblent ce même produit : les ingrédients identiques seront fusionnés automatiquement.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-3 text-xs">
