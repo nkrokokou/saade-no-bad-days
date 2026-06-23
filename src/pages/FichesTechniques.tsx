@@ -157,21 +157,26 @@ export default function FichesTechniques() {
   const confirmImport = async (selected: Array<ParsedFiche & { productId: string }>) => {
     setImporting(true);
     try {
-      // Anti-doublons : supprime d'abord les ingrédients existants pour chaque produit importé
+      // 1) Anti-doublons : supprime d'abord les ingrédients existants pour chaque produit importé
       const productIds = Array.from(new Set(selected.map(r => r.productId)));
       if (productIds.length) {
         const { error: delErr } = await supabase
           .from('fiches_techniques')
           .delete()
           .in('produit_id', productIds);
-        if (delErr) throw delErr;
+        if (delErr) {
+          throw new Error(`Suppression des anciennes lignes refusée (${delErr.code || ''}) : ${delErr.message}`);
+        }
       }
 
-      // Dédupe par (produit_id, nom MP normalisé) — l'index unique de la DB l'exige
+      // 2) Dédupe par (produit_id, nom MP normalisé) — l'index unique de la DB l'exige
+      //    On reproduit lower(trim(matiere_premiere)) côté Postgres en JS.
+      const normKey = (s: string) =>
+        String(s ?? '').trim().toLowerCase();
       const rows = selected.flatMap(r => {
         const dedup = new Map<string, any>();
         r.ingredients.forEach((ing, idx) => {
-          const key = (ing.nom || '').trim().toLowerCase();
+          const key = normKey(ing.nom);
           if (!key) return;
           const existing = dedup.get(key);
           if (existing) {
@@ -182,7 +187,7 @@ export default function FichesTechniques() {
               section: ing.section || null,
               ordre: idx,
               matiere_premiere_id: ing.mp_id || null,
-              matiere_premiere: ing.nom,
+              matiere_premiere: ing.nom.trim(),
               quantite_mp: ing.quantite,
               unite_mp: ing.unite,
               cout_unitaire_mp: ing.cout_unitaire,
@@ -192,12 +197,24 @@ export default function FichesTechniques() {
         });
         return Array.from(dedup.values());
       });
+
       if (rows.length > 0) {
-        const { error } = await supabase.from('fiches_techniques').insert(rows);
-        if (error) throw error;
+        // Insert par lots de 200 pour éviter les payloads géants
+        const chunkSize = 200;
+        for (let i = 0; i < rows.length; i += chunkSize) {
+          const chunk = rows.slice(i, i + chunkSize);
+          const { error } = await supabase.from('fiches_techniques').insert(chunk);
+          if (error) {
+            throw new Error(
+              `Insertion refusée (${error.code || ''}) : ${error.message}` +
+              (error.details ? ` — ${error.details}` : '') +
+              (error.hint ? ` [${error.hint}]` : ''),
+            );
+          }
+        }
       }
 
-      // Upsert meta complète par produit
+      // 3) Upsert meta complète par produit
       for (const r of selected) {
         const payload: any = {
           produit_id: r.productId,
@@ -216,18 +233,26 @@ export default function FichesTechniques() {
           conservation: r.meta.conservation ?? null,
           etapes: r.etapes.length ? r.etapes.map((e, i) => `${i + 1}. ${e}`).join('\n') : null,
         };
-        await supabase.from('fiches_techniques_meta').upsert(payload, { onConflict: 'produit_id' });
+        const { error: metaErr } = await supabase
+          .from('fiches_techniques_meta')
+          .upsert(payload, { onConflict: 'produit_id' });
+        if (metaErr) {
+          throw new Error(`Méta refusée (${metaErr.code || ''}) : ${metaErr.message}`);
+        }
       }
+
       qc.invalidateQueries({ queryKey: ['fiches_techniques'] });
       qc.invalidateQueries({ queryKey: ['fiches_meta'] });
       qc.invalidateQueries({ queryKey: ['fiche_excel_view'] });
       qc.invalidateQueries({ queryKey: ['catalogue'] });
       qc.invalidateQueries({ queryKey: ['produits'] });
-      toast.success(`Import OK : ${rows.length} ingrédient(s) sur ${selected.length} fiche(s) (anciennes lignes remplacées)`);
+      toast.success(
+        `Import OK : ${rows.length} ingrédient(s) sur ${selected.length} fiche(s) (anciennes lignes remplacées)`,
+      );
       setPreviewOpen(false);
     } catch (e: any) {
-      console.error(e);
-      toast.error('Erreur import : ' + (e.message || ''));
+      console.error('[fiches import]', e);
+      toast.error('Erreur import : ' + (e.message || ''), { duration: 10000 });
     } finally {
       setImporting(false);
     }
