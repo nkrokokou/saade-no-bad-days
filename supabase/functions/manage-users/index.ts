@@ -74,19 +74,45 @@ Deno.serve(async (req) => {
     if (action === 'list') {
       const { data: profiles } = await adminClient.from('profiles').select('*').order('created_at')
       const { data: roles } = await adminClient.from('user_roles').select('user_id, role')
-      const { data: usersData, error: listErr } = await adminClient.auth.admin.listUsers()
+      const { data: usersData, error: listErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
       if (listErr) console.error('listUsers error:', listErr.message)
       const users = usersData?.users || []
       let result = (profiles || []).map((p: any) => {
         const authUser = users?.find(u => u.id === p.id)
         const userRoles = (roles || []).filter((r: any) => r.user_id === p.id).map((r: any) => r.role)
-        return { ...p, email: authUser?.email || '', roles: userRoles }
+        return {
+          ...p,
+          email: authUser?.email || '',
+          roles: userRoles,
+          last_sign_in_at: authUser?.last_sign_in_at || null,
+          created_at_auth: authUser?.created_at || null,
+        }
       })
       // Filtrer les comptes cachés (developer) — sauf si le caller EST developer
       if (!isDev) {
         result = result.filter((u: any) => !u.is_hidden && !u.roles.includes('developer'))
       }
       return jsonResponse(result)
+    }
+
+    if (action === 'reset_password') {
+      const { user_id, new_password } = body
+      if (!user_id) return jsonResponse({ error: 'user_id requis' }, 400)
+      const { data: target } = await adminClient.from('profiles').select('is_hidden').eq('id', user_id).maybeSingle()
+      const { data: targetRoles } = await adminClient.from('user_roles').select('role').eq('user_id', user_id)
+      const targetIsDev = (targetRoles || []).some((r: any) => r.role === 'developer')
+      if ((target?.is_hidden || targetIsDev) && !isDev) {
+        return jsonResponse({ error: 'Action réservée au developer' }, 403)
+      }
+      // Génère un mot de passe temporaire si non fourni
+      const pwd = (new_password && String(new_password).length >= 8)
+        ? String(new_password)
+        : 'Saade' + Math.random().toString(36).slice(2, 8) + '!'
+      const { error: updErr } = await adminClient.auth.admin.updateUserById(user_id, { password: pwd })
+      if (updErr) return jsonResponse({ error: updErr.message }, 400)
+      // Révoque toutes les sessions actives → force reconnexion immédiate
+      try { await adminClient.auth.admin.signOut(user_id, 'global') } catch { /* ignore */ }
+      return jsonResponse({ success: true, temporary_password: pwd })
     }
 
     if (action === 'create') {
