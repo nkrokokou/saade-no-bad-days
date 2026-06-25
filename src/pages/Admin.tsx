@@ -163,6 +163,29 @@ export default function Admin() {
     onError: (e: any) => toast.error(e.message || 'Erreur'),
   });
 
+  const resetPassword = useMutation({
+    mutationFn: (userId: string) => invokeManageUsers({ action: 'reset_password', user_id: userId }),
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ['admin-users'] });
+      const pwd = res?.temporary_password || '';
+      if (pwd) {
+        try { navigator.clipboard?.writeText(pwd); } catch { /* ignore */ }
+        toast.success(`Mot de passe temporaire : ${pwd} (copié)`, { duration: 30000 });
+      } else {
+        toast.success('Mot de passe réinitialisé');
+      }
+    },
+    onError: (e: any) => toast.error(e.message || 'Erreur'),
+  });
+
+  function lastSignInLabel(iso: string | null) {
+    if (!iso) return { text: 'Jamais', stale: true, days: Infinity };
+    const d = new Date(iso);
+    const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+    const txt = days === 0 ? "Aujourd'hui" : days === 1 ? 'Hier' : `Il y a ${days} j`;
+    return { text: txt, stale: days >= 14, days };
+  }
+
   // ── Backup tab ──
   const [exporting, setExporting] = useState(false);
   const exportBackup = async () => {
