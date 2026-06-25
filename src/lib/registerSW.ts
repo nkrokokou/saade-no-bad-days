@@ -48,12 +48,34 @@ export function registerServiceWorker() {
         setInterval(() => {
           reg.update().catch(() => {});
         }, 30 * 60 * 1000);
+
+        // Détecte un SW en attente → propose un reload immédiat (au lieu de subir un reload silencieux).
+        const notifyUpdate = () => {
+          import("sonner").then(({ toast }) => {
+            toast.message("Nouvelle version disponible", {
+              description: "Rechargez pour appliquer la mise à jour.",
+              duration: Infinity,
+              action: { label: "Recharger", onClick: () => window.location.reload() },
+            });
+          }).catch(() => {
+            // Fallback : reload silencieux après 3s
+            setTimeout(() => window.location.reload(), 3000);
+          });
+        };
+        if (reg.waiting) notifyUpdate();
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) notifyUpdate();
+          });
+        });
       })
       .catch(() => {
         /* silent */
       });
 
-    // Quand un nouveau SW prend le contrôle, recharge la page pour servir la version fraîche.
+    // Quand un nouveau SW prend le contrôle (autre onglet a accepté l'update), recharge.
     let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (refreshing) return;
