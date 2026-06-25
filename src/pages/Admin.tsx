@@ -372,11 +372,14 @@ export default function Admin() {
                       <TableHead>Nom</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Rôle</TableHead>
-                      <TableHead className="w-24">Actions</TableHead>
+                      <TableHead>Dernière connexion</TableHead>
+                      <TableHead className="w-32">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((u: any) => (
+                    {users.map((u: any) => {
+                      const ls = lastSignInLabel(u.last_sign_in_at);
+                      return (
                       <TableRow key={u.id}>
                         <TableCell>{editingUser?.id === u.id ? (
                           <Input value={editingUser.full_name} onChange={e => setEditingUser((p: any) => ({ ...p, full_name: e.target.value }))} />
@@ -389,6 +392,9 @@ export default function Admin() {
                           </Select>
                         ) : ROLES.find(r => r.value === u.role)?.label || u.role}</TableCell>
                         <TableCell>
+                          <Badge variant={ls.stale ? 'destructive' : 'secondary'} className="text-xs">{ls.text}</Badge>
+                        </TableCell>
+                        <TableCell>
                           <div className="flex gap-1">
                             {editingUser?.id === u.id ? (
                               <Button size="icon" variant="ghost" onClick={() => updateUser.mutate({ user_id: u.id, full_name: editingUser.full_name, role: editingUser.role })}>
@@ -400,6 +406,11 @@ export default function Admin() {
                               </Button>
                             )}
                             {u.id !== user?.id && (
+                              <Button size="icon" variant="ghost" title="Réinitialiser le mot de passe et déconnecter cet utilisateur" onClick={() => { if (confirm(`Générer un nouveau mot de passe temporaire pour ${u.full_name || u.email} ?\nIl sera déconnecté immédiatement et devra utiliser ce mot de passe pour se reconnecter.`)) resetPassword.mutate(u.id); }}>
+                                <KeyRound className="h-4 w-4 text-amber-600" />
+                              </Button>
+                            )}
+                            {u.id !== user?.id && (
                               <Button size="icon" variant="ghost" onClick={() => { if (confirm('Supprimer cet utilisateur ?')) deleteUser.mutate(u.id); }}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
@@ -407,10 +418,11 @@ export default function Admin() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                    {usersLoading && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Chargement...</TableCell></TableRow>}
+                      );
+                    })}
+                    {usersLoading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Chargement...</TableCell></TableRow>}
                     {!usersLoading && users.length === 0 && !usersError && (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Aucun utilisateur</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Aucun utilisateur</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
