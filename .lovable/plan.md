@@ -1,67 +1,44 @@
-# Plan — Finitions avant présentation
+## Réponse courte
 
-## 1. Sidebar regroupée par pôles
-Réorganiser `AppSidebar.tsx` en groupes (collapsibles) :
-- **Pilotage** : Tableau de bord, SAADÉ Live, Assistant IA, Rapports CEO, Audits CEO
-- **Ventes** : Caisse/POS, Ventes & Rapports, Tables Restaurant, Clients & Crédits, Clôture journalière, Caisses Live
-- **Production** : Production Labo, Fiches Techniques, Dégustations
-- **Stocks** : Suivi Stock, Matières Premières, Économat, Stock Tampon, Bons de Transfert, Inventaire, Pertes, Achats MP
-- **Catalogue** : Catalogue, Catégories, Templates Ticket
-- **Admin** : Admin, Audit Log
+Non, ce n'est pas garanti. Une vieille version cache du HTML/JS via le Service Worker mais continue d'appeler la même base Supabase. Donc :
 
-## 2. Cycle de vie MP — accès visible
-Ajouter bouton "📈 Cycle de vie" sur chaque ligne de `MatieresPremieres.tsx`, `Economat.tsx`, `SuiviStock.tsx` (onglet MP) → ouvre `/mp/:id/cycle`. Plus une bannière d'aide en haut de la page MP.
+- Le **mot de passe** n'est pas refusé par "ancienne version" — Supabase accepte toujours.
+- En revanche, un utilisateur peut **paraître bloqué au login** si :
+  1. Son onglet sert un ancien `index.html` mis en cache par un Service Worker mort → page blanche / bouton qui ne réagit pas.
+  2. Son refresh token a été révoqué (rotation des clés Supabase faite récemment).
+  3. Une migration a renommé une table que l'ancien code lit après login → crash juste après auth.
 
-## 3. Assistant IA — switch + recherche approfondie
-- Toggle en haut : **🆓 Local** ↔ **✨ Lovable AI** (persisté localStorage).
-- Mode Lovable AI : appelle l'edge function `ai-insights` existante avec contexte enrichi (CA, top produits, ruptures, écarts du jour).
-- Mode Local : étendre `ceoAssistantLocal.ts` pour :
-  - Comprendre dates relatives ET absolues ("vente du 18/06/2026", "semaine dernière", "mois")
-  - Conserver contexte de la conversation précédente (date sélectionnée)
-  - Nouveaux intents : écarts caisse détaillés, ventes par caissier, ventes par catégorie, stock critique, marges, ruptures à venir
-  - Réponses avec liens cliquables vers pages détails
+J'ai trouvé la cause #1 dans le code : `src/lib/registerSW.ts` enregistre `/sw.js` mais **`public/sw.js` n'existe pas**. Les navigateurs qui avaient un ancien `sw.js` continuent de servir l'ancienne app depuis leur cache, et la requête `/sw.js` renvoie 404 (donc pas de mise à jour). C'est exactement le scénario "resté à la mise à jour Économat".
 
-## 4. KPI cliquables — généralisation
-Étendre le pattern `KpiDetailDialog` aux pages : Tableau de bord, Clients, Économat, SuiviStock, Pertes, AchatsMP, Inventaire, ProductionLabo. Composant générique `<KpiCardClickable />` partagé.
+## Plan (2 parties)
 
-## 5. Écarts de caisse — explication + affichage
-Documenter et afficher dans `ClotureJournaliere.tsx` + nouvelle modale d'aide :
+### 1. Diagnostic — qui est concerné
 
-**Formule** : `écart = (fond_ouverture + ventes_espèces_session) − fond_fermeture_compté`
+- Lister les comptes `profiles` et leur dernière connexion (`auth.users.last_sign_in_at` via une edge function en service_role, ou via le panneau Cloud Users).
+- Marquer comme "suspects" tous ceux qui n'ont **pas** de session récente depuis la date de la mise à jour Économat.
+- Pour chaque suspect, je te donnerai un tableau : nom, rôle, dernière connexion, action recommandée (rien à faire / forcer reset mot de passe).
+- Si tu confirmes, je peux pousser un bouton "Réinitialiser le mot de passe" dans `Admin.tsx` (déjà connecté à `manage-users`) pour les débloquer en un clic.
 
-Causes possibles :
-- Fond d'ouverture non renseigné → traité comme 0
-- Session non clôturée manuellement → auto-clôture sans comptage physique (donc 0 espèces comptées)
-- Crédits encaissés en espèces non rattachés à la session
-- Remboursements non saisis
+### 2. Mécanisme anti-vieille-version (kill-switch + force update)
 
-Actions :
-- Ajouter colonne "Origine" dans tableau écarts (manuel / auto / fond manquant)
-- Bannière d'alerte si sessions auto-clôturées sans comptage
-- Tooltip ❓ avec formule sur chaque écart
+a) **Créer `public/sw.js`** = service worker "kill-switch" conforme à la doc PWA :
+   - À l'activation, supprime les anciens caches Workbox du scope, force `clients.claim()`, recharge tous les onglets ouverts, puis `unregister()` lui-même.
+   - Résultat : les navigateurs qui avaient un vieux SW reçoivent ce nouveau SW au prochain chargement réussi, il vide le cache et recharge la page sur le build actuel. Plus jamais bloqués.
 
-## 6. Reporté précédemment — Ré-import 134 fiches
-Page admin `/fiches/import-mai-2026` avec :
-- Upload XLSX (ou chargement du fichier joint)
-- Aperçu obligatoire (diff par produit : qtés, coûts, marge avant/après)
-- Validation case par case OU tout-en-un
-- Rapport final Excel téléchargeable
+b) **Bannière "Nouvelle version disponible"** dans `AppLayout.tsx` :
+   - Au démarrage, fetch `/version.json` (généré au build avec le hash Vite) toutes les 10 min.
+   - Si le hash diffère du hash chargé en mémoire → toast persistant "Mise à jour disponible — Recharger" avec un bouton qui fait `forceRefreshApp()` (déjà présent dans `Login.tsx`, je le déplace dans `src/lib/forceRefresh.ts`).
 
-## Détails techniques
+c) **Garde-fou login** : dans `Login.tsx`, si la dernière mise à jour app détectée date de > 30 jours par rapport au build courant, lancer automatiquement `forceRefreshApp()` avant d'afficher le formulaire. Sécurise les postes qui n'ouvrent l'app qu'une fois par jour.
 
-**Fichiers à modifier** :
-- `src/components/AppSidebar.tsx` (groupes)
-- `src/pages/MatieresPremieres.tsx`, `Economat.tsx`, `SuiviStock.tsx` (bouton cycle)
-- `src/pages/InsightsBot.tsx` (toggle + UI)
-- `src/lib/ceoAssistantLocal.ts` (intents étendus, contexte)
-- `src/pages/ClotureJournaliere.tsx` (écarts détaillés)
-- `src/components/KpiCardClickable.tsx` (nouveau)
-- 8 pages dashboards (intégration KPI cliquables)
+### Détails techniques
 
-**Fichiers à créer** :
-- `src/pages/FichesImportMai2026.tsx`
-- `src/components/EcartCaisseHelpDialog.tsx`
+- `public/sw.js` : copie exacte du kill-switch de la skill PWA (filtre `precache-v*`, `runtime-*`, `googleAnalytics-*` scoppés à `self.registration.scope`, `unregister()` dans `finally`).
+- `vite.config.ts` : ajouter un petit plugin qui écrit `public/version.json` (ou `dist/version.json`) à chaque build avec `{ version: Date.now() }`.
+- Aucune migration DB. Aucune modification du flow d'auth Supabase. Aucun changement de mot de passe imposé.
+- Pas de `vite-plugin-pwa` réinstallé : on garde l'app non-PWA pour éviter les régressions.
 
-Aucune migration DB, aucune suppression de données. Tout est additif/UI.
+### Ce que ça change pour la présentation de demain
 
-Confirme et je lance l'implémentation en parallèle.
+- Les comptes "bloqués" seront identifiés ce soir et débloqués si besoin via le panneau Admin.
+- À partir du prochain déploiement, plus aucun utilisateur ne pourra rester coincé sur une version périmée : la bannière + le kill-switch les force à reprendre la version courante au prochain ouverture de l'app.
