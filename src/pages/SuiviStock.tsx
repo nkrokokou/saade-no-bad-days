@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -356,9 +357,9 @@ export default function SuiviStock() {
                       {!m.alerte_stock && !m.a_anomalies && m.stock_actuel > 0 && <Badge variant="outline" className="text-[10px]">OK</Badge>}
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <a href={`/mp/${m.id}/cycle`} title="Cycle de vie complet">
-                        <Button size="sm" variant="ghost" className="text-primary">📈 Cycle</Button>
-                      </a>
+                      <Button asChild size="sm" variant="ghost" className="text-primary">
+                        <Link to={`/mp/${m.id}/cycle`} title="Cycle de vie complet">📈 Cycle</Link>
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setAdjustOpen(m); setAdjustQty(Number(m.stock_actuel)); }}>Ajuster</Button>
                     </TableCell>
                   </TableRow>
