@@ -11,7 +11,7 @@ import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { exportToExcelMulti, exportToPDFSections, fmtMoneyPdf } from "@/hooks/useExcelImportExport";
 
-const CEO_EMAIL = "nkro006@gmail.com";
+const CEO_EMAIL = "al.fanar@hotmail.fr";
 
 const fmtXOF = (n: number) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(n || 0)) + " F";
