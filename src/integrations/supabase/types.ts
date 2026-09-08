@@ -1035,6 +1035,30 @@ export type Database = {
           },
         ]
       }
+      parametres_email: {
+        Row: {
+          copies: string[]
+          destinataire: string
+          expediteur_nom: string
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          copies?: string[]
+          destinataire?: string
+          expediteur_nom?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          copies?: string[]
+          destinataire?: string
+          expediteur_nom?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pertes: {
         Row: {
           created_at: string
