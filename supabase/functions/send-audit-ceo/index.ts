@@ -11,6 +11,19 @@ const corsHeaders = {
 const DEST_EMAIL = "al.fanar@hotmail.fr";
 const FROM = "SAADÉ Audits <onboarding@resend.dev>";
 
+async function getEmailSettings(admin: any) {
+  try {
+    const { data } = await admin.from("parametres_email").select("*").eq("id", true).maybeSingle();
+    return {
+      to: data?.destinataire || DEST_EMAIL,
+      cc: (data?.copies || []).filter((x: string) => !!x),
+      from: `${data?.expediteur_nom || "SAADÉ Audits"} <${data?.expediteur_email || "onboarding@resend.dev"}>`,
+    };
+  } catch (_e) {
+    return { to: DEST_EMAIL, cc: [], from: FROM };
+  }
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
@@ -204,6 +217,7 @@ Deno.serve(async (req) => {
         <p style="color:#666;font-size:13px;margin-top:24px">— SAADÉ, Lomé</p>
       </div>`;
 
+    const settings = await getEmailSettings(adminClient);
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -211,8 +225,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: FROM,
-        to: [DEST_EMAIL],
+        from: settings.from,
+        to: [settings.to],
+        ...(settings.cc.length ? { cc: settings.cc } : {}),
         subject,
         html,
         attachments: [{ filename, content: pdfBase64 }],
@@ -225,7 +240,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, to: DEST_EMAIL }), {
+    return new Response(JSON.stringify({ ok: true, to: settings.to }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

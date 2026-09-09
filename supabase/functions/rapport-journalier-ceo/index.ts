@@ -10,6 +10,20 @@ const corsHeaders = {
 const CEO_EMAIL = "al.fanar@hotmail.fr";
 const FROM = "SAADÉ Rapports <onboarding@resend.dev>";
 
+// Réglages d'envoi modifiables depuis l'application (table parametres_email)
+async function getEmailSettings(admin: any) {
+  try {
+    const { data } = await admin.from("parametres_email").select("*").eq("id", true).maybeSingle();
+    return {
+      to: data?.destinataire || CEO_EMAIL,
+      cc: (data?.copies || []).filter((x: string) => !!x),
+      from: `${data?.expediteur_nom || "SAADÉ Rapports"} <${data?.expediteur_email || "onboarding@resend.dev"}>`,
+    };
+  } catch (_e) {
+    return { to: CEO_EMAIL, cc: [], from: FROM };
+  }
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
@@ -338,7 +352,7 @@ async function buildAttachments(supabase: any, date: string): Promise<any[]> {
   return atts;
 }
 
-async function sendEmail(subject: string, html: string, attachments: any[] = []): Promise<{ ok: boolean; error?: string }> {
+async function sendEmail(subject: string, html: string, attachments: any[] = [], settings?: any): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -347,8 +361,9 @@ async function sendEmail(subject: string, html: string, attachments: any[] = [])
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: FROM,
-        to: [CEO_EMAIL],
+        from: settings?.from || FROM,
+        to: [settings?.to || CEO_EMAIL],
+        ...(settings?.cc?.length ? { cc: settings.cc } : {}),
         subject,
         html,
         attachments,
@@ -425,7 +440,12 @@ Deno.serve(async (req) => {
     const subject = `SAADÉ — Rapport du ${report.dayLabel} • CA ${fmtXOF(report.ca)}`;
 
     const attachments = await buildAttachments(supabase, date);
-    const sendRes = await sendEmail(subject, html, attachments);
+    const settings = await getEmailSettings(supabase);
+    const sendRes = await sendEmail(subject, html, attachments, settings);
+    await supabase.from("parametres_email")
+      .update({ derniere_erreur: sendRes.ok ? null : sendRes.error })
+      .eq("id", true);
+
 
 
     const payload = {
@@ -438,7 +458,7 @@ Deno.serve(async (req) => {
         .from("rapports_journaliers")
         .update({
           payload,
-          email_destinataire: CEO_EMAIL,
+          email_destinataire: settings.to,
           status: sendRes.ok ? "sent" : "failed",
           error_message: sendRes.ok ? null : sendRes.error,
           sent_at: sendRes.ok ? new Date().toISOString() : null,
@@ -448,7 +468,7 @@ Deno.serve(async (req) => {
       await supabase.from("rapports_journaliers").insert({
         date_rapport: date,
         payload,
-        email_destinataire: CEO_EMAIL,
+        email_destinataire: settings.to,
         status: sendRes.ok ? "sent" : "failed",
         error_message: sendRes.ok ? null : sendRes.error,
         sent_at: sendRes.ok ? new Date().toISOString() : null,
