@@ -458,7 +458,7 @@ Deno.serve(async (req) => {
         .from("rapports_journaliers")
         .update({
           payload,
-          email_destinataire: CEO_EMAIL,
+          email_destinataire: settings.to,
           status: sendRes.ok ? "sent" : "failed",
           error_message: sendRes.ok ? null : sendRes.error,
           sent_at: sendRes.ok ? new Date().toISOString() : null,
@@ -468,7 +468,7 @@ Deno.serve(async (req) => {
       await supabase.from("rapports_journaliers").insert({
         date_rapport: date,
         payload,
-        email_destinataire: CEO_EMAIL,
+        email_destinataire: settings.to,
         status: sendRes.ok ? "sent" : "failed",
         error_message: sendRes.ok ? null : sendRes.error,
         sent_at: sendRes.ok ? new Date().toISOString() : null,
