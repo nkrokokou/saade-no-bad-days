@@ -75,6 +75,8 @@ export default function RapportsCeo() {
         </Button>
       </div>
 
+      <EmailSettingsCard />
+
       <DailyExportCard />
 
 
