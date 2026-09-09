@@ -217,6 +217,7 @@ Deno.serve(async (req) => {
         <p style="color:#666;font-size:13px;margin-top:24px">— SAADÉ, Lomé</p>
       </div>`;
 
+    const settings = await getEmailSettings(adminClient);
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -224,8 +225,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: FROM,
-        to: [DEST_EMAIL],
+        from: settings.from,
+        to: [settings.to],
+        ...(settings.cc.length ? { cc: settings.cc } : {}),
         subject,
         html,
         attachments: [{ filename, content: pdfBase64 }],
@@ -238,7 +240,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, to: DEST_EMAIL }), {
+    return new Response(JSON.stringify({ ok: true, to: settings.to }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
