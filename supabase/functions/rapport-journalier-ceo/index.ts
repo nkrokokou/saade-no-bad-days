@@ -352,7 +352,7 @@ async function buildAttachments(supabase: any, date: string): Promise<any[]> {
   return atts;
 }
 
-async function sendEmail(subject: string, html: string, attachments: any[] = []): Promise<{ ok: boolean; error?: string }> {
+async function sendEmail(subject: string, html: string, attachments: any[] = [], settings?: any): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -361,8 +361,9 @@ async function sendEmail(subject: string, html: string, attachments: any[] = [])
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: FROM,
-        to: [CEO_EMAIL],
+        from: settings?.from || FROM,
+        to: [settings?.to || CEO_EMAIL],
+        ...(settings?.cc?.length ? { cc: settings.cc } : {}),
         subject,
         html,
         attachments,
