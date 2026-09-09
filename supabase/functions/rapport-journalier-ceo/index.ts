@@ -440,7 +440,12 @@ Deno.serve(async (req) => {
     const subject = `SAADÉ — Rapport du ${report.dayLabel} • CA ${fmtXOF(report.ca)}`;
 
     const attachments = await buildAttachments(supabase, date);
-    const sendRes = await sendEmail(subject, html, attachments);
+    const settings = await getEmailSettings(supabase);
+    const sendRes = await sendEmail(subject, html, attachments, settings);
+    await supabase.from("parametres_email")
+      .update({ derniere_erreur: sendRes.ok ? null : sendRes.error })
+      .eq("id", true);
+
 
 
     const payload = {
