@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { exportToExcelMulti, exportToPDFSections, fmtMoneyPdf } from "@/hooks/useExcelImportExport";
+import EmailSettingsCard from "@/components/EmailSettingsCard";
 
 const CEO_EMAIL = "al.fanar@hotmail.fr";
 
