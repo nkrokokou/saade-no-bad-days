@@ -11,6 +11,19 @@ const corsHeaders = {
 const DEST_EMAIL = "al.fanar@hotmail.fr";
 const FROM = "SAADÉ Audits <onboarding@resend.dev>";
 
+async function getEmailSettings(admin: any) {
+  try {
+    const { data } = await admin.from("parametres_email").select("*").eq("id", true).maybeSingle();
+    return {
+      to: data?.destinataire || DEST_EMAIL,
+      cc: (data?.copies || []).filter((x: string) => !!x),
+      from: `${data?.expediteur_nom || "SAADÉ Audits"} <${data?.expediteur_email || "onboarding@resend.dev"}>`,
+    };
+  } catch (_e) {
+    return { to: DEST_EMAIL, cc: [], from: FROM };
+  }
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
