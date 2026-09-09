@@ -1038,21 +1038,30 @@ export type Database = {
       parametres_email: {
         Row: {
           copies: string[]
+          derniere_erreur: string | null
           destinataire: string
+          domaine_verifie: boolean
+          expediteur_email: string
           expediteur_nom: string
           id: boolean
           updated_at: string
         }
         Insert: {
           copies?: string[]
+          derniere_erreur?: string | null
           destinataire?: string
+          domaine_verifie?: boolean
+          expediteur_email?: string
           expediteur_nom?: string
           id?: boolean
           updated_at?: string
         }
         Update: {
           copies?: string[]
+          derniere_erreur?: string | null
           destinataire?: string
+          domaine_verifie?: boolean
+          expediteur_email?: string
           expediteur_nom?: string
           id?: boolean
           updated_at?: string
