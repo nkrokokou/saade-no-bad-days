@@ -10,6 +10,20 @@ const corsHeaders = {
 const CEO_EMAIL = "al.fanar@hotmail.fr";
 const FROM = "SAADÉ Rapports <onboarding@resend.dev>";
 
+// Réglages d'envoi modifiables depuis l'application (table parametres_email)
+async function getEmailSettings(admin: any) {
+  try {
+    const { data } = await admin.from("parametres_email").select("*").eq("id", true).maybeSingle();
+    return {
+      to: data?.destinataire || CEO_EMAIL,
+      cc: (data?.copies || []).filter((x: string) => !!x),
+      from: `${data?.expediteur_nom || "SAADÉ Rapports"} <${data?.expediteur_email || "onboarding@resend.dev"}>`,
+    };
+  } catch (_e) {
+    return { to: CEO_EMAIL, cc: [], from: FROM };
+  }
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
