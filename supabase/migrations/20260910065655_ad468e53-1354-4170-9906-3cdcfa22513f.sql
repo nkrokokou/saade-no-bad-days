@@ -1,0 +1,2 @@
+ALTER TABLE public.parametres_email ADD COLUMN IF NOT EXISTS cron_token UUID NOT NULL DEFAULT gen_random_uuid();
+UPDATE public.parametres_email SET expediteur_email = 'rapports@saadenobaddays.store', domaine_verifie = true WHERE id = true;

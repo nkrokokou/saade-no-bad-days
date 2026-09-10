@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -293,7 +294,7 @@ function b64(str: string): string {
   return btoa(unescape(encodeURIComponent(str)));
 }
 
-async function buildAttachments(supabase: any, date: string): Promise<any[]> {
+async function buildAttachments(supabase: any, date: string, report?: any): Promise<any[]> {
   const dayStart = `${date}T00:00:00.000Z`;
   const dayEnd = `${date}T23:59:59.999Z`;
   const atts: any[] = [];
@@ -303,21 +304,22 @@ async function buildAttachments(supabase: any, date: string): Promise<any[]> {
     .from('ventes')
     .select('numero_ticket, date_vente, total, mode_paiement, statut, client_nom')
     .gte('date_vente', dayStart).lte('date_vente', dayEnd);
-  if (ventes?.length) {
+  const ventesRows = ventes || [];
+  if (ventesRows.length) {
     atts.push({
       filename: `ventes-${date}.csv`,
-      content: b64(toCsv(ventes, ['numero_ticket', 'date_vente', 'total', 'mode_paiement', 'statut', 'client_nom'])),
+      content: b64(toCsv(ventesRows, ['numero_ticket', 'date_vente', 'total', 'mode_paiement', 'statut', 'client_nom'])),
     });
   }
 
   // 2. Stock économat (état courant)
   const { data: articles } = await supabase
     .from('economat_articles')
-    .select('categorie, nom, unite, stock_initial, stock_min, prix_unitaire')
+    .select('id, categorie, nom, unite, stock_initial, stock_min, prix_unitaire')
     .eq('actif', true)
     .order('categorie').order('nom');
+  let stockRows: any[] = [];
   if (articles?.length) {
-    // Calcul stock courant via mouvements
     const { data: mvts } = await supabase
       .from('economat_mouvements')
       .select('article_id, type, quantite');
@@ -326,14 +328,18 @@ async function buildAttachments(supabase: any, date: string): Promise<any[]> {
       const sign = m.type === 'entree' ? 1 : -1;
       stockBy[m.article_id] = (stockBy[m.article_id] || 0) + sign * Number(m.quantite || 0);
     });
-    const rows = articles.map((a: any) => ({
-      ...a,
+    stockRows = articles.map((a: any) => ({
+      categorie: a.categorie,
+      nom: a.nom,
+      unite: a.unite,
       stock_courant: Number(a.stock_initial || 0) + (stockBy[a.id] || 0),
+      stock_min: a.stock_min,
+      prix_unitaire: a.prix_unitaire,
       alerte: (Number(a.stock_initial || 0) + (stockBy[a.id] || 0)) <= Number(a.stock_min || 0) ? 'OUI' : '',
     }));
     atts.push({
       filename: `economat-stock-${date}.csv`,
-      content: b64(toCsv(rows, ['categorie', 'nom', 'unite', 'stock_courant', 'stock_min', 'prix_unitaire', 'alerte'])),
+      content: b64(toCsv(stockRows, ['categorie', 'nom', 'unite', 'stock_courant', 'stock_min', 'prix_unitaire', 'alerte'])),
     });
   }
 
@@ -342,11 +348,59 @@ async function buildAttachments(supabase: any, date: string): Promise<any[]> {
     .from('achats_mp')
     .select('date_achat, fournisseur, produit, quantite, unite, prix_unitaire, prix_total')
     .eq('date_achat', date);
-  if (achats?.length) {
+  const achatsRows = achats || [];
+  if (achatsRows.length) {
     atts.push({
       filename: `achats-mp-${date}.csv`,
-      content: b64(toCsv(achats, ['date_achat', 'fournisseur', 'produit', 'quantite', 'unite', 'prix_unitaire', 'prix_total'])),
+      content: b64(toCsv(achatsRows, ['date_achat', 'fournisseur', 'produit', 'quantite', 'unite', 'prix_unitaire', 'prix_total'])),
     });
+  }
+
+  // 4. Rapport Excel complet (classeur multi-feuilles)
+  try {
+    const wb = XLSX.utils.book_new();
+
+    if (report) {
+      const resumeRows: any[] = [
+        { Indicateur: "Date", Valeur: report.dayLabel },
+        { Indicateur: "CA total", Valeur: Math.round(report.ca || 0) },
+        { Indicateur: "Nombre de tickets", Valeur: report.nbTickets },
+        { Indicateur: "Panier moyen", Valeur: Math.round(report.panierMoyen || 0) },
+        { Indicateur: "Sessions caisse (jour)", Valeur: report.sessions?.total ?? 0 },
+        { Indicateur: "Sessions fermées", Valeur: report.sessions?.fermees ?? 0 },
+        { Indicateur: "Sessions encore ouvertes", Valeur: report.sessions?.ouvertes ?? 0 },
+        { Indicateur: "Écart de caisse total", Valeur: Math.round(report.sessions?.ecartTotal || 0) },
+        { Indicateur: "Produits clôturés", Valeur: report.cloture?.nbProduits ?? 0 },
+        { Indicateur: "Produits avec perte", Valeur: report.cloture?.nbProduitsAvecPerte ?? 0 },
+        { Indicateur: "Valeur invendus -50%", Valeur: Math.round(report.cloture?.valeurInvendus || 0) },
+        { Indicateur: "Nouveaux crédits", Valeur: Math.round(report.credits?.nouveaux || 0) },
+        { Indicateur: "Paiements crédits reçus", Valeur: Math.round(report.credits?.paiements || 0) },
+        { Indicateur: "Total encours crédits", Valeur: Math.round(report.credits?.encours || 0) },
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumeRows), "Résumé");
+
+      const modes = Object.entries(report.parMode || {}).map(([mode, val]: any) => ({
+        "Mode de paiement": mode, "Montant": Math.round(val || 0),
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(modes.length ? modes : [{ "Mode de paiement": "-", Montant: 0 }]), "Paiements");
+
+      const top = (report.topProduits || []).map((p: any, i: number) => ({
+        Rang: i + 1, Produit: p.nom, "Quantité": p.qte, CA: Math.round(p.ca || 0),
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(top.length ? top : [{ Rang: "-", Produit: "Aucune vente", "Quantité": 0, CA: 0 }]), "Top produits");
+    }
+
+    if (ventesRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ventesRows), "Ventes");
+    if (stockRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stockRows), "Stock économat");
+    if (achatsRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(achatsRows), "Achats MP");
+
+    const xlsxB64 = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+    atts.unshift({
+      filename: `rapport-ceo-${date}.xlsx`,
+      content: xlsxB64,
+    });
+  } catch (e: any) {
+    console.error("xlsx build failed", e?.message || e);
   }
 
   return atts;
@@ -384,37 +438,50 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    // ── Auth : exiger un JWT et le rôle CEO ──
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const token = authHeader.replace("Bearer ", "");
-    const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
-    if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: isCeo } = await supabase.rpc("is_ceo", { _user_id: userData.user.id });
-    if (!isCeo) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     let body: any = {};
     if (req.method === "POST") {
       try {
         body = await req.json();
       } catch {
         body = {};
+      }
+    }
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // ── Auth : jeton cron interne OU JWT utilisateur avec rôle CEO ──
+    let authorized = false;
+    if (body.cron_token) {
+      const { data: s } = await supabase
+        .from("parametres_email")
+        .select("cron_token")
+        .eq("id", true)
+        .maybeSingle();
+      if (s?.cron_token && body.cron_token === s.cron_token) authorized = true;
+    }
+    if (!authorized) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const token = authHeader.replace("Bearer ", "");
+      const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: claims, error: claimsErr } = await authClient.auth.getClaims(token);
+      const userId = claims?.claims?.sub;
+      if (claimsErr || !userId) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: isCeo } = await supabase.rpc("is_ceo", { _user_id: userId });
+      if (!isCeo) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -439,7 +506,7 @@ Deno.serve(async (req) => {
     const html = renderHTML(report);
     const subject = `SAADÉ — Rapport du ${report.dayLabel} • CA ${fmtXOF(report.ca)}`;
 
-    const attachments = await buildAttachments(supabase, date);
+    const attachments = await buildAttachments(supabase, date, report);
     const settings = await getEmailSettings(supabase);
     const sendRes = await sendEmail(subject, html, attachments, settings);
     await supabase.from("parametres_email")
