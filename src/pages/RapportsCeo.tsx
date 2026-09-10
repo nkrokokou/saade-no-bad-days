@@ -21,6 +21,18 @@ export default function RapportsCeo() {
   const qc = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
 
+  const { data: emailSettings } = useQuery({
+    queryKey: ["parametres_email"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("parametres_email")
+        .select("destinataire, copies")
+        .eq("id", true)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   const { data: rapports, isLoading } = useQuery({
     queryKey: ["rapports_journaliers"],
     queryFn: async () => {
@@ -62,7 +74,9 @@ export default function RapportsCeo() {
           <h1 className="text-2xl font-heading">Rapports CEO</h1>
           <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
             <Mail className="h-4 w-4" />
-            Envoi automatique à <strong>{CEO_EMAIL}</strong> tous les jours à 23h00
+            Envoi automatique à <strong>{emailSettings?.destinataire || CEO_EMAIL}</strong> tous les jours à 23h00
+            — version Excel en pièce jointe
+            {emailSettings?.copies?.length ? ` (copie : ${emailSettings.copies.join(", ")})` : ""}
           </p>
         </div>
         <Button onClick={() => sendNow.mutate(undefined)} disabled={sendNow.isPending}>
