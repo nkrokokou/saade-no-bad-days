@@ -1038,6 +1038,7 @@ export type Database = {
       parametres_email: {
         Row: {
           copies: string[]
+          cron_token: string
           derniere_erreur: string | null
           destinataire: string
           domaine_verifie: boolean
@@ -1048,6 +1049,7 @@ export type Database = {
         }
         Insert: {
           copies?: string[]
+          cron_token?: string
           derniere_erreur?: string | null
           destinataire?: string
           domaine_verifie?: boolean
@@ -1058,6 +1060,7 @@ export type Database = {
         }
         Update: {
           copies?: string[]
+          cron_token?: string
           derniere_erreur?: string | null
           destinataire?: string
           domaine_verifie?: boolean
