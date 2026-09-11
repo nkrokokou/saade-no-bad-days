@@ -303,7 +303,7 @@ Chaque catégorie a maintenant une **imprimante cible** :
 
 **Configuration** : Administration → Catégories → éditer → choisir « Imprimante cible ».
 
-**À l'encaissement** : le bon cuisine est automatiquement réparti vers la bonne imprimante. Chrome se souvient du choix par bouton (« Bon Cuisine chaude », « Bon Cuisine froide », « Ticket Caisse »).
+**À la prise de commande** : le bon cuisine est automatiquement réparti vers la bonne imprimante **dès la mise en attente** du ticket (la cuisine prépare sans attendre le paiement). Les ventes directes au comptoir impriment aussi le bon à l'encaissement (qui est leur moment de prise de commande). Un tab encaissé plus tard ne réimprime **pas** de doublon. Chrome se souvient du choix par bouton (« Bon Cuisine chaude », « Bon Cuisine froide », « Ticket Caisse »).
 
 > 💡 Pour une impression sans dialogue Chrome, installer **QZ Tray** (gratuit) — guide technique séparé.
 
@@ -345,7 +345,7 @@ Si une session de caisse reste **ouverte** à la fin de la journée :
 
 ## 24. Impression cuisine chaude / froide ciblée *(v4)*
 
-À l'encaissement, le bon cuisine est désormais **automatiquement réparti** selon `imprimante_cible` de la catégorie du produit :
+Dès la **mise en attente** (prise de commande), le bon cuisine est **automatiquement réparti** selon `imprimante_cible` de la catégorie du produit, **sans attendre le paiement** :
 
 - Produits catégorisés **🔥 chaud** → bon « CUISINE CHAUDE »
 - Produits catégorisés **❄️ froid** → bon « CUISINE FROIDE »

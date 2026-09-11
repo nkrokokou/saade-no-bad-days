@@ -374,6 +374,16 @@ export default function POS() {
     mutationFn: async () => {
       if (!session) throw new Error('Ouvrez la caisse');
       if (cart.length === 0) throw new Error('Panier vide');
+      // Ne pas imprimer en doublon : le bon cuisine ne s'imprime qu'à la
+      // PREMIÈRE mise en attente (nouvel ordre). Une re-mise en attente
+      // (tab repris) garde la main au bouton « Bon Cuisine », pour éviter
+      // de faire cuisiner 2 fois les mêmes plats.
+      const isFirstHold = !currentTabId;
+      // Snapshot du panier AVANT son effacement : servira à imprimer le bon
+      // cuisine à la PRISE DE COMMANDE (la cuisine ne doit pas attendre le paiement).
+      const snapshot: CartLine[] = cart.map(l => ({
+        produit: l.produit, quantite: l.quantite, remise: l.remise, options: l.options || [],
+      }));
       const payload = buildVentePayload('en_cours');
       // Préfixes [Nom:] et [Serveur:] dans notes pour persistance simple sans changement de schéma
       const parts: string[] = [];
@@ -420,12 +430,23 @@ export default function POS() {
         }));
       });
       if (optionsRows.length) await (supabase.from('vente_ligne_options') as any).insert(optionsRows);
-      // Plus d'impression auto ici : la cuisine s'imprime via le bouton dédié
-      return venteId;
+      return { venteId, snapshot, isFirstHold };
     },
-    onSuccess: () => {
+    onSuccess: (res: { venteId: string | null; snapshot: CartLine[]; isFirstHold: boolean }) => {
       toast.success('Ticket mis en attente');
       refetchTabs();
+      // Bon cuisine IMMÉDIAT à la prise de commande : la cuisine prépare dès
+      // maintenant, sans attendre le paiement. Toutes les lignes, frites incluses.
+      if (res.isFirstHold) {
+        setTimeout(() => {
+          try {
+            const tableNum = tables.find(t => t.id === tableId)?.numero || 'Comptoir';
+            printPrepTickets(res.snapshot, { tableNum, serveur, numero: 'EN ATTENTE' });
+          } catch (err: any) {
+            toast.error(`Bon cuisine : ${err?.message || 'erreur'}`);
+          }
+        }, 300);
+      }
       clearCart();
       setCartOpen(false);
     },
@@ -560,33 +581,36 @@ export default function POS() {
       setTimeout(() => {
         printTicket({ vente, lignes });
       }, 100);
-      // Bon cuisine AUTOMATIQUE à l'encaissement (doc §24) : imprime TOUTES
-      // les lignes (y compris ajoutées en dernier, ex: frites) vers la bonne
-      // imprimante (chaud / froid / bar). Évite les plats oubliés.
-      setTimeout(() => {
-        try {
-          const prepLines: CartLine[] = lignes.map(l => {
-            const p = produits.find(pr => pr.id === l.produit_id) || ({
-              id: l.produit_id, nom: l.produit_nom, categorie: 'DIVERS',
-              prix_vente: l.prix_unitaire || 0,
-            } as Produit);
-            return {
-              produit: p,
-              quantite: Number(l.quantite) || 1,
-              remise: Number(l.remise || 0),
-              options: l.options || [],
-            };
-          });
-          const tableNum = tables.find(t => t.id === (vente?.table_id || tableId))?.numero || 'Comptoir';
-          printPrepTickets(prepLines, {
-            tableNum,
-            serveur,
-            numero: String(vente?.numero_ticket || currentTabId || ''),
-          });
-        } catch (err: any) {
-          toast.error(`Bon cuisine : ${err?.message || 'erreur'}`);
-        }
-      }, 1100);
+      // Vente DIRECTE au comptoir (aucun tab en cours) : l'encaissement EST le
+      // moment de la prise de commande → le bon cuisine s'imprime maintenant.
+      // Pour un tab mis en attente, le bon a DÉJÀ été imprimé à la prise de
+      // commande → on ne réimprime pas (pas de doublon).
+      if (!currentTabId) {
+        setTimeout(() => {
+          try {
+            const prepLines: CartLine[] = lignes.map(l => {
+              const p = produits.find(pr => pr.id === l.produit_id) || ({
+                id: l.produit_id, nom: l.produit_nom, categorie: 'DIVERS',
+                prix_vente: l.prix_unitaire || 0,
+              } as Produit);
+              return {
+                produit: p,
+                quantite: Number(l.quantite) || 1,
+                remise: Number(l.remise || 0),
+                options: l.options || [],
+              };
+            });
+            const tableNum = tables.find(t => t.id === (vente?.table_id || tableId))?.numero || 'Comptoir';
+            printPrepTickets(prepLines, {
+              tableNum,
+              serveur,
+              numero: String(vente?.numero_ticket || '') || 'EN ATTENTE',
+            });
+          } catch (err: any) {
+            toast.error(`Bon cuisine : ${err?.message || 'erreur'}`);
+          }
+        }, 1100);
+      }
       clearCart();
       setCartOpen(false);
     },
