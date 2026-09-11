@@ -10,7 +10,10 @@ Deno.serve(async (req) => {
 
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured')
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      throw new Error('No AI key configured (LOVABLE_API_KEY or GEMINI_API_KEY)')
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!
@@ -107,11 +110,20 @@ ACHATS MP 30j: ${JSON.stringify(recentAchats?.map(a => ({ produit: a.produit, fo
 
 ${dataContext}`
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // IA : Google Gemini en direct (GEMINI_API_KEY) avec fallback gateway Lovable
+    // L'endpoint GeminiOpenAI-compat accepte le format chat/completions OpenAI.
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+    const aiUrl = GEMINI_API_KEY
+      ? `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
+      : 'https://ai.gateway.lovable.dev/v1/chat/completions'
+    const aiKey = GEMINI_API_KEY || LOVABLE_API_KEY
+    const aiModel = GEMINI_API_KEY ? 'gemini-2.5-flash' : 'google/gemini-2.5-flash'
+
+    const response = await fetch(aiUrl, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: aiModel,
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages,

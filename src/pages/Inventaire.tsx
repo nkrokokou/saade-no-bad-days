@@ -59,8 +59,13 @@ export default function Inventaire() {
   });
 
   const deleteEntry = async (id: string) => {
-    await supabase.from('inventaire').delete().eq('id', id);
-    qc.invalidateQueries({ queryKey: ['inventaire'] });
+    try {
+      const { error } = await supabase.from('inventaire').delete().eq('id', id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ['inventaire'] });
+    } catch (e: any) {
+      toast.error(`Suppression impossible : ${e?.message || 'erreur'}`);
+    }
   };
 
   const handleExport = () => {

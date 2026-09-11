@@ -108,7 +108,8 @@ export default function BonsTransfert() {
 
   const deleteBon = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from('bon_transfert_lignes').delete().eq('bon_transfert_id', id);
+      const { error: e1 } = await supabase.from('bon_transfert_lignes').delete().eq('bon_transfert_id', id);
+      if (e1) throw e1;
       const { error } = await supabase.from('bons_transfert').delete().eq('id', id);
       if (error) throw error;
       audit('delete', 'bons_transfert', id, {});

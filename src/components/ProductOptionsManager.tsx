@@ -48,8 +48,13 @@ export function ProductOptionsManager({
 
   const deleteGroupe = async (id: string) => {
     if (!confirm('Supprimer ce groupe et tous ses choix ?')) return;
-    await supabase.from('produit_options_groupes' as any).delete().eq('id', id);
-    refetch();
+    try {
+      const { error } = await supabase.from('produit_options_groupes' as any).delete().eq('id', id);
+      if (error) throw error;
+      refetch();
+    } catch (e: any) {
+      alert(`Suppression impossible : ${e?.message || 'erreur'}`);
+    }
   };
 
   const addItem = async (groupeId: string) => {

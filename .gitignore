@@ -12,6 +12,24 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (keep secrets out of the repo)
+.env
+.env.*
+!.env.example
+
+# Données exportées / migration (fichiers locaux sensibles ou volumineux)
+databasecsv/
+supabase/.temp/
+migration-guide/04-notes-projet.md
+migration-guide/import/lt.json
+migration-guide/import/login-test.json
+migration-guide/import/login-badpw.json
+migration-guide/import/login-fake.json
+migration-guide/import/q*.json
+migration-guide/import/cron-token.json
+migration-guide/import/admin-user.json
+migration-guide/import/test-body.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

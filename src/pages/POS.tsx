@@ -21,6 +21,7 @@ import { queueVente, isOffline } from '@/lib/offlineQueue';
 import { printHtmlOrFallback, isQzAvailable, listPrinters } from '@/lib/qzPrint';
 import { ProductOptionsDialog, fetchProductOptions } from '@/components/ProductOptionsDialog';
 import { escapeHtml, sanitizeCss } from '@/lib/htmlSafe';
+import { productEmoji, CATEGORY_EMOJI } from '@/lib/productEmojis';
 
 
 type PaymentMode = 'especes' | 'mobile_money' | 'carte' | 'credit' | 'ticket';
@@ -47,8 +48,11 @@ const POSTE_LABELS: Record<string, string> = {
   labo_viennoiserie: 'LABO VIENNOISERIE',
   chaud: 'CUISINE CHAUDE',
   froid: 'CUISINE FROIDE',
-  caisse: 'CAISSE',
+  caisse: 'BAR / BOISSONS',
 };
+
+// Clé localStorage pour la sauvegarde du panier en cours
+const CART_STORAGE_KEY = 'pos_cart_v1';
 
 
 interface TableResto { id: string; numero: string; zone: string | null; places: number; }
@@ -84,6 +88,9 @@ export default function POS() {
     try { return JSON.parse(localStorage.getItem('qz_printers') || '{}'); } catch { return {}; }
   });
   const [qzStatus, setQzStatus] = useState<'idle' | 'checking' | 'ok' | 'ko'>('idle');
+  // Filtres du dialogue "Tickets en attente"
+  const [tabSearch, setTabSearch] = useState('');
+  const [tabFilter, setTabFilter] = useState('all');
 
   // Produits
   const { data: produits = [] } = useProducts();
@@ -192,6 +199,64 @@ export default function POS() {
 
   useEffect(() => { if (payOpen) setMontantRecu(totalTicket); }, [payOpen, totalTicket]);
 
+  // ── Sauvegarde / restauration du panier (localStorage) ──
+  useEffect(() => {
+    try {
+      if (cart.length === 0) { localStorage.removeItem(CART_STORAGE_KEY); return; }
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ cart, currentTabId, tableId, serveur, tabNom }));
+    } catch { /* stockage indisponible */ }
+  }, [cart, currentTabId, tableId, serveur, tabNom]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CART_STORAGE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (Array.isArray(s.cart) && s.cart.length > 0) {
+        setCart(s.cart);
+        if (s.currentTabId) setCurrentTabId(s.currentTabId);
+        if (s.tableId) setTableId(s.tableId);
+        if (typeof s.serveur === 'string') setServeur(s.serveur);
+        if (typeof s.tabNom === 'string') setTabNom(s.tabNom);
+        toast.info('Panier restauré · Ticket en cours conservé', { duration: 3000 });
+      }
+    } catch { /* panier corrompu — ignoré */ }
+  }, []);
+
+  // ── Raccourcis clavier caisse ──
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOptDialog(null); setPayOpen(false); setTabsOpen(false); setCartOpen(false);
+        return;
+      }
+      const el = e.target as HTMLElement | null;
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      if (typing) return;
+      if (e.key === 'F1') { e.preventDefault(); printCuisineFromCart(); }
+      else if (e.key === 'F2') { e.preventDefault(); printCartTicket(); }
+      else if (e.key === 'F3') { e.preventDefault(); if (session && cart.length > 0) setPayOpen(true); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  // Tickets en attente → filtrés (recherche + table)
+  const visibleTabs = useMemo(() => {
+    const q = tabSearch.trim().toLowerCase();
+    return openTabs.filter(tab => {
+      if (tabFilter !== 'all' && tab.table_id !== tabFilter) return false;
+      if (!q) return true;
+      const t = tables.find(tt => tt.id === tab.table_id);
+      const mNom = (tab.notes || '').match(/\[Nom:\s*([^\]]+)\]/);
+      const hay = [
+        tab.numero_ticket, tab.client_nom, tab.notes, mNom?.[1],
+        t?.numero ? `Table ${t.numero}` : 'Comptoir', `#${tab.numero_ticket}`,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }, [openTabs, tabSearch, tabFilter, tables]);
+
   const [optDialog, setOptDialog] = useState<{ produit: Produit; groupes: any[] } | null>(null);
 
   const addToCart = async (p: Produit) => {
@@ -220,6 +285,8 @@ export default function POS() {
   const clearCart = () => {
     setCart([]); setRemiseGlobale(0); setClientNom(''); setNotes('');
     setTableId('comptoir'); setServeur(''); setCurrentTabId(null); setTabNom('');
+    setMontantRecu(0); setPaymentMode('especes'); // évite de réutiliser l'ancien montant/rendu d'une vente précédente
+    try { localStorage.removeItem(CART_STORAGE_KEY); } catch { /* ignore */ }
   };
 
   const openSessionMut = useMutation({
@@ -441,7 +508,7 @@ export default function POS() {
           lignes: buildLignes(null).map(({ options, ...rest }) => rest),
           credit,
         });
-        const fauxVente = { id: pending.id, numero_ticket: '⏳ HORS-LIGNE', total: totalTicket, mode_paiement: paymentMode, date_vente: new Date().toISOString() } as any;
+        const fauxVente = { id: pending.id, numero_ticket: '⏳ HORS-LIGNE', total: totalTicket, mode_paiement: paymentMode, montant_recu: paymentMode === 'especes' ? montantRecu : totalTicket, rendu, date_vente: new Date().toISOString() } as any;
         return { vente: fauxVente, lignes: buildLignes(pending.id), offline: true };
       }
 
@@ -500,15 +567,18 @@ export default function POS() {
   });
 
   // Imprime un ticket par imprimante cible (chaud / froid / caisse) — applique le template cuisine
+  // Inclut TOUS les articles : cuisine chaude, froide, bar/boissons, labo (les boissons sont ajoutées au bon cuisine)
   const printPrepTickets = (lines: CartLine[], ctx: { tableNum: string; serveur: string; numero: string }) => {
     const groups: Record<string, CartLine[]> = {};
     lines.forEach(l => {
       // Priorité : produit.imprimante_cible (override) → catégorie.imprimante_cible → fallback 'chaud'
       const override = (l.produit as any).imprimante_cible as string | undefined;
       const fromCat = catImprimante[l.produit.categorie] || 'chaud';
-      const cible = override || fromCat;
+      let cible = override || fromCat;
+      // RÈGLE FERME : les boissons (chaudes, froides, smoothies) et les dogels partent
+      // TOUJOURS sur le bon « CUISINE FROIDE / BAR » — même si une config les met ailleurs.
+      if (/^(BOISSON|DOGEL)/.test(l.produit.categorie)) cible = 'froid';
       if (cible === 'aucune') return; // pas d'impression cuisine
-      if (cible === 'caisse') return; // imprimé sur le ticket caisse uniquement
       (groups[cible] = groups[cible] || []).push(l);
     });
     if (Object.keys(groups).length === 0) {
@@ -607,15 +677,61 @@ export default function POS() {
     printViaIframe(html, `Bon ${POSTE_LABELS[poste] || poste}`, poste);
   };
 
-  const printTicket = (data: any) => {
+  // Imprime le ticket de CAISSE du TICKET EN COURS (panier) — toujours disponible.
+  // Si le panier est vide : réimprime le dernier ticket encaissé (reprint).
+  const printCartTicket = () => {
+    if (cart.length === 0) {
+      if (lastTicket) {
+        printTicket(lastTicket);
+        return;
+      }
+      toast.error('Panier vide — ajoutez des articles ou encaissez une vente pour imprimer');
+      return;
+    }
+    const cliente = (tabNom.trim() || clientNom.trim() || 'CLIENT');
+    const pseudoLignes = cart.map(l => {
+      const supp = (l.options || []).reduce((a, o) => a + (o.prix_supplement || 0), 0);
+      const unit = (l.produit.prix_vente || 0) + supp;
+      return {
+        produit_nom: l.produit.nom,
+        prix_unitaire: unit,
+        quantite: l.quantite,
+        total_ligne: unit * l.quantite - (l.remise || 0),
+        options: l.options || [],
+      };
+    });
+    printTicket({
+      vente: {
+        numero_ticket: currentTabId ? 'EN ATTENTE' : 'BROUILLON',
+        client_nom: cliente,
+        notes: serveur ? `[Serveur: ${serveur}]` : null,
+        total: totalTicket,
+        remise_globale: remiseGlobale,
+        mode_paiement: paymentMode,
+        montant_recu: 0,
+        rendu: 0,
+        date_vente: new Date().toISOString(),
+        table_id: tableId === 'comptoir' ? null : tableId,
+        ticket_pdf_url: null,
+      },
+      lignes: pseudoLignes,
+    }, { showPayment: false });
+  };
+
+  const printTicket = (data: any, opts?: { showPayment?: boolean }) => {
     if (!data) return;
     const v = data.vente;
+    if (v.ticket_pdf_url) {
+      toast.info('Ticket déjà généré — impression différée');
+      return;
+    }
+    const showPayment = opts?.showPayment !== false; // false → ticket en cours NON payé (aucun montant reçu / rendu)
     const lignes = data.lignes || [];
     const fmt = (n: number) => Number(n || 0).toLocaleString('fr-FR').replace(/,/g, ' ');
     const date = new Date(v.date_vente).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' });
     const caissier = (user?.email || 'CAISSIER').split('@')[0].toUpperCase();
     const modeLabel = (PAYMENT_LABELS[v.mode_paiement as PaymentMode] || '').toUpperCase();
-    const tableNum = tables.find(t => t.id === v.table_id)?.numero || '';
+    const tableNum = tables.find(t => t.id === v.table_id)?.numero || 'Comptoir';
     const serveurMatch = (v.notes || '').match(/^\[Serveur: ([^\]]+)\]/);
     const serveurNom = serveurMatch ? serveurMatch[1] : '';
 
@@ -676,8 +792,8 @@ export default function POS() {
         <div class="row"><span>Remise</span><span>${fmt(v.remise_globale)} CFA</span></div>
         <div class="row total"><span>Net à payer</span><span>${fmt(v.total)} CFA</span></div>
       ` : ''}
-      ${t?.show_payment_mode !== false ? `<div class="row"><span>${escapeHtml(modeLabel)}</span><span>${fmt(v.montant_recu)} CFA</span></div>` : ''}
-      ${(t?.show_change !== false && Number(v.rendu) > 0) ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
+      ${showPayment && t?.show_payment_mode !== false ? `<div class="row"><span>${escapeHtml(modeLabel)}</span><span>${fmt(v.montant_recu)} CFA</span></div>` : ''}
+      ${(showPayment && t?.show_change !== false && Number(v.rendu) > 0) ? `<div class="row"><span>Relicat</span><span>${fmt(v.rendu)} CFA</span></div>` : ''}
       <hr/>
       ${(t?.show_serveur !== false || t?.show_table !== false) ? `<div style="font-size:11px;">${t?.show_serveur !== false ? `serveur : ${escapeHtml(serveurNom || '....')}   ` : ''}${t?.show_table !== false ? `table : ${escapeHtml(tableNum || '....')}` : ''}</div>` : ''}
       ${t?.show_caissier !== false ? `<div style="font-size:11px;">caissier : ${escapeHtml(caissier)}</div>` : ''}
@@ -753,8 +869,8 @@ export default function POS() {
         <Tabs value={activeCat} onValueChange={setActiveCat}>
           <ScrollArea className="w-full whitespace-nowrap">
             <TabsList className="inline-flex w-max">
-              <TabsTrigger value="all">Tous</TabsTrigger>
-              {categories.map(c => <TabsTrigger key={c} value={c}>{c.replace(/_/g, ' ')}</TabsTrigger>)}
+              <TabsTrigger value="all">🛍️ Tous</TabsTrigger>
+              {categories.map(c => <TabsTrigger key={c} value={c}>{CATEGORY_EMOJI[c] ? `${CATEGORY_EMOJI[c]} ` : ''}{c.replace(/_/g, ' ')}</TabsTrigger>)}
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
@@ -777,7 +893,7 @@ export default function POS() {
                 </span>
                 {p.photo_url ? (
                   <img src={p.photo_url} alt={p.nom} className="w-full h-16 object-cover rounded" />
-                ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-2xl">🍰</div>}
+                ) : <div className="w-full h-16 bg-muted rounded flex items-center justify-center text-3xl">{productEmoji(p.nom, p.categorie)}</div>}
                 <div className="text-xs font-medium line-clamp-2">{p.nom}</div>
                 <div className="text-xs font-bold text-primary">{(p.prix_vente || 0).toLocaleString()} F</div>
               </button>
@@ -797,12 +913,24 @@ export default function POS() {
         </Button>
       )}
 
+      {/* Barre d'action rapide — mobile / tablette (en haut de la bulle panier) */}
+      {(cart.length > 0 || lastTicket) && (
+        <div className="fixed bottom-24 left-4 right-4 md:hidden z-40 flex gap-2">
+          <Button variant="secondary" size="lg" className="flex-1" disabled={cart.length === 0} onClick={printCuisineFromCart}>
+            <Utensils className="h-5 w-5 mr-1" />Bon Cuisine
+          </Button>
+          <Button variant="outline" size="lg" className="flex-1" onClick={printCartTicket}>
+            <Printer className="h-5 w-5 mr-1" />Ticket Caisse
+          </Button>
+        </div>
+      )}
+
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
         <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-4">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-between">
               <span>Ticket en cours</span>
-              {cart.length > 0 && <Button size="sm" variant="ghost" onClick={clearCart}>Vider</Button>}
+              {cart.length > 0 && <Button size="sm" variant="ghost" onClick={() => { if (confirm('Vider le ticket en cours ?')) clearCart(); }}>Vider</Button>}
             </SheetTitle>
           </SheetHeader>
           <ScrollArea className="flex-1 -mx-4 px-4 my-2">
@@ -853,9 +981,7 @@ export default function POS() {
               <Button variant="secondary" disabled={cart.length === 0} onClick={printCuisineFromCart}>
                 <Utensils className="h-4 w-4 mr-1" />Bon Cuisine
               </Button>
-              {lastTicket
-                ? <Button variant="outline" onClick={() => printTicket(lastTicket)}><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>
-                : <Button variant="outline" disabled><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>}
+              <Button variant="outline" onClick={printCartTicket}><Printer className="h-4 w-4 mr-1" />Ticket Caisse</Button>
             </div>
           </div>
         </SheetContent>
@@ -864,10 +990,25 @@ export default function POS() {
       {/* Tickets en attente */}
       <Dialog open={tabsOpen} onOpenChange={setTabsOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Tickets en attente ({openTabs.length})</DialogTitle></DialogHeader>
-          <div className="space-y-2 max-h-[60vh] overflow-auto">
+          <DialogHeader><DialogTitle>Tickets en attente ({visibleTabs.length})</DialogTitle></DialogHeader>
+          <div className="flex gap-2 mb-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Rechercher (nom, n°, client, table)…" value={tabSearch} onChange={e => setTabSearch(e.target.value)} className="pl-8 h-9" />
+            </div>
+            <Select value={tabFilter} onValueChange={setTabFilter}>
+              <SelectTrigger className="w-36 h-9"><SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes tables</SelectItem>
+                {tables.map(t => <SelectItem key={t.id} value={t.id}>Table {t.numero}{t.zone ? ` · ${t.zone}` : ''}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2 max-h-[55vh] overflow-auto">
             {openTabs.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Aucun ticket en attente</p>}
-            {openTabs.map((tab: any) => {
+            {openTabs.length > 0 && visibleTabs.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Aucun résultat pour cette recherche</p>}
+            {visibleTabs.map((tab: any) => {
               const t = tables.find(tt => tt.id === tab.table_id);
               const lignesCount = (tab.vente_lignes || []).length;
               const mNom = (tab.notes || '').match(/\[Nom:\s*([^\]]+)\]/);
