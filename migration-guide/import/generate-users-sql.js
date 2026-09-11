@@ -1,12 +1,22 @@
 // generate-users-sql.js
 // Génère un script SQL pour recréer les utilisateurs dans auth.users avec les MÊMES IDs.
 // Usage : node generate-users-sql.js
+// Le mot de passe initial est lu depuis la variable d'environnement INITIAL_PASSWORD
+// (jamais de secret en dur dans le code).
 import { readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Mot de passe initial depuis l'environnement (12-factor) — pas de valeur en dur.
+const INITIAL_PASSWORD = process.env.INITIAL_PASSWORD || "";
+if (!INITIAL_PASSWORD || INITIAL_PASSWORD.length < 8) {
+  console.error("❌ Variable INITIAL_PASSWORD manquante ou trop courte (min 8).");
+  console.error("   Exemple :  $env:INITIAL_PASSWORD='VotreMdpFort!'; node generate-users-sql.js");
+  process.exit(1);
+}
 
 // Charge la config des utilisateurs (JSON)
 const usersRaw = readFileSync(path.join(__dirname, "users.config.json"), "utf8");
@@ -24,7 +34,7 @@ if (missing.length) {
 // Génère le SQL
 let sql = `-- Création des utilisateurs auth (contrôle total)
 -- À exécuter dans le SQL Editor de SUPABASE (nouveau projet)
--- Mot de passe initial commun : __MOT_DE_PASSE_INITIAL_REDACTE__  (à changer après connexion)
+-- Mot de passe initial fourni via INITIAL_PASSWORD / déjà changé après connexion.
 
 -- Extension nécessaire pour crypt()/gen_salt()
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -49,7 +59,7 @@ INSERT INTO auth.users (
   'authenticated',
   'authenticated',
   '${u.email}',
-  crypt('__MOT_DE_PASSE_INITIAL_REDACTE__', gen_salt('bf')),
+  crypt('${INITIAL_PASSWORD.replace(/'/g, "''")}', gen_salt('bf')),
   now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"${u.full_name.replace(/'/g, "''")}"}'::jsonb,

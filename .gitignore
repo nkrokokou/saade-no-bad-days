@@ -40,3 +40,8 @@ migration-guide/import/test-body.json
 *.njsproj
 *.sln
 *.sw?
+
+migration-guide/import/users.config.json
+migration-guide/import/generated-users.sql
+migration-guide/import/counts*.txt
+migration-guide/import/import-log*.txt

@@ -16,20 +16,18 @@ SUPABASE_SERVICE_KEY=votre-cle-service-role-ici
 
 > 🔒 Ce fichier est local. Ne le commitez pas, ne le montrez à personne.
 
-## Étape 2 — Renseigner les emails des 3 comptes manquants
+## Étape 2 — Renseigner les emails des comptes
 
-Ouvrez `migration-guide/import/users.config.json` et remplacez les `???@saade.local` par les vrais emails de :
-- `LABO PATISSERIE ELI`
-- `LABO VIENNOISERIE JEAN`
-- `Developer`
+Copiez `users.config.example.json` en `users.config.json` (fichier local, ignoré par git) et remplacez les `???@exemple.com` par les vrais emails de vos comptes. Les UUID doivent correspondre aux comptes existants à recréer à l'identique.
 
 ## Étape 3 — Générer le SQL des utilisateurs
 
 ```bash
 cd migration-guide/import
+$env:INITIAL_PASSWORD='UnMotDePasseFortEtTemporaire'   # PowerShell (jamais en dur dans le code)
 node generate-users-sql.js
 ```
-Cela crée `generated-users.sql` (comptes auth.users avec les MÊMES UUID, + profiles + user_roles).
+Cela crée `generated-users.sql` (comptes auth.users avec les MÊMES UUID, + profiles + user_roles). Ce fichier est local (ignoré par git) : il contient le hash du mot de passe initial.
 
 ## Étape 4 — Exécuter dans cet ordre (SQL Editor Supabase)
 
@@ -64,4 +62,4 @@ node import-data.mjs --dry-run   # doit afficher total=0 restant
 
 ## À savoir
 - Les 3 vues (`v_mp_stock`, `v_economat_stock`, `v_stock_matieres_premieres`) sont créées par le schéma → **ne pas importer** (script les ignore).
-- Les comptes ont un mot de passe initial `__MOT_DE_PASSE_INITIAL_REDACTE__` → penser à le changer.
+- Les comptes utilisent un mot de passe initial temporaire (fourni via `INITIAL_PASSWORD` au lancement du générateur) → **à changer obligatoirement après connexion** (Administration → Profil). Le CEO peut réinitialiser chaque compte (Administration → Utilisateurs → 🔑).

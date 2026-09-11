@@ -21,7 +21,7 @@ BEGIN
       v_uid, '00000000-0000-0000-0000-000000000000',
       'authenticated', 'authenticated',
       'dev@saade.com',
-      crypt('__CHANGEZ_CE_MOT_DE_PASSE__', gen_salt('bf')),
+      crypt('__CHANGEZ_CE_MOT_DE_PASSE_APRES_MIGRATION__', gen_salt('bf')),
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
       '{"full_name":"Developer"}'::jsonb,
@@ -36,7 +36,7 @@ BEGIN
   ELSE
     v_uid := v_existing;
     UPDATE auth.users
-       SET encrypted_password = crypt('__CHANGEZ_CE_MOT_DE_PASSE__', gen_salt('bf')),
+       SET encrypted_password = crypt('__CHANGEZ_CE_MOT_DE_PASSE_APRES_MIGRATION__', gen_salt('bf')),
            email_confirmed_at = COALESCE(email_confirmed_at, now()),
            updated_at = now()
      WHERE id = v_uid;

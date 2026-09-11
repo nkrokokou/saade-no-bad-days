@@ -1,0 +1,11 @@
+[
+  { "id": "aaaaaaaa-0000-4000-8000-000000000001", "email": "???@exemple.com", "full_name": "CEO",               "role": "ceo" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000002", "email": "???@exemple.com", "full_name": "CEO 2",             "role": "ceo" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000003", "email": "???@exemple.com", "full_name": "Économat",          "role": "economat" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000004", "email": "???@exemple.com", "full_name": "Caisse 1",          "role": "salle" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000005", "email": "???@exemple.com", "full_name": "Caisse 2",          "role": "salle" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000006", "email": "???@exemple.com", "full_name": "Caisse 3",          "role": "salle" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000007", "email": "???@exemple.com", "full_name": "Labo Pâtisserie",   "role": "labo_patisserie" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000008", "email": "???@exemple.com", "full_name": "Labo Viennoiserie", "role": "labo_viennoiserie" },
+  { "id": "aaaaaaaa-0000-4000-8000-000000000009", "email": "???@exemple.com", "full_name": "Developer",         "role": "developer" }
+]

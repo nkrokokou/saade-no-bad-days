@@ -1,1 +1,1 @@
-UPDATE auth.users SET encrypted_password = crypt('__CHANGEZ_CE_MOT_DE_PASSE__', gen_salt('bf')), email_confirmed_at = COALESCE(email_confirmed_at, now()), updated_at = now() WHERE email = 'dev@saade.com';
+UPDATE auth.users SET encrypted_password = crypt('__CHANGEZ_CE_MOT_DE_PASSE_APRES_MIGRATION__', gen_salt('bf')), email_confirmed_at = COALESCE(email_confirmed_at, now()), updated_at = now() WHERE email = 'dev@saade.com';
