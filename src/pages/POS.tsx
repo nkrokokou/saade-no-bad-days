@@ -560,6 +560,33 @@ export default function POS() {
       setTimeout(() => {
         printTicket({ vente, lignes });
       }, 100);
+      // Bon cuisine AUTOMATIQUE à l'encaissement (doc §24) : imprime TOUTES
+      // les lignes (y compris ajoutées en dernier, ex: frites) vers la bonne
+      // imprimante (chaud / froid / bar). Évite les plats oubliés.
+      setTimeout(() => {
+        try {
+          const prepLines: CartLine[] = lignes.map(l => {
+            const p = produits.find(pr => pr.id === l.produit_id) || ({
+              id: l.produit_id, nom: l.produit_nom, categorie: 'DIVERS',
+              prix_vente: l.prix_unitaire || 0,
+            } as Produit);
+            return {
+              produit: p,
+              quantite: Number(l.quantite) || 1,
+              remise: Number(l.remise || 0),
+              options: l.options || [],
+            };
+          });
+          const tableNum = tables.find(t => t.id === (vente?.table_id || tableId))?.numero || 'Comptoir';
+          printPrepTickets(prepLines, {
+            tableNum,
+            serveur,
+            numero: String(vente?.numero_ticket || currentTabId || ''),
+          });
+        } catch (err: any) {
+          toast.error(`Bon cuisine : ${err?.message || 'erreur'}`);
+        }
+      }, 1100);
       clearCart();
       setCartOpen(false);
     },
