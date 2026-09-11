@@ -55,7 +55,21 @@ const PageLoader = () => (
   </div>
 );
 
-const queryClient = new QueryClient();
+// Cache agressif + pas de refetch a chaque focus : la DB Supabase etant loin
+// (RTT ~500 ms), refetchOnWindowFocus refaisait les 12-15 requetes du Dashboard
+// a chaque clic -> appli perçue comme "lente". Cache 5 min = pages instantanées.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,      // garde en cache 5 minutes
+      gcTime: 30 * 60 * 1000,        // 30 min en memoire avant ecrasement
+      refetchOnWindowFocus: false,   // NE refetch plus au focus -> gros gain UX
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      retry: 1,                      // 1 retry max en cas d'erreur reseau
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
