@@ -21,10 +21,11 @@ SELECT cron.unschedule('rapport-journalier-ceo')
 WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'rapport-journalier-ceo');
 
 SELECT cron.schedule('rapport-journalier-ceo', '0 23 * * *', $$
-  SELECT extensions.http_post(
+  SELECT net.http_post(
     url := 'https://rgdvlqwuhyrtmzraaowt.supabase.co/functions/v1/rapport-journalier-ceo',
     headers := '{"Content-Type":"application/json"}'::jsonb,
-    body := jsonb_build_object('cron_token', (SELECT cron_token FROM public.parametres_email WHERE id = true))
+    body := jsonb_build_object('cron_token', (SELECT cron_token FROM public.parametres_email WHERE id = true)),
+    timeout_milliseconds := 120000
   );
 $$);
 
